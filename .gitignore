@@ -147,3 +147,13 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Tabella: secrets and build output
+.env
+.env.*
+!.env.example
+# Foundry
+out/
+cache/
+broadcast/
+contracts/lib/
