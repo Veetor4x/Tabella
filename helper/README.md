@@ -157,3 +157,12 @@ src/ratelimit.ts  per-IP limiter and trusted-proxy IP rule
 src/abi.ts        the four relayed functions (relayAbi) and, separately, the Postman's (postmanAbi)
 src/config.ts     environment -> settings (no secrets in it)
 ```
+
+## Last testnet E2E (`npm run e2e`)
+
+Registry `0xC0808aF18e2283dFE4d026315a462349561fFd1c` on qorechain-diana. Letter #2 (2 heirs, guardian, quiet 120 s,
+warning 60 s): one check-in, then silence. Released at chain time 1794815644; the Postman's `publishPartB` landed
+in block 10182920 at 1794815657, **13 s after release** (the loop runs every 20 s, so it is 0-20 s plus ~2 blocks).
+Both heirs opened the letter; the Postman could not re-open what it published; a second `publishPartB` was refused
+(`AlreadyPublished`). On letter #3 two guardian pauses worked and the third was refused with `PauseLimitReached`
+(no gas spent). `publishPartB` for a 2-heir letter used 2,457,301 gas; `createLetter` 4,171,860.
