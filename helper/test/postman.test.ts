@@ -496,6 +496,116 @@ describe("the loop", () => {
   });
 });
 
+describe("startup catch-up (a helper waking from sleep on a free instance)", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
+  afterEach(() => vi.useRealTimers());
+
+  it("runs one FULL pass immediately: every overdue Part B is published before any 20 s wait", async () => {
+    addLetter(1n, STATUS.Released); // overdue for hours
+    addLetter(2n, STATUS.Active);
+    addLetter(3n, STATUS.Released);
+    addLetter(4n, STATUS.Cancelled);
+    addLetter(5n, STATUS.Released);
+    chain.letters.get(5n)!.released = true; // already done before the sleep
+    addLetter(6n, STATUS.Released);
+    nowMs += 6 * 3600_000; // the helper has been asleep for six hours
+
+    const postman = makePostman();
+    const report = await postman.start(); // NOTE: the fake clock is never advanced
+
+    expect(report.skipped).toBe(false);
+    expect(report.published).toEqual([1n, 3n, 6n]);
+    expect(chain.published.map((p) => p.id)).toEqual([1n, 3n, 6n]);
+    expect(chain.letters.get(2n)!.released).toBe(false); // Active: untouched
+    expect(chain.letters.get(4n)!.released).toBe(false); // cancelled: untouched
+    expect(chain.calls.filter((c) => c === "send")).toHaveLength(3);
+    postman.stop();
+  });
+
+  it("does not wait for the interval: with timers frozen, the catch-up still completes", async () => {
+    addLetter(1n, STATUS.Released);
+    const postman = makePostman();
+    const done = postman.start();
+    // resolve without advancing any timer: only the first pass itself, no 20 s sleep, is awaited
+    await expect(done).resolves.toMatchObject({ published: [1n] });
+    expect(chain.published).toHaveLength(1);
+    postman.stop();
+  });
+
+  it("then carries on every 20 s, and a letter that releases later is picked up on the next tick", async () => {
+    addLetter(1n, STATUS.Released);
+    addLetter(2n, STATUS.Warning);
+    const postman = makePostman();
+    await postman.start();
+    expect(chain.published.map((p) => p.id)).toEqual([1n]);
+
+    chain.letters.get(2n)!.status = STATUS.Released;
+    await vi.advanceTimersByTimeAsync(19_000);
+    expect(chain.published.map((p) => p.id)).toEqual([1n]); // not yet
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(chain.published.map((p) => p.id)).toEqual([1n, 2n]);
+    postman.stop();
+  });
+
+  it("start() twice gives one catch-up and no double publication", async () => {
+    addLetter(1n, STATUS.Released);
+    const postman = makePostman();
+    const [a, b] = await Promise.all([postman.start(), postman.start()]);
+    expect(a).toBe(b); // the same pass
+    expect(chain.published).toHaveLength(1);
+    expect(chain.calls.filter((c) => c === "send")).toHaveLength(1);
+    postman.stop();
+  });
+
+  it("a catch-up that hits a dead chain resolves with errors (no crash, no hang) and the next tick recovers", async () => {
+    addLetter(1n, STATUS.Released);
+    chain.down = true; // the RPC is still waking up too
+    const postman = makePostman();
+    const report = await postman.start();
+    expect(report.errors).toBeGreaterThan(0);
+    expect(chain.published).toHaveLength(0);
+
+    chain.down = false;
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(chain.published).toHaveLength(1);
+    postman.stop();
+  });
+
+  it("a restarted process has no memory of earlier work, yet never republishes a letter that is already done", async () => {
+    addLetter(1n, STATUS.Released);
+    const before = makePostman();
+    await before.start();
+    before.stop();
+    expect(chain.published).toHaveLength(1);
+
+    const afterWake = makePostman(); // the instance went to sleep and came back: new process
+    const report = await afterWake.start();
+    expect(report.published).toEqual([]);
+    expect(chain.published).toHaveLength(1);
+    expect(chain.calls.filter((c) => c === "send")).toHaveLength(1);
+    afterWake.stop();
+  });
+
+  it("the request that wakes the helper is served while the catch-up runs, sharing one send queue", async () => {
+    vi.useRealTimers(); // this one needs real (tiny) delays so the two really overlap
+    addLetter(1n, STATUS.Released);
+    chain.delayMs = 5;
+    const mutex = new Mutex();
+    const postman = makePostman({ RATE_LIMIT_PER_MIN: "1000" }, mutex);
+    const app = createApp({ chain, cfg, now: () => nowMs, log: () => {}, mutex });
+    const wake = app.request("/relay", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fn: "checkIn", args: { letterId: "1" }, pubkey: "0x" + "11".repeat(2592), sig: "0x" + "22".repeat(4627) }),
+    });
+    const [res, report] = await Promise.all([wake, postman.start()]);
+    expect(res.status).toBe(200);
+    expect(report.published).toEqual([1n]);
+    expect(chain.maxSendInFlight).toBe(1);
+    postman.stop();
+  });
+});
+
 describe("shares the relay's queue (one nonce counter)", () => {
   it("a /relay request and a Postman publish never send at the same time", async () => {
     addLetter(1n, STATUS.Released);

@@ -48,8 +48,15 @@ async function main() {
 
   const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info });
   serve({ fetch: app.fetch, port: cfg.port }, (info) => console.log(`listening: http://localhost:${info.port}  (POST /relay, GET /health)`));
-  postman?.start();
-  if (postman) console.log(`Postman:   looking for released letters every ${cfg.postmanIntervalMs / 1000} s`);
+  if (postman) {
+    // Catch-up first: after a sleep (free Render plan) this publishes anything that became overdue, right away.
+    const r = await postman.start();
+    console.log(
+      `Postman:   startup catch-up done: looked at ${r.scanned} letters, published ${r.published.length}, ` +
+        `${r.waiting.length} waiting, ${r.cannotOpen.length} can't-open, ${r.errors} errors`,
+    );
+    console.log(`Postman:   then looking for released letters every ${cfg.postmanIntervalMs / 1000} s`);
+  }
 }
 
 main().catch((err) => {

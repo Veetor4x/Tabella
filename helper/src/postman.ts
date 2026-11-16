@@ -17,6 +17,10 @@
  *   4. after a failed attempt a letter waits (30 s, 60 s, ... up to 5 min) before the next one;
  *   5. ticks never overlap and tx sending shares the relay's Mutex (one nonce counter).
  *
+ * Startup catch-up: `start()` runs one FULL pass immediately (not after the first interval) and returns its
+ * report. On a free Render instance the process is stopped when idle and restarted by the next request, so
+ * this first pass is what publishes anything that became overdue while it slept, within seconds of waking.
+ *
  * A letter whose Part B this Postman cannot open (sealed to some other key, or corrupt) can never become
  * openable, so it is marked "can't open": logged ONCE, then skipped for good (no reads, no gas, no log spam).
  *
@@ -82,6 +86,7 @@ export function createPostman(deps: PostmanDeps) {
 
   let running = false;
   let stopped = true;
+  let catchUp: Promise<TickReport> | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   async function read(functionName: "letterCount" | "status" | "getLetter", args: unknown[] = []): Promise<unknown> {
@@ -213,19 +218,29 @@ export function createPostman(deps: PostmanDeps) {
     return report;
   }
 
-  /** Run a tick now, then every `postmanIntervalMs` after the previous one finishes (never overlapping). */
-  function start(): void {
-    if (!stopped) return;
+  /**
+   * Run a full catch-up tick RIGHT NOW, then a tick every `postmanIntervalMs` after the previous one finishes
+   * (never overlapping). Resolves with the catch-up tick's report; it never rejects (errors are logged and
+   * counted in the report). Calling it again while running returns the same promise.
+   */
+  function start(): Promise<TickReport> {
+    if (!stopped && catchUp) return catchUp;
     stopped = false;
     const loop = async () => {
+      if (stopped) return;
       await tick();
       if (!stopped) timer = setTimeout(loop, cfg.postmanIntervalMs);
     };
-    void loop();
+    catchUp = tick(); // one full pass over every letter, before any waiting
+    void catchUp.then(() => {
+      if (!stopped) timer = setTimeout(loop, cfg.postmanIntervalMs);
+    });
+    return catchUp;
   }
 
   function stop(): void {
     stopped = true;
+    catchUp = undefined;
     if (timer) clearTimeout(timer);
   }
 

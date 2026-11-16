@@ -75,6 +75,10 @@ repeated logging. `/health` shows the count as `postman.cannotOpen`. A restart l
 one is still missing after `POSTMAN_HEIR_KEY_GRACE_MINUTES` (30), it seals to the heirs that have one and logs a
 warning. With no keys at all it keeps waiting.
 
+**Startup catch-up.** `start()` runs one full pass immediately and returns its report (logged as
+`startup catch-up done: looked at N letters, published M, ...`), then ticks every 20 s. This is what makes a helper
+that wakes from sleep publish overdue Part B within seconds.
+
 **Honest limits.** The Postman can *delay* a release (liveness) but cannot read a letter: it only ever holds
 Part B, never Part A. It cannot fake a check-in or a pause, because those need the owner's or guardian's
 ML-DSA-87 signature, verified on-chain. It also sees *that* a letter was released and who its heirs are (public
@@ -142,11 +146,10 @@ needs `HELPER_MNEMONIC`; see `scripts/e2e-postman.ts`).
 and relays a `createLetter` and a `checkIn` signed by `shared/tabella-crypto.ts`. It needs
 `cd ../contracts && forge build` first.
 
-## Deploy on Render (always-on)
+## Deploy on Render (free plan)
 
-`../render.yaml` is a Blueprint for one **Starter** web service (the cheapest plan that never sleeps; a free instance
-spins down after 15 min idle, which would stop the Postman). It builds from the repo root because `helper/` imports
-`../shared/`:
+`../render.yaml` is a Blueprint for one web service on Render's **free** plan. It builds from the repo root because
+`helper/` imports `../shared/`:
 
 ```
 build:   npm ci --prefix shared && npm ci --prefix helper
@@ -154,11 +157,19 @@ start:   npm start --prefix helper
 health:  /health          TRUSTED_PROXY_HOPS=1   NODE_VERSION=22
 ```
 
-1. In Render, add a payment method (Account settings -> Billing); Starter needs one.
-2. New -> Blueprint -> connect `Veetor4x/Tabella`, pick the branch -> review -> Apply.
-3. Type the one secret when prompted: **`HELPER_MNEMONIC`** (the testnet-only helper account). Until it is set the
+> **Free plan: a release can be delayed until the helper wakes.** A free instance spins down after about 15 minutes
+> without inbound traffic and wakes (roughly a minute) on the next request. The Postman runs inside this process,
+> so while the helper sleeps **nothing is published**: a letter that becomes Released during the sleep waits until
+> something wakes it (a visit to the app that calls the helper, or any request to `/health`). The moment it
+> starts, the Postman runs one **full catch-up pass** over every letter *before* its first 20-second wait, so any
+> overdue Part B is published within seconds of waking (tested). Nothing is lost or published twice. For
+> releases on time, use the `starter` plan (always-on): change `plan` in `render.yaml`.
+> Letters opened by heirs are never affected: Part B stays on-chain once published.
+
+1. New -> Blueprint -> connect `Veetor4x/Tabella`, pick the branch -> review -> Apply.
+2. Type the one secret when prompted: **`HELPER_MNEMONIC`** (the testnet-only helper account). Until it is set the
    service fails fast with `HELPER_MNEMONIC is not set` and the deploy shows as failed; setting it redeploys.
-4. Check `https://<service>.onrender.com/health`: `ok: true`, a live `window`, and `postman.mlkemPublicKey`.
+3. Check `https://<service>.onrender.com/health`: `ok: true`, a live `window`, and `postman.mlkemPublicKey`.
 
 Everything else in the Blueprint is public (the registry address, CORS origins). The build and start commands were
 tested from a fresh clone with `NODE_ENV=production` (dev dependencies skipped).

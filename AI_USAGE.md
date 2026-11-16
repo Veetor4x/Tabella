@@ -38,3 +38,7 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **I decided:** the Postman key comes from HELPER_MNEMONIC (no new secret), a 20 s loop, safe retries, never publish twice.
 - **Claude chose:** a fixed non-secret BIP-39 passphrase for key separation; layered "never twice" (contract + simulate-first + reading the on-chain flag + backoff + no overlapping ticks); waiting for all heirs' keys with a 30-minute grace before sealing to a subset; `postmanAbi` kept separate from `registryAbi` so /relay can never encode publishPartB.
 - **Result:** E2E passed on testnet; Released -> Part B published in 13 s. Found along the way: letter #1 (made by the earlier deploy script) is sealed to a throwaway Postman key, so the Postman now marks such letters can't-open, logs once and stops (checked on the live registry: 1 log line, 0 txs over 6 ticks). A hybrid-signed `MsgRegisterKEMKey` is accepted by the chain for ordinary accounts, which settles the open question from the QoreX test: the registry path itself works.
+
+## 2026-11-16 (Render: free plan)
+- **I decided:** free Render plan instead of Starter; a sleeping helper may delay a release, and that is documented.
+- **Claude did:** made `postman.start()` an awaited, reported catch-up pass (one full tick before the first 20 s wait), 7 tests (checked by breaking it: all 7 fail), logged at startup; README + render.yaml notes on the free-plan sleep.

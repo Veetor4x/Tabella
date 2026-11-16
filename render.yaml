@@ -1,9 +1,13 @@
-# Render Blueprint for the Tabella helper (relay + Postman): one always-on web service.
+# Render Blueprint for the Tabella helper (relay + Postman): one web service on the FREE plan.
+#
+# Free instances spin down after ~15 minutes without inbound traffic and wake (about a minute) on the
+# next request. The Postman's loop lives in this process, so while it sleeps nothing is published:
+# a release can be delayed until something wakes the helper. On every start the Postman runs one full
+# catch-up pass at once, so overdue Part B goes out within seconds of waking. For an always-on helper,
+# change `plan` to `starter`.
 #
 # Why the repo root is the build context: helper/ imports ../shared/tabella-crypto.ts, so both
-# folders must be installed. The Postman's loop runs inside this process, so the service must
-# never sleep: a free instance spins down after 15 minutes without traffic, which would stop
-# releases. Starter is the cheapest plan that stays on.
+# folders must be installed.
 #
 # Secrets are NOT in this file. HELPER_MNEMONIC is `sync: false`: Render asks you for it in the
 # dashboard and never stores it in git.
@@ -11,7 +15,7 @@ services:
   - type: web
     name: tabella-helper
     runtime: node
-    plan: starter
+    plan: free
     region: virginia # closest to the testnet API (Cloudflare IAD)
     branch: claude/charming-gauss-6rpr0x # change to main once merged
     autoDeploy: true
