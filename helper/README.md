@@ -142,6 +142,27 @@ needs `HELPER_MNEMONIC`; see `scripts/e2e-postman.ts`).
 and relays a `createLetter` and a `checkIn` signed by `shared/tabella-crypto.ts`. It needs
 `cd ../contracts && forge build` first.
 
+## Deploy on Render (always-on)
+
+`../render.yaml` is a Blueprint for one **Starter** web service (the cheapest plan that never sleeps; a free instance
+spins down after 15 min idle, which would stop the Postman). It builds from the repo root because `helper/` imports
+`../shared/`:
+
+```
+build:   npm ci --prefix shared && npm ci --prefix helper
+start:   npm start --prefix helper
+health:  /health          TRUSTED_PROXY_HOPS=1   NODE_VERSION=22
+```
+
+1. In Render, add a payment method (Account settings -> Billing); Starter needs one.
+2. New -> Blueprint -> connect `Veetor4x/Tabella`, pick the branch -> review -> Apply.
+3. Type the one secret when prompted: **`HELPER_MNEMONIC`** (the testnet-only helper account). Until it is set the
+   service fails fast with `HELPER_MNEMONIC is not set` and the deploy shows as failed; setting it redeploys.
+4. Check `https://<service>.onrender.com/health`: `ok: true`, a live `window`, and `postman.mlkemPublicKey`.
+
+Everything else in the Blueprint is public (the registry address, CORS origins). The build and start commands were
+tested from a fresh clone with `NODE_ENV=production` (dev dependencies skipped).
+
 ## Files
 
 ```
