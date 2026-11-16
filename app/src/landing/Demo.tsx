@@ -241,6 +241,10 @@ function Open({ t }: { t: number }) {
     <div className="done-screen" style={{ paddingTop: 30 }}>
       <Headline text="Mia, this is for you." />
       <div className="open-seal">
+        <m.span className="open-light" aria-hidden="true" initial={false} animate={cracked ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.3 }} transition={{ duration: 1.4, ease: EASE }} />
+        {Array.from({ length: 9 }, (_, i) => (
+          <m.span key={i} className="open-ray" aria-hidden="true" style={{ rotate: -80 + i * 20 }} initial={false} animate={cracked ? { opacity: [0, 0.9, 0.35], scaleY: [0.2, 1.1, 0.9] } : { opacity: 0, scaleY: 0.2 }} transition={{ duration: 1.6, ease: EASE, delay: 0.1 + i * 0.04 }} />
+        ))}
         {half("l")}
         {half("r")}
         <m.span className="crack" initial={false} animate={{ opacity: at(t, 1300) && !cracked ? 1 : 0 }} transition={{ duration: 0.3 }} />

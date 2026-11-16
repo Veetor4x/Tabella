@@ -7,6 +7,7 @@ import { IconArrow, IconPlay } from "../ui/icons";
 import { fadeUp } from "../ui/motion";
 import { Demo } from "./Demo";
 import { IntroPlayer, IntroPrompt } from "./Intro";
+import { startIntroSound } from "./sfx";
 import { preloadVoice, unlockVoice } from "./voice";
 import { HeroLetter } from "./HeroLetter";
 import { Reveal } from "./Reveal";
@@ -27,6 +28,7 @@ export function Landing() {
   }, []);
   const start = (remember: boolean) => {
     unlockVoice(); // from the tap itself: this is what lets the voice play
+    startIntroSound(); // and the effects and the music bed
     if (remember) {
       setIntroChoice("yes");
       setChoice("yes");

@@ -82,3 +82,18 @@ export const IconClose = (p: P) => (
     <path d="m6 6 12 12M18 6 6 18" />
   </Icon>
 );
+export const IconChevL = (p: P) => (
+  <Icon {...p}>
+    <path d="M14.5 5.5 8 12l6.5 6.5" />
+  </Icon>
+);
+export const IconChevR = (p: P) => (
+  <Icon {...p}>
+    <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+  </Icon>
+);
+export const IconReplay = (p: P) => (
+  <Icon {...p}>
+    <path d="M5 12a7 7 0 1 0 2.2-5.1M5 5v4h4" />
+  </Icon>
+);

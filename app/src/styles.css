@@ -497,3 +497,67 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .intro-still { display: flex; gap: 8px; justify-content: center; padding: 0 16px max(18px, env(safe-area-inset-bottom)); flex-wrap: wrap; }
 .intro-still .btn { width: auto; margin-top: 0; padding: 12px 20px; min-height: 48px; font-size: 15px; }
 @media (min-width: 860px) { .intro-caption { min-height: 100px; } }
+
+/* ================= the story scenes (stick figures, thin lines): transform and opacity only ================= */
+.story { width: 100%; height: 100%; max-height: 100%; display: block; overflow: visible; }
+.story * { transform-box: view-box; }
+.story .sk { fill: none; stroke: #eef0f6; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.story .sk.soft { stroke-opacity: 0.45; }
+.story .sk.faint { stroke-opacity: 0.28; }
+.story .wx { fill: #c0303d; stroke: none; }
+.story .wxl { fill: none; stroke: #d4505c; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.story .wxr { fill: none; stroke: #d4505c; stroke-width: 2.2; }
+.story .page { fill: #0c0e13; }
+.story .paper-fill { fill: rgba(238, 240, 246, 0.07); }
+.story .nm, .story .cap { font-family: var(--serif); font-style: italic; font-size: 15px; fill: #b4bac7; }
+.story .say { font-family: var(--serif); font-style: italic; font-size: 20px; fill: #eef0f6; }
+.story .big { font-family: var(--serif); font-size: 84px; fill: #eef0f6; }
+.story .stampT { font-family: var(--serif); font-size: 18px; fill: #f0c9cd; }
+.story .stampring { fill: none; stroke: #e3a3aa; stroke-opacity: 0.5; stroke-width: 1.2; }
+.story .lamp-light { fill: rgba(255, 224, 186, 0.1); }
+.story .gift-light { fill: rgba(255, 226, 190, 0.14); }
+.story .pause { stroke-width: 3.4; }
+.story .an { animation-duration: 0.8s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); animation-fill-mode: backwards; }
+/* the finished picture is what is drawn; each animation only says where it comes from */
+@keyframes pop { from { opacity: 0; transform: scale(0.5); } }
+@keyframes rise { from { opacity: 0; transform: translate3d(0, 22px, 0); } }
+@keyframes ring { from { opacity: 0.7; transform: scale(0.5); } to { opacity: 0; transform: scale(1.5); } }
+@keyframes float-up { from { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.6); } 20% { opacity: 1; } to { opacity: 0; transform: translate3d(0, -48px, 0) scale(1); } }
+@keyframes bob { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -3px, 0) rotate(-1.2deg); } }
+@keyframes wave { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(16deg); } }
+@keyframes raise { from { transform: rotate(78deg); } }
+@keyframes glow { 0%, 100% { opacity: 0.55; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes glint { 0% { opacity: 0; transform: scale(0.2) rotate(0deg); } 40% { opacity: 1; transform: scale(1) rotate(45deg); } 100% { opacity: 0; transform: scale(1.3) rotate(90deg); } }
+@keyframes ray { 0%, 100% { opacity: 0.2; transform: scaleY(0.7); } 50% { opacity: 1; transform: scaleY(1.15); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+@keyframes drift-x { 0%, 100% { transform: translate3d(-8px, 0, 0); } 50% { transform: translate3d(8px, 0, 0); } }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes scrap { from { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); } 20% { opacity: 0.8; } to { opacity: 0; transform: translate3d(calc(var(--dir, 1) * 30px), -90px, 0) rotate(calc(var(--dir, 1) * 80deg)); } }
+@keyframes fly-away { from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; } to { transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--r)) scale(var(--s)); opacity: 0; } }
+@keyframes hop { from { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); } 20% { opacity: 1; } 55% { transform: translate3d(calc(var(--dx) * 0.55), calc(var(--dy) * 1.5), 0) rotate(var(--r)); } to { opacity: 0; transform: translate3d(var(--dx), 0, 0) rotate(0deg); } }
+@keyframes flip-page { to { transform: scaleY(0); opacity: 0; } }
+@keyframes slide-in { from { transform: translate3d(0, var(--dy), 0); } }
+@keyframes fold { from { transform: scaleY(1); } 50% { transform: scaleY(0.5); } to { transform: scaleY(0.62); } }
+@keyframes flap { from { transform: scaleY(-1); opacity: 0.5; } }
+@keyframes drop { from { opacity: 0; transform: translate3d(0, var(--dy), 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(1.3, 0.6); } }
+@keyframes stamp { from { opacity: 0; transform: scale(1.7); } 60% { transform: scale(0.94); } }
+@keyframes descend { from { opacity: 0; transform: translate3d(0, var(--dy), 0) rotate(-12deg); } 30% { opacity: 1; } 70% { transform: translate3d(0, -20px, 0) rotate(5deg); } }
+.story.still .an { animation: none !important; }
+.paused .story .an, .paused .story .an * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .story .an { animation: none !important; } }
+.camera { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+.cam-story, .cam-phone { position: absolute; inset: 0; display: grid; place-items: center; will-change: transform, opacity; }
+.cam-story { padding: 4px 8px 0; }
+.cam-story .story { width: min(100%, 520px); height: 100%; }
+.glass-arrow { position: absolute; top: 50%; z-index: 5; width: 46px; height: 46px; margin-top: -23px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--ink); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 0.7; transition: opacity 0.25s, transform 0.25s; font: inherit; }
+.glass-arrow:hover, .glass-arrow:focus-visible { opacity: 1; }
+.glass-arrow.left { left: 6px; }
+.glass-arrow.right { right: 6px; }
+@media (min-width: 700px) { .glass-arrow { width: 54px; height: 54px; margin-top: -27px; } .glass-arrow.left { left: 22px; } .glass-arrow.right { right: 22px; } }
+.intro-stage.paused .story .an, .intro-stage.paused .story .an * { animation-play-state: paused !important; }
+/* light pouring out of the cracked seal */
+.open-seal { overflow: visible; }
+.open-light { position: absolute; left: 50%; top: 50%; width: 330px; height: 330px; margin: -165px 0 0 -165px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 232, 196, 0.5), rgba(255, 220, 180, 0.14) 55%, rgba(255, 220, 180, 0)); will-change: transform, opacity; pointer-events: none; }
+.open-ray { position: absolute; left: 50%; bottom: 50%; width: 2px; height: 150px; margin-left: -1px; background: linear-gradient(to top, rgba(255, 236, 205, 0.75), rgba(255, 236, 205, 0)); transform-origin: 50% 100%; will-change: transform, opacity; pointer-events: none; }
+.open-seal .half { z-index: 2; }

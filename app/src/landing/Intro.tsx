@@ -1,13 +1,14 @@
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { playSealTone } from "../lib/sound";
 import { Headline } from "../ui/Headline";
-import { IconArrow, IconBack, IconClose, IconPause, IconPlay, IconSound } from "../ui/icons";
+import { IconArrow, IconBack, IconChevL, IconChevR, IconPause, IconPlay, IconReplay, IconSound } from "../ui/icons";
 import { EASE } from "../ui/motion";
 import { Background } from "../ui/Background";
 import { WaxSeal } from "../ui/WaxSeal";
-import { PhoneView, STEPS } from "./Demo";
-import { ESTIMATED_SECONDS, SCENES, VOICE_AT, VOICE_LINES, sceneMs, sentenceStarts, sentences, stepAt } from "./introScript";
+import { PhoneView } from "./Demo";
+import { BEATS, ESTIMATED_SECONDS, STEPS as DEMO_STEPS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences } from "./introScript";
+import { duckMusic, pauseMusic, playSfx, setIntroMuted, startIntroSound, stopIntroSound } from "./sfx";
+import { Story } from "./stories";
 import { allVoice, hasVoice, stopVoice, voiceAudio } from "./voice";
 
 /** The calm question a first-time visitor sees over the page. */
@@ -86,26 +87,28 @@ function useFit() {
 }
 
 /**
- * Full-screen intro: the opener, then the demo's own screens, with the voiceover and matching captions.
- * One clock (scene, ms into the scene) drives the screens, the captions and the voice. Mute, pause and skip.
- * Under reduced motion it is a still version: each scene at its finished moment, with captions, stepped by hand.
+ * Full-screen intro. The film is a list of beats (see introScript): the opener, then for each demo screen a short
+ * illustrated scene, a smooth zoom into the phone, and the screen itself, with the voiceover, soft sound effects and a
+ * calm music bed that ducks under the voice. One clock (beat, ms into the beat) drives everything.
+ * Under reduced motion it is a still version: each beat as its finished picture and screen, with captions, stepped by hand.
  */
 export function IntroPlayer({ onClose }: { onClose: () => void }) {
   const calm = !!useReducedMotion();
-  const [scene, setScene] = useState(0);
+  const [beat, setBeat] = useState(0);
   const [t, setT] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [ended, setEnded] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [calmSub, setCalmSub] = useState<"story" | "phone">("story"); // still version: each beat is two stills, the picture then the screen
   const [secs, setSecs] = useState<Record<number, number>>({});
-  const toneDone = useRef(false);
   const voiceStarted = useRef(-1);
+  const prevT = useRef(-1);
   const k = useFit();
   const running = !paused && !hidden && !ended && !calm;
-  const sc = SCENES[scene]!;
-  const lineSecs = secs[sc.line];
-  const length = sceneMs(scene, lineSecs);
+  const b = BEATS[beat]!;
+  const lineSecs = b.line === null ? undefined : secs[b.line];
+  const length = beatMs(beat, lineSecs);
 
   // real lengths of the recordings, as soon as they are known
   useEffect(() => {
@@ -121,7 +124,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
     return () => offs.forEach((o) => o());
   }, []);
 
-  // keep the page still behind, and close on Escape
+  // keep the page still behind, close on Escape, and let the sound end with the film
   useEffect(() => {
     const prev = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
@@ -134,6 +137,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
       window.removeEventListener("keydown", key);
       document.removeEventListener("visibilitychange", vis);
       stopVoice();
+      stopIntroSound();
     };
   }, [onClose]);
 
@@ -145,96 +149,138 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   }, [running]);
 
   const next = useCallback(() => {
-    if (scene >= SCENES.length - 1) setEnded(true);
+    if (beat >= BEATS.length - 1) setEnded(true);
     else {
-      setScene((s) => s + 1);
+      setBeat((s) => s + 1);
       setT(0);
     }
-  }, [scene]);
+  }, [beat]);
   useEffect(() => {
     if (running && t >= length) next();
   }, [t, length, running, next]);
 
-  // the voice: starts when its moment in the scene comes, stops when the scene ends, follows pause and mute
+  // sound effects fire at their moments in the beat
   useEffect(() => {
+    if (!running) return;
+    for (const c of cuesBetween(beat, prevT.current, t)) playSfx(c.sfx, c.gain);
+    prevT.current = t;
+  }, [t, beat, running]);
+  useEffect(() => {
+    prevT.current = -1;
+  }, [beat]);
+
+  // mute is one switch for the voice, the effects and the music
+  useEffect(() => {
+    setIntroMuted(muted);
     allVoice().forEach((a) => (a.muted = muted));
-  }, [muted, scene]);
+  }, [muted, beat]);
+  // pause holds the music too
+  useEffect(() => {
+    pauseMusic(!running && !ended);
+  }, [running, ended]);
+
+  // the voice: starts early in its beat, stops when the beat ends, follows pause and mute
   useEffect(() => {
     if (calm) return;
     allVoice().forEach((a) => {
-      if (a.dataset.voice !== String(sc.line + 1)) {
+      if (b.line === null || a.dataset.voice !== String(b.line + 1)) {
         a.pause();
         a.currentTime = 0;
       }
     });
     voiceStarted.current = -1;
-  }, [scene, sc.line, calm]);
+    duckMusic(false);
+  }, [beat, b.line, calm]);
   useEffect(() => {
-    const a = voiceAudio(sc.line);
-    if (calm || !a) return;
+    if (calm || b.line === null) return;
+    const a = voiceAudio(b.line);
+    if (!a) return;
     if (!running) {
       a.pause();
       return;
     }
-    if (t >= VOICE_AT[scene]! && voiceStarted.current !== scene) {
-      voiceStarted.current = scene;
+    if (t >= VOICE_AT[beat]! && voiceStarted.current !== beat) {
+      voiceStarted.current = beat;
       a.currentTime = 0;
       a.muted = muted;
       void a.play().catch(() => {});
-    } else if (voiceStarted.current === scene && a.paused && !a.ended) void a.play().catch(() => {}); // resume after a pause
-  }, [t, running, scene, sc.line, muted, calm]);
+      duckMusic(true);
+    } else if (voiceStarted.current === beat && a.paused && !a.ended) void a.play().catch(() => {});
+    else if (a.ended) duckMusic(false);
+  }, [t, running, beat, b.line, muted, calm]);
   useEffect(() => {
-    if (ended) stopVoice();
-  }, [ended]);
-  // the soft tone as the seal settles
-  useEffect(() => {
-    if (scene === 0 && t >= 3000 && !toneDone.current && !muted && !calm) {
-      toneDone.current = true;
-      playSealTone(true);
+    if (ended) {
+      stopVoice();
+      stopIntroSound();
     }
-  }, [scene, t, muted, calm]);
+  }, [ended]);
 
-  const at = calm ? length - 100 : t;
-  const view = stepAt(scene, at);
-  const veilOn = !!view && view.step === 4 && view.t >= 7000 && view.t < 8400 && !calm;
+  const { phase, screenT } = calm ? { phase: calmSub, screenT: b.phoneMs - 100 } : phaseAt(beat, t, lineSecs);
+  const step = b.step;
+  const veilOn = step === 4 && screenT >= 7000 && screenT < 8400 && !calm;
   const progress = Math.min(1, t / length);
-  const voiceSecs = lineSecs ?? undefined;
+  const voiceSecs = lineSecs;
 
-  // by-hand controls (reduced motion)
+  // by-hand controls (also the arrows)
   const hear = () => {
-    const a = voiceAudio(sc.line);
+    if (b.line === null) return;
+    const a = voiceAudio(b.line);
     if (!a) return;
     stopVoice();
     a.muted = false;
     void a.play().catch(() => {});
   };
-  const go = (d: number) => {
+  const jump = (n: number) => {
     stopVoice();
-    if (ended) {
-      setEnded(false);
+    duckMusic(false);
+    if (n < 0) return;
+    if (n >= BEATS.length) {
+      setEnded(true);
       return;
     }
-    const n = scene + d;
-    if (n < 0) return;
-    if (n >= SCENES.length) setEnded(true);
-    else {
-      setScene(n);
-      setT(0);
-    }
+    setEnded(false);
+    setBeat(n);
+    setT(0);
+    if (n === 0) toneReset();
   };
+  const toneReset = () => {};
+  const replay = () => {
+    stopVoice();
+    setEnded(false);
+    setPaused(false);
+    setBeat(0);
+    setT(0);
+    startIntroSound(); // music from the top again
+  };
+  const goPrev = () => {
+    if (calm && !ended && beat > 0 && calmSub === "phone") return setCalmSub("story");
+    if (calm) setCalmSub("phone");
+    jump(ended ? BEATS.length - 1 : beat - 1);
+  };
+  const goNext = () => {
+    if (calm && !ended && beat > 0 && calmSub === "story") return setCalmSub("phone");
+    setCalmSub("story");
+    jump(beat + 1);
+  };
+
+  const inStory = phase === "story";
+  const inPhone = phase !== "story";
 
   return (
     <m.div className="intro night" role="dialog" aria-modal="true" aria-label="Introduction to Tabella" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9, ease: EASE }}>
       <Background />
       <header className="intro-bar">
         <div className="intro-segs" aria-hidden="true">
-          {SCENES.map((_, i) => (
+          {BEATS.map((_, i) => (
             <span key={i}>
-              <m.i initial={false} animate={{ scaleX: ended || i < scene ? 1 : i === scene ? progress : 0 }} transition={{ duration: 0.12, ease: "linear" }} />
+              <m.i initial={false} animate={{ scaleX: ended || i < beat ? 1 : i === beat ? progress : 0 }} transition={{ duration: 0.12, ease: "linear" }} />
             </span>
           ))}
         </div>
         <div className="intro-buttons">
+          <button type="button" className="icon-btn" onClick={replay} aria-label="Replay">
+            <IconReplay size={20} />
+          </button>
           {!calm && (
             <button type="button" className="icon-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? "Play" : "Pause"} disabled={ended}>
               {paused ? <IconPlay size={20} /> : <IconPause size={20} />}
@@ -249,7 +295,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
         </div>
       </header>
 
-      <div className="intro-stage">
+      <div className={`intro-stage ${paused ? "paused" : ""}`}>
         {ended ? (
           <m.div className="intro-end" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE }}>
             <WaxSeal className="end-seal" />
@@ -263,46 +309,69 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
               <span>Back to the page</span>
             </button>
           </m.div>
-        ) : scene === 0 ? (
+        ) : beat === 0 ? (
           <Opener t={calm ? 99999 : t} calm={calm} />
         ) : (
-          <div className="intro-phone" style={{ height: 600 * k, width: 292 * k }}>
-            <div className="intro-phone-in" style={{ transform: `scale(${k})` }}>
-              <PhoneView step={view!.step} t={view!.t} shownT={view!.t} still={!running} veilOn={veilOn} />
-            </div>
+          <div className="camera">
+            {/* the illustrated scene: it fades in, then the camera pushes into the phone */}
+            <m.div className="cam-story" initial={false} animate={{ opacity: inStory ? 1 : 0, scale: inStory ? 1 : 1.5 }} transition={{ duration: inStory ? 0.7 : ZOOM_MS / 1000, ease: EASE }} >
+              <Story key={`${beat}-${calm}`} id={b.story!} still={calm} />
+            </m.div>
+            {/* the phone: it grows out of the scene, and shrinks away at the end */}
+            <m.div className="cam-phone" initial={false} animate={{ opacity: inPhone ? (phase === "zoom-out" ? 0 : 1) : 0, scale: phase === "zoom-out" ? 0.78 : inPhone ? 1 : 0.5 }} transition={{ duration: phase === "zoom-out" ? ZOOM_OUT_MS / 1000 : ZOOM_MS / 1000, ease: EASE }}>
+              <div className="intro-phone" style={{ height: 600 * k, width: 292 * k }}>
+                <div className="intro-phone-in" style={{ transform: `scale(${k})` }}>
+                  <PhoneView step={step!} t={screenT} shownT={screenT} still={!running} veilOn={veilOn} />
+                </div>
+              </div>
+            </m.div>
           </div>
         )}
       </div>
 
       {!ended && (
         <>
-          {scene === 0 ? (
+          {beat === 0 ? (
             <p className="sr-only" aria-live="polite">
               {VOICE_LINES[0]}
             </p>
+          ) : b.line !== null ? (
+            <Caption line={b.line} sinceVoice={t - VOICE_AT[beat]!} seconds={voiceSecs ?? ESTIMATED_SECONDS[b.line]!} still={calm} />
           ) : (
-            <Caption line={sc.line} sinceVoice={t - VOICE_AT[scene]!} seconds={voiceSecs ?? ESTIMATED_SECONDS[sc.line]!} still={calm} />
+            <div className="intro-caption" aria-hidden="true" />
           )}
           <p className="intro-step" aria-hidden="true">
-            {scene === 0 ? "" : STEPS[sc.steps[0]!]!.label}
+            {beat === 0 || step === null ? "" : DEMO_STEPS[step]!.label}
           </p>
         </>
       )}
 
+      {/* transparent glass arrows on the sides jump between scenes */}
+      {!(beat === 0 && !ended) && (
+        <button type="button" className="glass-arrow left" onClick={goPrev} aria-label="Previous scene">
+          <IconChevL size={26} />
+        </button>
+      )}
+      {!ended && (
+        <button type="button" className="glass-arrow right" onClick={goNext} aria-label="Next scene">
+          <IconChevR size={26} />
+        </button>
+      )}
+
       {calm && (
         <footer className="intro-still">
-          <button type="button" className="btn glass" onClick={() => go(-1)} disabled={scene === 0 && !ended}>
+          <button type="button" className="btn glass" onClick={() => goPrev()} disabled={beat === 0 && !ended}>
             <IconBack size={18} />
             <span>Back</span>
           </button>
-          {!ended && hasVoice(sc.line) && (
+          {!ended && b.line !== null && hasVoice(b.line) && (
             <button type="button" className="btn glass" onClick={hear}>
               <IconPlay size={18} />
               <span>Hear this line</span>
             </button>
           )}
           {!ended && (
-            <button type="button" className="btn primary" onClick={() => go(1)}>
+            <button type="button" className="btn primary" onClick={() => goNext()}>
               <span>Next</span>
               <IconArrow size={18} />
             </button>
