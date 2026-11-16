@@ -66,6 +66,11 @@ seals Part B to.
 4. a failed attempt backs off 30 s, 60 s, ... up to 5 min before the next one;
 5. ticks never overlap, and sending shares `/relay`'s queue (one nonce counter).
 
+**Part B it cannot open.** If a letter's `partBForPostman` is not sealed to the Postman's key (for example a letter
+made against a different helper) or is corrupt, that can never become openable. The letter is marked
+*can't-open*: one log line, then it is skipped for the life of the process, with no RPC calls, no gas and no
+repeated logging. `/health` shows the count as `postman.cannotOpen`. A restart looks (and logs) once more.
+
 **Heirs without a key.** Publishing is one-shot, so it waits until *every* heir has a registered opening key. If
 one is still missing after `POSTMAN_HEIR_KEY_GRACE_MINUTES` (30), it seals to the heirs that have one and logs a
 warning. With no keys at all it keeps waiting.

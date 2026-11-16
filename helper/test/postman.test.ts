@@ -316,15 +316,90 @@ describe("heirs' opening keys", () => {
   });
 });
 
-describe("Part B the Postman cannot open", () => {
-  it("is skipped without a send, and does not block other letters", async () => {
-    const stranger = sealKeysFromCardSeed(newSeed());
-    addLetter(1n, STATUS.Released, { sealedTo: stranger }); // sealed to someone else's key
+describe("Part B the Postman cannot open (e.g. letter #1 from the old deploy)", () => {
+  const cannotOpenLines = () => logs.filter((l) => /letter #1: cannot open Part B/.test(l));
+
+  it("is marked can't-open, logged once, and never retried: no gas, no log spam every 20 s", async () => {
+    addLetter(1n, STATUS.Released, { sealedTo: sealKeysFromCardSeed(newSeed()) }); // sealed to someone else's key
+    const postman = makePostman();
+
+    const first = await postman.tick();
+    expect(first.cannotOpen).toEqual([1n]);
+    expect(first.waiting).toEqual([]); // not "will retry"
+    expect(cannotOpenLines()).toHaveLength(1);
+    expect(cannotOpenLines()[0]).toMatch(/NOT_A_RECIPIENT/);
+    expect(cannotOpenLines()[0]).toMatch(/not retrying/);
+
+    // an hour of ticks (every 20 s): silence, and no work at all for that letter
+    const callsAfterFirst = chain.calls.length;
+    for (let i = 0; i < 180; i++) {
+      nowMs += 20_000;
+      const r = await postman.tick();
+      expect(r.cannotOpen).toEqual([]);
+      expect(r.scanned).toBe(0);
+    }
+    expect(cannotOpenLines()).toHaveLength(1); // still just the one line
+    expect(logs.filter((l) => /letter #1/.test(l)).length).toBe(2); // "is Released..." + "cannot open", nothing else
+    expect(chain.spending).toEqual([]); // no tx, no window
+    expect(chain.calls.slice(callsAfterFirst).every((c) => c === "call")).toBe(true); // only the cheap letterCount read
+    expect(chain.calls.slice(callsAfterFirst).length).toBe(180);
+    expect(chain.published).toHaveLength(0);
+  });
+
+  it("a corrupt Part B is treated the same way", async () => {
+    addLetter(1n, STATUS.Released);
+    chain.letters.get(1n)!.partBForPostman = "0xdeadbeef";
+    const postman = makePostman();
+    for (let i = 0; i < 5; i++) {
+      await postman.tick();
+      nowMs += 20_000;
+    }
+    expect(cannotOpenLines()).toHaveLength(1);
+    expect(chain.spending).toEqual([]);
+  });
+
+  it("does not block other letters, in the same tick or later", async () => {
+    addLetter(1n, STATUS.Released, { sealedTo: sealKeysFromCardSeed(newSeed()) });
     addLetter(2n, STATUS.Released);
-    const report = await makePostman().tick();
+    const postman = makePostman();
+    const report = await postman.tick();
+    expect(report.cannotOpen).toEqual([1n]);
     expect(report.published).toEqual([2n]);
-    expect(chain.published.map((p) => p.id)).toEqual([2n]);
-    expect(logs.join("\n")).toMatch(/letter #1: cannot open Part B \(NOT_A_RECIPIENT\)/);
+
+    addLetter(3n, STATUS.Released); // a new letter later is still handled
+    nowMs += 20_000;
+    expect((await postman.tick()).published).toEqual([3n]);
+    expect(chain.published.map((p) => p.id)).toEqual([2n, 3n]);
+  });
+
+  it("is shown in /health as a count, without making the Postman look unhealthy", async () => {
+    addLetter(1n, STATUS.Released, { sealedTo: sealKeysFromCardSeed(newSeed()) });
+    const postman = makePostman();
+    await postman.tick();
+    const info = postman.info();
+    expect(info.cannotOpen).toBe(1);
+    expect(info.lastTickOk).toBe(true);
+    expect(info.lastError).toBeNull();
+  });
+
+  it("only a fresh process (restart) looks again, and says it once more", async () => {
+    addLetter(1n, STATUS.Released, { sealedTo: sealKeysFromCardSeed(newSeed()) });
+    await makePostman().tick();
+    await makePostman().tick(); // restarted: empty memory
+    expect(cannotOpenLines()).toHaveLength(2);
+    expect(chain.spending).toEqual([]);
+  });
+
+  it("is different from a letter that is merely waiting (an heir has no key yet), which IS retried", async () => {
+    addLetter(1n, STATUS.Released);
+    chain.kemKeys.delete(evmToQor(SAM));
+    const postman = makePostman();
+    const r1 = await postman.tick();
+    expect(r1.cannotOpen).toEqual([]);
+    expect(r1.waiting).toEqual([1n]);
+    chain.kemKeys.set(evmToQor(SAM), sam.mlkemPublicKey);
+    nowMs += 20_000;
+    expect((await postman.tick()).published).toEqual([1n]);
   });
 });
 
@@ -359,8 +434,8 @@ describe("logs and /health leak nothing secret", () => {
 
     expect(json.postman.mlkemPublicKey).toBe(bytesToHex(postmanKeys.mlkemPublicKey));
     expect(json.postman.mlkemPublicKey).toHaveLength(2 + 1568 * 2);
-    expect(json.postman).toMatchObject({ enabled: true, address: chain.evmAddress, intervalSeconds: 20, lastTickOk: true, published: 1, lastError: null });
-    expect(Object.keys(json.postman).sort()).toEqual(["address", "enabled", "intervalSeconds", "lastError", "lastTickAt", "lastTickOk", "lettersWatched", "mlkemPublicKey", "published"]);
+    expect(json.postman).toMatchObject({ enabled: true, address: chain.evmAddress, intervalSeconds: 20, lastTickOk: true, published: 1, cannotOpen: 0, lastError: null });
+    expect(Object.keys(json.postman).sort()).toEqual(["address", "cannotOpen", "enabled", "intervalSeconds", "lastError", "lastTickAt", "lastTickOk", "lettersWatched", "mlkemPublicKey", "published"]);
 
     for (const secret of [bytesToHex(postmanKeys.mlkemSecretKey).slice(2, 60), bytesToHex(postmanKeys.seed).slice(2, 40), "test test", "SECRET"]) {
       expect(text).not.toContain(secret);

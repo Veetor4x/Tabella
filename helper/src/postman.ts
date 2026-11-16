@@ -17,6 +17,9 @@
  *   4. after a failed attempt a letter waits (30 s, 60 s, ... up to 5 min) before the next one;
  *   5. ticks never overlap and tx sending shares the relay's Mutex (one nonce counter).
  *
+ * A letter whose Part B this Postman cannot open (sealed to some other key, or corrupt) can never become
+ * openable, so it is marked "can't open": logged ONCE, then skipped for good (no reads, no gas, no log spam).
+ *
  * Logs contain letter ids, counts and tx hashes only: never Part B, keys or envelopes.
  */
 import { evmToQor } from "@qorechain/sdk";
@@ -48,6 +51,8 @@ export interface TickReport {
   published: bigint[];
   /** released letters we could not finish this tick (will retry) */
   waiting: bigint[];
+  /** letters found this tick whose Part B this Postman cannot open (never retried) */
+  cannotOpen: bigint[];
   errors: number;
 }
 
@@ -68,6 +73,8 @@ export function createPostman(deps: PostmanDeps) {
 
   /** Letters that need nothing more from us (published by anyone, or cancelled). */
   const finished = new Set<bigint>();
+  /** Letters whose Part B is not openable with our key. Permanent for this process; never retried. */
+  const cannotOpen = new Set<bigint>();
   const retry = new Map<bigint, { attempts: number; at: number }>();
   const firstSeenReleased = new Map<bigint, number>();
   const lastWaitLog = new Map<bigint, number>();
@@ -95,10 +102,10 @@ export function createPostman(deps: PostmanDeps) {
     try {
       B = openPart(hexToBytes(letter.partBForPostman), keys);
     } catch (err) {
-      backoff(id);
-      stats.lastError = "cannot_open_part_b";
-      report.waiting.push(id);
-      log(`letter #${id}: cannot open Part B (${(err as { code?: string }).code ?? "error"}); will retry`);
+      // Not sealed to our key (or corrupt): that will never change, so say so once and stop looking at it.
+      cannotOpen.add(id);
+      report.cannotOpen.push(id);
+      log(`letter #${id}: cannot open Part B (${(err as { code?: string }).code ?? "error"}); it is not sealed to this Postman's key. Marked can't-open, not retrying`);
       return;
     }
 
@@ -175,13 +182,13 @@ export function createPostman(deps: PostmanDeps) {
 
   /** One pass over all letters. Safe to call at any time; a second call while one runs does nothing. */
   async function tick(): Promise<TickReport> {
-    const report: TickReport = { skipped: false, scanned: 0, published: [], waiting: [], errors: 0 };
+    const report: TickReport = { skipped: false, scanned: 0, published: [], waiting: [], cannotOpen: [], errors: 0 };
     if (running) return { ...report, skipped: true };
     running = true;
     try {
       const count = (await read("letterCount")) as bigint;
       for (let id = 1n; id <= count; id++) {
-        if (finished.has(id)) continue;
+        if (finished.has(id) || cannotOpen.has(id)) continue; // nothing more to do, and no RPC calls spent on them
         report.scanned++;
         try {
           await visit(id, report);
@@ -233,6 +240,7 @@ export function createPostman(deps: PostmanDeps) {
       lastTickOk: stats.lastTickOk,
       lettersWatched: stats.scanned,
       published: stats.published,
+      cannotOpen: cannotOpen.size,
       lastError: stats.lastError,
     };
   }
