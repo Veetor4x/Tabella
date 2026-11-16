@@ -76,3 +76,9 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **Claude did:** `app/scripts/make-background-assets.cjs` draws illegible handwriting with a seeded random pen and saves it already blurred (PNG); `ui/Background.tsx` + CSS build the layer; "writes itself" is a sliding window with the image sliding the other way; `e2e/background.cjs` measures the rules (no filters, opacities, pause, reduced motion, scroll shift, glow warm-up).
 - **Bug found on the way (older than this change):** on the timing step the timeline marker's wrapper reached past the right edge, which made phones zoom the page out; the old "no sideways scrolling" check could not see it. Fixed, and both e2e scripts now check the page is not zoomed.
 - **Limits:** tilt needs a permission prompt on iPhones, which the app does not show, so tilt works on Android and with a mouse on desktop only. Real letters made by these runs: #16, #17, #18.
+
+## 2026-11-16 (background: smoke and dust, handwriting reverted)
+- **I decided:** the handwriting layer did not work; back to the flat pearl / ink base with grain, glass cards unchanged, plus slow candle-smoke wisps (6-10%), a few dust motes, depth with scroll and tilt, and a puff of smoke behind the seal when it settles.
+- **Claude did:** removed the handwriting, lattice and glow; `app/scripts/make-smoke-sprites.cjs` draws the wisps once, already soft (day and night PNGs); `ui/Background.tsx` spawns each wisp and mote with its own random path and timing (Web Animations, transform and opacity only), so nothing loops; `e2e/background.cjs` measures the rules.
+- **Claude chose:** on iPhones the tilt needs a system question, asked once on the first tap (otherwise tilt cannot work there).
+- **Real letters made by these runs:** #19, #20.
