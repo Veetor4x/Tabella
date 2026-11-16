@@ -90,14 +90,14 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
   let shots = 0; const t0 = Date.now();
   while (Date.now() - t0 < 200000) {
     if (await a.locator(".intro-end").count()) break;
-    const cap = (await a.locator(".intro-caption p").first().innerText().catch(() => "")).trim();
+    const cap = (await a.evaluate(() => document.querySelector(".intro-caption p")?.innerText || "")).trim();
     if (cap && !seenCaptions.includes(cap)) {
       seenCaptions.push(cap);
       if (shots < 8) await a.screenshot({ path: path.join(OUT, `06-scene-${String(++shots).padStart(2, "0")}.png`) });
     }
-    steps.add(await a.locator(".intro-step").innerText().catch(() => ""));
-    const story = await a.locator(".cam-story svg.story").first().getAttribute("aria-label").catch(() => null);
-    if (story && +(await a.locator(".cam-story").first().evaluate((e) => getComputedStyle(e).opacity).catch(() => 0)) > 0.6) sawStories.add(story.split(" ")[0] + " " + (story.split(" ")[1] || ""));
+    steps.add(await a.evaluate(() => document.querySelector(".intro-step")?.innerText || ""));
+    const story = await a.evaluate(() => { const e = document.querySelector(".cam-story"); return e && +getComputedStyle(e).opacity > 0.6 ? e.querySelector("svg.story")?.getAttribute("aria-label") : null; });
+    if (story) sawStories.add(story.split(" ").slice(0, 2).join(" "));
     for (const s of await audioState(a)) if (!s.paused && s.t > 0) playedLines.add(s.line);
     await a.waitForTimeout(250);
   }
@@ -213,7 +213,7 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
     const spoken = SCRIPT.slice(1).filter((_, i) => i !== 6); // the time-passes beat has no voice
     ok(captions.filter(Boolean).length === 7 && spoken.every((l) => captions.includes(l)), `still version: each screen shows its full caption (${captions.filter(Boolean).length} stepped by hand)`);
     ok(hear[0] === 1 && hear[1] === 1 && hear[6] === 0, `still version: 'Hear this line' appears only where a recording exists (${hear.join("")})`);
-    await p.getByRole("button", { name: "Next" }).click();
+    await p.getByRole("button", { name: "Next", exact: true }).click();
     await p.locator(".intro-end").waitFor();
     ok(await o.getByRole("link", { name: /Start here/ }).isVisible(), "still version: the end has 'Start here' too");
     await shot(p, "10-still-end");
