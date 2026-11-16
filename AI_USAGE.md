@@ -26,3 +26,9 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **I decided:** the library's shape (functions, 12-byte nonce + tag layout, A xor B split) and the test list from the brief.
 - **Claude chose:** card code = `tbl1_` + base64url(32-byte seed + 4-byte checksum) so typos are caught; `sealPartB` also accepts an array (Postman re-seals B to the heirs); 32-byte seeds only (both ML-DSA-87 and QoreSeal need exactly 32).
 - **Checked:** deliberately changed the domain string in TS and then in Solidity; both are caught by the cross-checked vectors.
+
+## 2026-11-16 (build step 3, part 2: helper relay)
+- **Generated:** `helper/` (Hono relay + /health, strict zod validation, per-IP and global rate limits, simulate-first, automatic EVM window reuse/reopen, one-at-a-time queue), 78 Vitest tests against a mocked chain, and `scripts/deploy-and-relay.ts` (real testnet run).
+- **I decided:** only four calls relayed; refuse anything that would revert; bigger demo-day window; no Postman yet.
+- **Claude chose:** the `{fn, args, pubkey, sig}` request shape; trusted-proxy-hops rule for X-Forwarded-For (rightmost entry); 25% gas headroom, fee = min(2 x gas price, 250 gwei); small module split instead of the single relay.ts/chain.ts in the brief's tree.
+- **Learned from the real run:** createLetter costs ~4.2M gas (envelopes are stored on-chain), so the per-tx cap default went from 6M to 12M; the EVM window charges gasLimit x maxFee against its value budget but the account is only charged actual use.
