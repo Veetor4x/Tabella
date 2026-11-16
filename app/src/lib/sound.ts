@@ -45,8 +45,8 @@ export function setSound(value: boolean): void {
  * One soft, low tone when the seal settles: a slow rise, a long fade, nothing sharp.
  * (A sine near F3 with a very quiet octave above it, through a low-pass filter.)
  */
-export function playSealTone(): void {
-  if (!on) return;
+export function playSealTone(force = false): void {
+  if (!on && !force) return;
   const c = primeAudio();
   if (!c) return;
   const t = c.currentTime + 0.02;

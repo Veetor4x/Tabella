@@ -67,3 +67,18 @@ export const IconUser = (p: P) => (
     <path d="M5.5 19.5c.8-3.3 3.3-5 6.5-5s5.7 1.7 6.5 5" />
   </Icon>
 );
+export const IconPlay = (p: P) => (
+  <Icon {...p}>
+    <path d="M8 5.5v13l10-6.5-10-6.5Z" />
+  </Icon>
+);
+export const IconPause = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 5.5v13M15 5.5v13" />
+  </Icon>
+);
+export const IconClose = (p: P) => (
+  <Icon {...p}>
+    <path d="m6 6 12 12M18 6 6 18" />
+  </Icon>
+);

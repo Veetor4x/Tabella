@@ -22,6 +22,7 @@ const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) fail
   // ---- reduced motion first: the calm version
   {
     const ctx = await browser.newContext({ ...devices["iPhone 13"], reducedMotion: "reduce" });
+    await ctx.addInitScript(() => localStorage.setItem("tabella.intro.v1", "skip")); // the intro has its own test (intro.cjs)
     const page = await ctx.newPage();
     await page.goto(BASE, { waitUntil: "networkidle" });
     await page.evaluate(() => document.querySelector("#how").scrollIntoView()); await page.waitForTimeout(2500);
@@ -37,6 +38,7 @@ const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) fail
   }
 
   const ctx = await browser.newContext({ ...devices["iPhone 13"], ...(RECORD ? { recordVideo: { dir: RECORD, size: { width: 390, height: 664 } } } : {}) });
+  await ctx.addInitScript(() => localStorage.setItem("tabella.intro.v1", "skip"));
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));

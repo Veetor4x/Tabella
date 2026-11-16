@@ -16,7 +16,7 @@ import { Reveal } from "./Reveal";
  * The first six screens are the app's own screens (with sample data); the last two (time passing, Mia opening it)
  * are previews of screens that are still being built.
  */
-const STEPS = [
+export const STEPS = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 7000 },
   { label: "People", caption: "Alex chooses who can read it. Each person turns Ready.", ms: 8000 },
   { label: "Guardian", caption: "A guardian can say “they're okay” if Alex goes quiet.", ms: 5500 },
@@ -255,13 +255,35 @@ function Open({ t }: { t: number }) {
     </div>
   );
 }
-const SCREENS = [Write, People, Guardian, Timing, SealScreen, StillHere, TimePasses, Open];
+export const SCREENS = [Write, People, Guardian, Timing, SealScreen, StillHere, TimePasses, Open];
 
 /* ---------- the phone and the controls ---------- */
+/** The phone frame with the current screen in it. `t` drives the screen; `shownT` is what it shows (a finished moment when still). */
+export function PhoneView({ step, t, shownT, still, veilOn }: { step: number; t: number; shownT: number; still: boolean; veilOn: boolean }) {
+  const phone = useRef<HTMLDivElement>(null);
+  useEffect(() => phone.current?.setAttribute("inert", ""), []);
+  const night = step >= 5 || (step === 4 && at(shownT, 8000));
+  const Screen = SCREENS[step]!;
+  void t;
+  return (
+    <div className={`phone ${still ? "still" : ""}`}>
+      <span className="phone-notch" />
+      <div ref={phone} className={`phone-screen ${night ? "night" : "day"}`} aria-hidden="true">
+        <div className="phone-bg" />
+        <AnimatePresence mode="wait" initial={false}>
+          <m.div key={step} className="phone-page" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.45, ease: EASE }}>
+            <Screen t={shownT} />
+          </m.div>
+        </AnimatePresence>
+        <m.div className="phone-veil" initial={false} animate={{ opacity: veilOn ? 1 : 0 }} transition={{ duration: 1 }} />
+      </div>
+    </div>
+  );
+}
+
 export function Demo() {
   const calm = useReducedMotion();
   const box = useRef<HTMLDivElement>(null);
-  const phone = useRef<HTMLDivElement>(null);
   const inView = useInView(box, { amount: 0.35 });
   const [paused, setPaused] = useState(false); // chosen by the visitor
   const [playedByChoice, setPlayed] = useState(false); // reduced motion: only plays if the visitor presses play
@@ -274,11 +296,8 @@ export function Demo() {
     document.addEventListener("visibilitychange", f);
     return () => document.removeEventListener("visibilitychange", f);
   }, []);
-  useEffect(() => phone.current?.setAttribute("inert", ""), []);
   // reduced motion: each screen is shown at its finished moment until the visitor presses play
   const shownT = calm && !playedByChoice ? STEPS[step]!.ms - 100 : t;
-  const night = step >= 5 || (step === 4 && at(shownT, 8000));
-  const Screen = SCREENS[step]!;
   const veil = step === 4 && t >= 7000 && t < 8400 && !(calm && !playedByChoice);
 
   const jump = (i: number) => {
@@ -298,18 +317,7 @@ export function Demo() {
       <Reveal>
         <div className="demo">
           <div className="phone-wrap">
-            <div className={`phone ${running ? "" : "still"}`}>
-              <span className="phone-notch" />
-              <div ref={phone} className={`phone-screen ${night ? "night" : ""}`} aria-hidden="true">
-                <div className="phone-bg" />
-                <AnimatePresence mode="wait" initial={false}>
-                  <m.div key={step} className="phone-page" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.45, ease: EASE }}>
-                    <Screen t={shownT} />
-                  </m.div>
-                </AnimatePresence>
-                <m.div className="phone-veil" initial={false} animate={{ opacity: veil ? 1 : 0 }} transition={{ duration: 1 }} />
-              </div>
-            </div>
+            <PhoneView step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
           </div>
           <p className="demo-caption" aria-live="polite">
             <span className="demo-num">{String(step + 1).padStart(2, "0")}</span>

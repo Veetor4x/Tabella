@@ -1,5 +1,6 @@
 /* Tabella: pearl light, thin lines, one editorial serif and a clean sans. Wax-red appears only on the seal and the main button. */
-:root {
+:root,
+.day {
   --pearl: #f4f3ef;
   --ink: #15171c;
   --soft: #50555f;
@@ -455,3 +456,44 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
   .print-card { box-shadow: none; width: 90mm; }
 }
 @media (prefers-reduced-motion: reduce) { .btn.primary.alert::after { animation: none !important; opacity: 0.4; } }
+
+/* ================= the intro: first-visit question, cinematic opener, full-screen demo with voiceover ================= */
+.watch-intro { appearance: none; background: none; border: 1px solid var(--line-strong); border-radius: 999px; padding: 6px 12px 6px 10px; font: inherit; font-size: 13px; color: var(--soft); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.watch-intro:hover { color: var(--ink); }
+.land-nav nav { align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px 16px; }
+.intro-scrim { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgba(21, 23, 28, 0.22); }
+.intro-prompt { width: min(420px, 100%); padding: 28px 24px 24px; text-align: center; background: rgba(250, 249, 246, 0.9); }
+.intro-prompt h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 8.6vw, 38px); line-height: 1.05; margin: 0 0 10px; }
+.intro-prompt p { margin: 0 0 22px; color: var(--soft); font-size: 15px; }
+.intro-prompt-actions { display: grid; gap: 10px; }
+.intro-prompt-actions .btn { width: 100%; margin-top: 0; }
+.intro { position: fixed; inset: 0; z-index: 100; color: var(--ink); isolation: isolate; display: grid; grid-template-rows: auto 1fr auto auto; background: #0c0e13; overflow: hidden; }
+.intro-bar { display: grid; gap: 12px; padding: max(14px, env(safe-area-inset-top)) 18px 0; }
+.intro-segs { display: flex; gap: 4px; }
+.intro-segs span { flex: 1; height: 2px; background: rgba(238, 240, 246, 0.2); overflow: hidden; border-radius: 2px; }
+.intro-segs i { display: block; height: 2px; background: #eef0f6; transform-origin: left center; transform: scaleX(0); will-change: transform; }
+.intro-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.icon-btn { appearance: none; background: rgba(255, 255, 255, 0.06); color: var(--ink); border: 1px solid var(--line); width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; font: inherit; }
+.icon-btn.text { width: auto; padding: 0 18px; border-radius: 999px; font-size: 14px; }
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
+.intro-stage { display: grid; place-items: center; min-height: 0; padding: 8px 12px; }
+.intro-phone { position: relative; }
+.intro-phone-in { position: absolute; left: 0; top: 0; transform-origin: 0 0; width: 292px; height: 600px; }
+.intro-caption { min-height: 88px; padding: 6px 28px 4px; display: grid; place-items: center; text-align: center; }
+.intro-caption p { margin: 0; font-family: var(--serif); font-size: clamp(25px, 6.6vw, 34px); line-height: 1.12; max-width: 22em; }
+.intro-step { margin: 0; padding: 0 0 max(18px, env(safe-area-inset-bottom)); text-align: center; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); min-height: 1.2em; }
+.opener { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 22px; }
+.opener-light { position: absolute; left: 50%; bottom: -18%; width: 150vmax; height: 80vmax; margin-left: -75vmax; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 232, 205, 0.3), rgba(255, 232, 205, 0.09) 46%, rgba(255, 232, 205, 0) 100%); will-change: transform, opacity; pointer-events: none; }
+.opener-words { position: relative; min-height: 4.4em; display: grid; align-items: end; padding: 0 22px; }
+.opener-h { font-size: clamp(38px, 11vw, 62px); line-height: 1.02; margin: 0; max-width: 11em; }
+.opener-seal { position: relative; height: 92px; display: grid; place-items: center; }
+.opener .seal-wrap { width: 84px; height: 84px; }
+.opener-name { position: relative; margin: 0; font-family: var(--serif); font-size: 40px; letter-spacing: 0.04em; will-change: transform, opacity; }
+.intro-end { text-align: center; display: grid; gap: 14px; justify-items: center; padding: 0 24px; max-width: 420px; }
+.intro-end h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(42px, 12vw, 60px); line-height: 1; margin: 6px 0 0; }
+.intro-end p { margin: 0 0 8px; color: var(--soft); }
+.intro-end .end-seal { width: 76px; height: 76px; filter: drop-shadow(0 0 22px rgba(190, 50, 70, 0.35)); }
+.intro-end .btn { width: 100%; margin-top: 0; }
+.intro-still { display: flex; gap: 8px; justify-content: center; padding: 0 16px max(18px, env(safe-area-inset-bottom)); flex-wrap: wrap; }
+.intro-still .btn { width: auto; margin-top: 0; padding: 12px 20px; min-height: 48px; font-size: 15px; }
+@media (min-width: 860px) { .intro-caption { min-height: 100px; } }

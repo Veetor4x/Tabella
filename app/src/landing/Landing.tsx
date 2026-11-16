@@ -1,9 +1,13 @@
-import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import { getIntroChoice, setIntroChoice, type IntroChoice } from "../lib/intro";
 import { Background } from "../ui/Background";
 import { Headline } from "../ui/Headline";
-import { IconArrow } from "../ui/icons";
+import { IconArrow, IconPlay } from "../ui/icons";
 import { fadeUp } from "../ui/motion";
 import { Demo } from "./Demo";
+import { IntroPlayer, IntroPrompt } from "./Intro";
+import { preloadVoice, unlockVoice } from "./voice";
 import { HeroLetter } from "./HeroLetter";
 import { Reveal } from "./Reveal";
 import { Trust } from "./Trust";
@@ -13,6 +17,28 @@ const REPO = "https://github.com/Veetor4x/Tabella";
 
 /** The front page. The owner's flow lives at /write. */
 export function Landing() {
+  // First visit only: ask once whether to show the intro, and remember the answer.
+  const [choice, setChoice] = useState<IntroChoice | null | "loading">("loading");
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    const c = getIntroChoice();
+    setChoice(c);
+    if (c === null) preloadVoice();
+  }, []);
+  const start = (remember: boolean) => {
+    unlockVoice(); // from the tap itself: this is what lets the voice play
+    if (remember) {
+      setIntroChoice("yes");
+      setChoice("yes");
+    }
+    setPlaying(true);
+  };
+  const skip = () => {
+    setIntroChoice("skip");
+    setChoice("skip");
+  };
+  const close = useCallback(() => setPlaying(false), []);
+
   return (
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
@@ -23,6 +49,10 @@ export function Landing() {
               Tabella
             </a>
             <nav aria-label="Sections">
+              <button type="button" className="watch-intro" onClick={() => start(false)}>
+                <IconPlay size={14} />
+                <span>Watch intro</span>
+              </button>
               <a href="#why">Why</a>
               <a href="#how">How</a>
               <a href="#trust">Trust</a>
@@ -82,6 +112,8 @@ export function Landing() {
             </p>
             <p className="fine">A demo on a test network. Please don't write real secrets yet.</p>
           </footer>
+          {choice === null && !playing && <IntroPrompt onYes={() => start(true)} onSkip={skip} />}
+          <AnimatePresence>{playing && <IntroPlayer key="intro" onClose={close} />}</AnimatePresence>
         </div>
       </MotionConfig>
     </LazyMotion>
