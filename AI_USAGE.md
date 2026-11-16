@@ -13,3 +13,5 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **Notes:** the SDK's preset RPC host doesn't resolve, so Claude switched the broadcast to REST with offline signing; hybrid signing also needed `resolveSignBytesVersion`.
 - **Generated (test #2):** `contracts/src/spike/PqcProbe.sol`, `spike/02-pqc-verify.ts`, and `spike/common.ts` (shared REST tx client + window helper, refactored out of 01).
 - **I decided:** keep the probe tiny (check/act/keyStatus only); test with a tampered signature to prove false-not-revert.
+- **Generated (test #3):** `app/src/spike/KemSpike.tsx` (temporary `/#spike` page), hash route in `main.tsx`, `app/vercel.json` REST rewrites.
+- **I decided:** treat the QoreX registration as a manual check; CORS answer drives the need for a REST proxy in production.
