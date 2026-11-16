@@ -1,22 +1,23 @@
-/** The wax seal. `stamp` plays the stamping motion once (skipped for people who prefer less motion). */
-export function WaxSeal({ stamp = false, className = "" }: { stamp?: boolean; className?: string }) {
+import { useId } from "react";
+
+/** The wax seal: the one place (with the main button) that carries the wax-red. */
+export function WaxSeal({ className = "" }: { className?: string }) {
+  const id = useId();
   return (
-    <svg className={`wax ${stamp ? "stamp" : ""} ${className}`} viewBox="0 0 100 100" role="img" aria-label="Wax seal">
+    <svg className={`wax ${className}`} viewBox="0 0 100 100" role="img" aria-label="Wax seal">
       <defs>
-        <radialGradient id="wax-g" cx="38%" cy="32%" r="75%">
-          <stop offset="0" stopColor="#c0414c" />
-          <stop offset="0.55" stopColor="#8c1d28" />
-          <stop offset="1" stopColor="#5e111a" />
+        <radialGradient id={`${id}-g`} cx="36%" cy="30%" r="80%">
+          <stop offset="0" stopColor="#b3333f" />
+          <stop offset="0.6" stopColor="#8a1c27" />
+          <stop offset="1" stopColor="#5d1019" />
         </radialGradient>
       </defs>
-      {/* an uneven pool of wax */}
       <path
-        d="M50 4c9 0 14 6 22 8 9 2 17 7 19 17 2 8-3 13-1 21 2 9 5 14 2 22-3 9-12 12-19 17-8 5-14 9-23 7-9-2-13-9-22-11C19 83 9 78 7 68c-2-9 4-14 3-23-1-9-6-15-2-24 4-9 14-11 22-14C38 4 43 4 50 4z"
-        fill="url(#wax-g)"
+        d="M50 5c8 0 13 5 21 7 9 2 16 7 18 16 2 8-2 13-1 21 1 8 4 13 1 21-3 8-11 12-18 16-8 4-13 8-21 6-8-2-13-8-21-10C20 80 11 75 9 66c-2-8 3-13 2-21-1-8-5-14-1-22 4-8 13-10 20-13C37 5 43 5 50 5z"
+        fill={`url(#${id}-g)`}
       />
-      <circle cx="50" cy="50" r="30" fill="none" stroke="#d98a92" strokeOpacity="0.55" strokeWidth="2.5" />
-      <circle cx="50" cy="50" r="24" fill="#7a1822" fillOpacity="0.5" />
-      <text x="50" y="62" textAnchor="middle" fontFamily="Georgia, 'Times New Roman', serif" fontSize="34" fontWeight="700" fill="#e9b6bb" fillOpacity="0.95">
+      <circle cx="50" cy="50" r="28" fill="none" stroke="#e3a3aa" strokeOpacity="0.5" strokeWidth="1.5" />
+      <text x="50" y="61" textAnchor="middle" fontFamily="'Instrument Serif', Georgia, serif" fontSize="34" fill="#f0c9cd" fillOpacity="0.95">
         T
       </text>
     </svg>

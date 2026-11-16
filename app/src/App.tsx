@@ -1,5 +1,5 @@
 import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { warmUp } from "./lib/helper";
 import { whenById } from "./lib/periods";
 import { clearDraft, emptyDraft, loadDraft, saveDraft, saveLetter, type Draft, type SealedLetter } from "./lib/storage";
@@ -10,20 +10,22 @@ import { WhenStep } from "./steps/WhenStep";
 import { WhoStep } from "./steps/WhoStep";
 import { WriteStep } from "./steps/WriteStep";
 import { Background } from "./ui/Background";
-import { CeremonyContext, type CeremonyApi, type CeremonyState } from "./ui/ceremony";
-import { stepVariants } from "./ui/motion";
-import { ProgressDots } from "./ui/ProgressDots";
-import { SealCeremony } from "./ui/SealCeremony";
+import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
+import { Numeral } from "./ui/Numeral";
+import { Pills } from "./ui/Pills";
 import { SoundToggle } from "./ui/SoundToggle";
-import { joinNames } from "./ui/steps";
-import { WaxSeal } from "./ui/WaxSeal";
+import { STEP_COUNT, countWords, joinNames } from "./ui/steps";
+
+const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
 
 export function App() {
   const [draft, setDraft] = useState<Draft>(() => loadDraft() ?? emptyDraft());
   const [step, setStep] = useState(0);
   const dir = useRef(1); // 1 = going forward, -1 = going back: the screens slide differently
   const [sealed, setSealed] = useState<SealedLetter | null>(null);
-  const [ceremony, setCeremony] = useState<CeremonyState | null>(null);
+  const [veil, setVeil] = useState(false); // the dark veil that carries the screen into night
+  const [taps, setTaps] = useState(0);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Wake the Postman now: by the time the letter is written it is up.
   useEffect(() => {
@@ -32,11 +34,12 @@ export function App() {
   useEffect(() => {
     saveDraft(draft);
   }, [draft]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
   const next = () => {
     dir.current = 1;
-    setStep((s) => Math.min(4, s + 1));
+    setStep((s) => Math.min(STEP_COUNT - 1, s + 1));
   };
   const back = () => {
     dir.current = -1;
@@ -44,38 +47,53 @@ export function App() {
   };
 
   const onSealed = useCallback((letter: SealedLetter) => {
+    // Keep the cards first, before any animation: nothing can lose them.
     saveLetter(letter);
     clearDraft();
     dir.current = 1;
-    setSealed(letter);
+    setVeil(true); // fade the day screen out to night...
+    timers.current.push(
+      setTimeout(() => {
+        setSealed(letter); // ...swap while it is fully dark...
+        setVeil(false); // ...and let the night screen fade in
+      }, 1300),
+    );
   }, []);
 
   function another() {
     dir.current = -1;
-    setSealed(null);
-    setDraft(emptyDraft());
-    setStep(0);
+    setVeil(true);
+    timers.current.push(
+      setTimeout(() => {
+        setSealed(null);
+        setDraft(emptyDraft());
+        setStep(0);
+        setVeil(false);
+      }, 900),
+    );
   }
 
-  const ceremonyApi = useMemo<CeremonyApi>(
-    () => ({
-      show: (s) => setCeremony(s),
-      update: (p) => setCeremony((c) => (c ? { ...c, ...p } : c)),
-      hide: () => setCeremony(null),
-    }),
-    [],
-  );
+  const demo = demoFromUrl() || taps >= 5;
+  const owner = draft.owner ?? "";
+  const words = countWords(draft.text);
+  const pills: { key: string; label: string }[] = [];
+  if (!sealed) {
+    if (step >= 1) pills.push({ key: "letter", label: `Letter · ${words} ${words === 1 ? "word" : "words"}` });
+    if (step >= 2) pills.push({ key: "people", label: `${draft.heirs.length} ${draft.heirs.length === 1 ? "person" : "people"}` });
+    if (step >= 3) pills.push({ key: "guardian", label: draft.guardian?.name.trim() ? `${draft.guardian.name.trim()} · guardian` : "No guardian" });
+    if (step >= 4) pills.push({ key: "when", label: whenById(draft.when).label });
+  }
 
   const screen = sealed ? (
     <DoneScreen letter={sealed} onAnother={another} />
   ) : step === 0 ? (
-    <WriteStep text={draft.text} onChange={(text) => patch({ text })} onNext={next} />
+    <WriteStep text={draft.text} owner={owner} onChange={(text) => patch({ text })} onOwner={(o) => patch({ owner: o })} onNext={next} />
   ) : step === 1 ? (
-    <WhoStep heirs={draft.heirs} onChange={(heirs) => patch({ heirs })} onBack={back} onNext={next} />
+    <WhoStep owner={owner} heirs={draft.heirs} onChange={(heirs) => patch({ heirs })} onBack={back} onNext={next} />
   ) : step === 2 ? (
     <GuardianStep guardian={draft.guardian} onChange={(guardian) => patch({ guardian })} onBack={back} onNext={next} />
   ) : step === 3 ? (
-    <WhenStep when={draft.when} names={joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
+    <WhenStep when={draft.when} demo={demo} names={joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
   ) : (
     <SealStep draft={{ ...draft, when: whenById(draft.when).id }} onBack={back} onSealed={onSealed} />
   );
@@ -84,30 +102,33 @@ export function App() {
     // reducedMotion="user": people who ask their device for less motion get a calm version (fades, no movement)
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
-        <CeremonyContext.Provider value={ceremonyApi}>
+        <div className={`root ${sealed ? "night" : ""}`}>
           <Background />
           <div className="app">
             <header className="brand">
               <div className="brand-text">
-                <span className="brand-name">
-                  <WaxSeal /> Tabella
-                </span>
+                <span className="brand-name">Tabella</span>
                 <span className="brand-tag">Sealed today. Opened when it matters.</span>
               </div>
               <SoundToggle />
             </header>
             <main>
-              {!sealed && <ProgressDots step={step} />}
+              {!sealed && (
+                <>
+                  <Numeral step={step} onTap={() => setTaps((t) => t + 1)} />
+                  <Pills items={pills} />
+                </>
+              )}
               <AnimatePresence mode="wait" custom={dir.current} initial={false}>
-                <m.div key={sealed ? "done" : step} className="screen" custom={dir.current} variants={stepVariants} initial="enter" animate="center" exit="exit">
+                <m.div key={sealed ? "done" : step} className="screen" custom={dir.current} variants={screenVariants} transition={screenTransition} initial="enter" animate="center" exit="exit">
                   {screen}
                 </m.div>
               </AnimatePresence>
             </main>
             <footer>A demo on a test network. Please don't write real secrets yet.</footer>
           </div>
-          <AnimatePresence>{ceremony && <SealCeremony key="ceremony" {...ceremony} />}</AnimatePresence>
-        </CeremonyContext.Provider>
+          <m.div className="veil" aria-hidden="true" initial={false} animate={{ opacity: veil ? 1 : 0 }} transition={veilTransition} style={{ pointerEvents: veil ? "auto" : "none" }} />
+        </div>
       </MotionConfig>
     </LazyMotion>
   );

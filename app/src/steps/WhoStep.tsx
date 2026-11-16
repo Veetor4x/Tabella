@@ -5,11 +5,11 @@ import { isReady } from "../lib/seal";
 import type { Person } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
-import { MiniStack } from "../ui/MiniStack";
-import { badgePop, cardEnter } from "../ui/motion";
+import { IconCheck, IconPlus } from "../ui/icons";
+import { cardAppear, fadeTransition, ghostLayer, sharpLayer } from "../ui/motion";
 import { StepFrame } from "../ui/StepFrame";
 
-/** 0xE6EB…6Ca3: enough to recognise an address that does not fit the field. */
+/** 0xE6EB…6Ca3: enough to recognise an address. */
 const short = (evm: string) => `${evm.slice(0, 6)}…${evm.slice(-4)}`;
 
 export type Readiness = "empty" | "invalid" | "checking" | "ready" | "notready" | "error";
@@ -44,24 +44,46 @@ export function useReadiness(address: string): Readiness {
   return state;
 }
 
+const MESSAGE: Partial<Record<Readiness, string>> = {
+  invalid: "That doesn't look like an address. It starts with qor1 or 0x.",
+  notready: "They haven't set up their opening card yet. Once they have, this turns to Ready and you can continue.",
+  error: "We couldn't check just now. Please try again in a moment.",
+};
+
 function Badge({ state }: { state: Readiness }) {
-  // "Ready ✓" pops in with a bounce; the others simply appear
   if (state === "ready")
     return (
-      <m.span key="ready" className="badge ready" {...badgePop}>
-        Ready ✓
-      </m.span>
+      <span className="badge ready">
+        Ready <IconCheck size={15} />
+      </span>
     );
-  if (state === "checking") return <span className="badge wait">Checking…</span>;
   if (state === "notready") return <span className="badge not">Not ready yet</span>;
+  if (state === "error") return <span className="badge not">Couldn't check</span>;
   return null;
 }
 
-const MESSAGE: Partial<Record<Readiness, string>> = {
-  invalid: "That doesn't look like an address. It starts with qor1 or 0x.",
-  notready: "They haven't set up their opening card yet. Once they have, this turns to Ready ✓ and you can continue.",
-  error: "We couldn't check just now. Please try again in a moment.",
-};
+/**
+ * A blurred, empty glass card appears while we look the person up, then sharpens into their card.
+ * (Two layers cross-fade: a statically blurred ghost and the sharp card. Only opacity moves.)
+ */
+function Reveal({ person, evm, state }: { person: Person; evm: string; state: Readiness }) {
+  const checking = state === "checking" || state === "empty";
+  return (
+    <div className="reveal">
+      <m.div className="reveal-ghost glass" aria-hidden="true" initial={{ opacity: 1 }} animate={ghostLayer(checking)} transition={fadeTransition}>
+        <span className="sheen" />
+      </m.div>
+      <m.div className="reveal-card glass" initial={{ opacity: 0 }} animate={sharpLayer(checking)} transition={fadeTransition} aria-live="polite">
+        <span className="avatar">{person.name.trim().charAt(0).toUpperCase() || "•"}</span>
+        <span className="reveal-text">
+          <strong>{person.name.trim() || "Their name"}</strong>
+          <span className="mono">{short(evm)}</span>
+        </span>
+        <Badge state={state} />
+      </m.div>
+    </div>
+  );
+}
 
 function PersonRow(props: {
   index: number;
@@ -72,20 +94,14 @@ function PersonRow(props: {
   onRemove: () => void;
   onState: (s: Readiness) => void;
 }) {
-  const { index, person } = props;
+  const { index, person, onState } = props;
   const parsed = useMemo(() => parseAddress(person.address), [person.address]);
   const state = useReadiness(person.address);
-  const { onState } = props;
   useEffect(() => onState(state), [state, onState]);
+  const message = props.duplicate ? "This address is already in the list." : MESSAGE[state] ?? "";
 
   return (
-    <div className="person glass" role="group" aria-label={`Person ${index + 1}`}>
-      <div className="person-head">
-        <strong>Person {index + 1}</strong>
-        <span aria-live="polite">
-          <Badge state={state} />
-        </span>
-      </div>
+    <div className="person" role="group" aria-label={`Person ${index + 1}`}>
       <label htmlFor={`name-${index}`}>Their name</label>
       <Field>
         <input id={`name-${index}`} type="text" value={person.name} placeholder="Mia" autoComplete="off" onChange={(e) => props.onChange({ ...person, name: e.target.value })} />
@@ -107,13 +123,15 @@ function PersonRow(props: {
           aria-describedby={`addr-msg-${index}`}
         />
       </Field>
-      {parsed.ok && (
-        <p className="addr-preview">
-          Looks like <span>{short(parsed.evm)}</span>
-        </p>
-      )}
+      <AnimatePresence initial={false}>
+        {parsed.ok && (
+          <m.div key="reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fadeTransition}>
+            <Reveal person={person} evm={parsed.evm} state={state} />
+          </m.div>
+        )}
+      </AnimatePresence>
       <p className="status-line" id={`addr-msg-${index}`} aria-live="polite">
-        {props.duplicate ? "This address is already in the list." : MESSAGE[state] ?? ""}
+        {message}
       </p>
       {props.canRemove && (
         <button type="button" className="link" onClick={props.onRemove}>
@@ -124,14 +142,12 @@ function PersonRow(props: {
   );
 }
 
-export function WhoStep(props: { heirs: Person[]; onChange: (h: Person[]) => void; onBack: () => void; onNext: () => void }) {
+export function WhoStep(props: { owner: string; heirs: Person[]; onChange: (h: Person[]) => void; onBack: () => void; onNext: () => void }) {
   const { heirs } = props;
   // Stable ids for the cards on screen (the saved draft keeps its simple shape).
   const nextId = useRef(heirs.length);
   const [ids, setIds] = useState<number[]>(() => heirs.map((_, i) => i));
   const [states, setStates] = useState<Record<number, Readiness>>({});
-  const [fly, setFly] = useState<{ id: number; x: number; y: number } | null>(null);
-  const addButton = useRef<HTMLButtonElement>(null);
 
   const keys = heirs.map((h) => {
     const p = parseAddress(h.address);
@@ -139,33 +155,25 @@ export function WhoStep(props: { heirs: Person[]; onChange: (h: Person[]) => voi
   });
   const duplicate = (i: number) => !!keys[i] && keys.indexOf(keys[i]!) !== i;
   const allReady = heirs.every((h, i) => h.name.trim() && states[ids[i]!] === "ready" && !duplicate(i));
-
   const update = (i: number, p: Person) => props.onChange(heirs.map((h, j) => (j === i ? p : h)));
 
-  function add() {
-    const id = nextId.current++;
-    const r = addButton.current?.getBoundingClientRect();
-    // the new person's little card flies from this button into the stack
-    setFly(r ? { id, x: r.left + r.width / 2, y: r.top + r.height / 2 } : null);
-    setIds((prev) => [...prev, id]);
+  const add = () => {
+    setIds((prev) => [...prev, nextId.current++]);
     props.onChange([...heirs, { name: "", address: "" }]);
-  }
-  function remove(i: number) {
+  };
+  const remove = (i: number) => {
     setIds((prev) => prev.filter((_, j) => j !== i));
     props.onChange(heirs.filter((_, j) => j !== i));
-  }
+  };
 
+  const title = `${props.owner.trim() ? `${props.owner.trim()}, who` : "Who"} should *read* this one day?`;
   return (
-    <StepFrame step={1} lead="Choose up to three people. The letter is sealed just for them." onBack={props.onBack} onNext={props.onNext} nextDisabled={!allReady}>
-      <MiniStack
-        fly={fly}
-        items={heirs.map((h, i) => ({ id: ids[i]!, letter: h.name.trim().charAt(0).toUpperCase() || String(i + 1), ready: states[ids[i]!] === "ready" }))}
-      />
+    <StepFrame step={1} title={title} lead="Choose up to three people. The letter is sealed just for them." onBack={props.onBack} onNext={props.onNext} nextDisabled={!allReady}>
       <AnimatePresence initial={false}>
         {heirs.map((p, i) => {
           const id = ids[i]!;
           return (
-            <m.div key={id} {...cardEnter}>
+            <m.div key={id} {...cardAppear}>
               <PersonRow
                 index={i}
                 person={p}
@@ -180,12 +188,14 @@ export function WhoStep(props: { heirs: Person[]; onChange: (h: Person[]) => voi
         })}
       </AnimatePresence>
       {heirs.length < MAX_PEOPLE && (
-        <Button ref={addButton} variant="small" onClick={add}>
-          + Add another person
+        <Button variant="glass" onClick={add}>
+          <span className="inline-icon">
+            <IconPlus size={16} /> Add another person
+          </span>
         </Button>
       )}
       <p className="hint">
-        <strong>Ready ✓</strong> means they have set up their opening card, so a letter can be sealed for them. Paste the address they gave you.
+        <strong>Ready</strong> means they have set up their opening card, so a letter can be sealed for them. Paste the address they gave you.
       </p>
     </StepFrame>
   );

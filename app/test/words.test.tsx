@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { App } from "../src/App";
@@ -37,13 +38,13 @@ const sealed: SealedLetter = {
 const draft = { text: "Dear Mia and Leo,\nThe spare door code is under the blue pot.", heirs, guardian: { name: "Sofia" }, when: "6m" as const };
 
 const screens: [string, () => string][] = [
-  ["write", () => renderToStaticMarkup(<WriteStep text="" onChange={noop} onNext={noop} />)],
-  ["write, filled", () => renderToStaticMarkup(<WriteStep text={draft.text} onChange={noop} onNext={noop} />)],
-  ["who", () => renderToStaticMarkup(<WhoStep heirs={heirs} onChange={noop} onBack={noop} onNext={noop} />)],
+  ["write", () => renderToStaticMarkup(<WriteStep text="" owner="" onChange={noop} onOwner={noop} onNext={noop} />)],
+  ["write, filled", () => renderToStaticMarkup(<WriteStep text={draft.text} owner="Alex" onChange={noop} onOwner={noop} onNext={noop} />)],
+  ["who", () => renderToStaticMarkup(<WhoStep owner="Alex" heirs={heirs} onChange={noop} onBack={noop} onNext={noop} />)],
   ["guardian, added", () => renderToStaticMarkup(<GuardianStep guardian={{ name: "Sofia" }} onChange={noop} onBack={noop} onNext={noop} />)],
   ["guardian, skipped", () => renderToStaticMarkup(<GuardianStep guardian={null} onChange={noop} onBack={noop} onNext={noop} />)],
-  ["when", () => renderToStaticMarkup(<WhenStep when="6m" names="Mia and Leo" onChange={noop} onBack={noop} onNext={noop} />)],
-  ["when, with the hidden demo option", () => renderToStaticMarkup(<WhenStep when="demo" names="Mia and Leo" onChange={noop} onBack={noop} onNext={noop} />)],
+  ["when", () => renderToStaticMarkup(<WhenStep when="6m" names="Mia and Leo" demo={false} onChange={noop} onBack={noop} onNext={noop} />)],
+  ["when, with the hidden demo option", () => renderToStaticMarkup(<WhenStep when="demo" names="Mia and Leo" demo onChange={noop} onBack={noop} onNext={noop} />)],
   ["seal", () => renderToStaticMarkup(<SealStep draft={draft} onBack={noop} onSealed={noop} />)],
   ["done", () => renderToStaticMarkup(<DoneScreen letter={sealed} onAnother={noop} />)],
   ["whole app, first screen", () => renderToStaticMarkup(<App />)],
@@ -62,9 +63,26 @@ describe("no technical words on screen", () => {
 
   it("says the things the brief says", () => {
     const html = renderToStaticMarkup(<DoneScreen letter={sealed} onAnother={noop} />);
-    expect(html).toContain("Only Mia and Leo can open this, even with future super-computers.");
+    expect(html).toContain("Only Mia and Leo can open this.");
+    expect(html).toContain('aria-label="Sealed."');
     expect(html).toContain("Keep this safe, like a spare house key.");
     expect(html).toContain("Your I&#x27;m-still-here card");
-    expect(renderToStaticMarkup(<WriteStep text="" onChange={noop} onNext={noop} />)).toContain("Write something they&#x27;ll want to read one day.");
+    expect(renderToStaticMarkup(<WriteStep text="" owner="" onChange={noop} onOwner={noop} onNext={noop} />)).toContain("What do you want them to read one day?");
+    expect(renderToStaticMarkup(<WhoStep owner="Alex" heirs={heirs} onChange={noop} onBack={noop} onNext={noop} />)).toContain("Alex, who should read this one day?");
+  });
+});
+
+// Mature and quiet: no emoji, sparkles or decorative symbols anywhere in the app's own text or source.
+const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+describe("no emoji", () => {
+  it.each(screens)("on screen: %s", (_name, render) => {
+    expect(EMOJI.exec(render())?.[0]).toBeUndefined();
+  });
+  it("in the source", () => {
+    const dir = (d: string) => readdirSync(new URL(`../src/${d}`, import.meta.url)).filter((f) => /\.(tsx?|css)$/.test(f)).map((f) => `${d}${f}`);
+    for (const f of [...dir(""), ...dir("ui/"), ...dir("steps/")]) {
+      const src = readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
+      expect(EMOJI.exec(src)?.[0], f).toBeUndefined();
+    }
   });
 });

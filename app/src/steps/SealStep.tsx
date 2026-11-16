@@ -1,3 +1,4 @@
+import { m } from "framer-motion";
 import { useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { friendlyError } from "../lib/helper";
@@ -5,9 +6,10 @@ import { sealLetter, type Progress } from "../lib/seal";
 import { whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
 import type { Draft, SealedLetter } from "../lib/storage";
 import { parseAddress } from "../lib/addr";
+import { IconLetter } from "../ui/icons";
+import { PeopleMap } from "../ui/PeopleMap";
 import { StepFrame } from "../ui/StepFrame";
-import { joinNames } from "../ui/steps";
-import { useCeremony } from "../ui/ceremony";
+import { WaxSeal } from "../ui/WaxSeal";
 import { isSoundOn, primeAudio } from "../lib/sound";
 
 const PROGRESS_TEXT: Record<Progress, string> = {
@@ -20,23 +22,25 @@ const PROGRESS_TEXT: Record<Progress, string> = {
 export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l: SealedLetter) => void }) {
   const { draft } = props;
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ceremony = useCeremony();
   const calm = useReducedMotion();
 
   const names = draft.heirs.map((h) => h.name.trim());
   const when = whenById(draft.when as WhenId);
-  const quote = draft.text.trim().split("\n")[0]!.slice(0, 60);
-
+  const quote = draft.text.trim().split("\n")[0]!.slice(0, 44);
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   async function seal() {
     setError(null);
     setBusy(true);
+    setProgress(PROGRESS_TEXT.postman);
+    // bring the map to the middle of the screen, so the shimmer is what you watch
+    document.querySelector(".map")?.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" });
     if (isSoundOn()) primeAudio(); // browsers only let sound start from a tap: this is that tap
-    ceremony.show({ stage: "folding", text: PROGRESS_TEXT.postman, slow: false });
     // If the Postman was asleep the first step can take a while: say so, kindly.
-    const slowTimer = setTimeout(() => ceremony.update({ slow: true }), 8000);
+    const slowTimer = setTimeout(() => setSlow(true), 8000);
     try {
       const heirs = draft.heirs.map((h) => {
         const p = parseAddress(h.address);
@@ -53,61 +57,51 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
             warning: when.warning,
             whenLabel: when.label,
           },
-          (p) => ceremony.update({ text: PROGRESS_TEXT[p] }),
+          (p) => setProgress(PROGRESS_TEXT[p]),
         ),
-        wait(calm ? 0 : 2800), // let the letter finish folding into its envelope
+        wait(calm ? 0 : 2600), // let the slow shimmer cross the map at least once
       ]);
       clearTimeout(slowTimer);
-      // It is sealed for real now: the wax drop falls and the seal stamps down.
-      ceremony.update({ stage: "dropping", slow: false });
-      await wait(calm ? 0 : 620);
-      ceremony.update({ stage: "stamping" });
-      await wait(calm ? 800 : 1350);
       props.onSealed(letter);
-      ceremony.hide();
     } catch (e) {
       clearTimeout(slowTimer);
-      ceremony.hide();
       setError(friendlyError(e));
       setBusy(false);
+      setSlow(false);
+      setProgress(null);
     }
   }
 
-  return (
-    <>
-      <StepFrame step={4} lead="One last look. Once it's sealed, nobody can change it." onBack={props.onBack} onNext={seal} nextLabel="Seal it" nextDisabled={busy}>
-        <section className="summary glass" aria-label="Your letter">
-          <dl>
-            <div className="row">
-              <dt>Letter</dt>
-              <dd>
-                <span className="quote">“{quote}{draft.text.trim().length > 60 ? "…" : ""}”</span>
-              </dd>
-            </div>
-            <div className="row">
-              <dt>For</dt>
-              <dd>{joinNames(names)}</dd>
-            </div>
-            <div className="row">
-              <dt>Guardian</dt>
-              <dd>{draft.guardian ? draft.guardian.name.trim() : "None"}</dd>
-            </div>
-            <div className="row">
-              <dt>Opens after</dt>
-              <dd>
-                {when.id === "demo" ? "2 quiet minutes" : `${when.label} of quiet`}
-                <span className="quote">{when.id === "demo" ? "then a 1-minute countdown" : `then a ${WARNING_DAYS}-day countdown`}</span>
-              </dd>
-            </div>
-          </dl>
-        </section>
-        {error && (
-          <p className="notice" role="alert">
-            {error}
-          </p>
-        )}
-      </StepFrame>
+  const root = (
+    <m.div className="letter-node glass" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
+      <span className="letter-ico">
+        <IconLetter size={18} />
+      </span>
+      <span className="letter-quote">“{quote}{draft.text.trim().length > 44 ? "…" : ""}”</span>
+      <WaxSeal className="mini-seal" />
+    </m.div>
+  );
 
-    </>
+  return (
+    <StepFrame
+      step={4}
+      title="Ready to *seal* it?"
+      lead="One last look. Once it's sealed, nobody can change it."
+      onBack={busy ? undefined : props.onBack}
+      onNext={seal}
+      nextLabel={busy ? "Sealing…" : "Seal it"}
+      nextDisabled={busy}
+    >
+      <PeopleMap root={root} people={names} guardian={draft.guardian ? draft.guardian.name.trim() : null} variant="day" working={busy} />
+      <p className="status-line center" role="status" aria-live="polite">
+        {busy ? (slow ? "The Postman is waking up. This can take a minute…" : progress) : ""}
+      </p>
+      <p className="hint center">{when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>
+      {error && (
+        <p className="notice" role="alert">
+          {error}
+        </p>
+      )}
+    </StepFrame>
   );
 }

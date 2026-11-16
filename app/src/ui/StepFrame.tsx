@@ -1,61 +1,56 @@
 import { m } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "./Button";
-import { emojiPop, rise, riseContainer } from "./motion";
-import { STEPS } from "./steps";
+import { Headline } from "./Headline";
+import { fadeUp } from "./motion";
 
 interface Props {
   step: number;
+  title: string;
   lead?: string;
   children: ReactNode;
   onBack?: () => void;
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
-  /** Secret gesture hook for the hourglass (opens the demo timer). */
-  onEmojiTap?: () => void;
 }
 
-/** One step per screen: a calm heading, the content, and big Back / Next buttons. (The dots live above, in App.) */
-export function StepFrame({ step, lead, children, onBack, onNext, nextLabel = "Next", nextDisabled, onEmojiTap }: Props) {
+/** One question per screen: a headline that rises word by word, the answer, and Back / Continue. (The number and pills live in App.) */
+export function StepFrame({ step, title, lead, children, onBack, onNext, nextLabel = "Continue", nextDisabled }: Props) {
   const heading = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
 
-  // Move focus to the new heading so screen-reader users hear where they are. Not on the very first screen,
+  // Move focus to the new headline so screen-reader users hear where they are. Not on the very first screen,
   // so a phone keyboard does not pop up before anyone has touched anything.
   useEffect(() => {
     if (first.current) {
       first.current = false;
       if (step === 0) return;
     }
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
   }, [step]);
 
-  const s = STEPS[step]!;
   return (
-    <m.div variants={riseContainer} initial="hidden" animate="show">
-      <m.h1 ref={heading} tabIndex={-1} variants={rise}>
-        <m.span className="emoji" aria-hidden="true" onClick={onEmojiTap} {...emojiPop}>
-          {s.emoji}
-        </m.span>
-        {s.title}
-      </m.h1>
+    <div className="step">
+      <Headline ref={heading} text={title} />
       {lead && (
-        <m.p className="lead" variants={rise}>
+        <m.p className="lead" {...fadeUp(0.45)}>
           {lead}
         </m.p>
       )}
-      <m.div variants={rise}>{children}</m.div>
-      <m.div className="actions" variants={rise}>
+      <m.div className="body" {...fadeUp(0.6)}>
+        {children}
+      </m.div>
+      <div className="actions">
         {onBack && (
-          <Button variant="secondary" onClick={onBack}>
+          <Button variant="quiet" arrow="back" onClick={onBack}>
             Back
           </Button>
         )}
-        <Button onClick={onNext} disabled={nextDisabled}>
+        <Button arrow="forward" onClick={onNext} disabled={nextDisabled}>
           {nextLabel}
         </Button>
-      </m.div>
-    </m.div>
+      </div>
+    </div>
   );
 }

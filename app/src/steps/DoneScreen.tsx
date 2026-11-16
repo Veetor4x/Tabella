@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { m } from "framer-motion";
+import { useEffect, useState } from "react";
 import { EXPLORER } from "../lib/config";
 import type { SealedLetter } from "../lib/storage";
 import { joinNames } from "../ui/steps";
 import { Button } from "../ui/Button";
-import { Sparkles } from "../ui/Sparkles";
+import { Headline } from "../ui/Headline";
+import { fadeUp, sealSettle } from "../ui/motion";
+import { PeopleMap } from "../ui/PeopleMap";
+import { playSealTone } from "../lib/sound";
 import { WaxSeal } from "../ui/WaxSeal";
 
 async function copyText(text: string): Promise<boolean> {
@@ -41,15 +45,15 @@ function Card(props: { title: string; blurb: string; code: string; file: string 
       <code className="code mono">{props.code}</code>
       <div className="card-actions">
         <Button
-          variant="small"
+          variant="glass"
           onClick={async () => {
             setCopied(await copyText(props.code));
             setTimeout(() => setCopied(false), 2500);
           }}
         >
-          {copied ? "Copied ✓" : "Copy"}
+          {copied ? "Copied" : "Copy"}
         </Button>
-        <Button variant="small" onClick={() => download(props.file, `Tabella: ${props.title}\nKeep this safe, like a spare house key.\n\n${props.code}\n`)}>
+        <Button variant="glass" onClick={() => download(props.file, `Tabella: ${props.title}\nKeep this safe, like a spare house key.\n\n${props.code}\n`)}>
           Save a copy
         </Button>
       </div>
@@ -60,50 +64,65 @@ function Card(props: { title: string; blurb: string; code: string; file: string 
 export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnother: () => void }) {
   const [saved, setSaved] = useState(false);
   const names = joinNames(letter.heirs.map((h) => h.name));
+
+  // One soft low tone as the seal settles (only if sound was switched on).
+  useEffect(() => {
+    const t = setTimeout(playSealTone, 1300);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="done-screen">
-      <Sparkles />
-      <div className="done-seal">
-        <WaxSeal stamp />
-      </div>
-      <h1 tabIndex={-1} style={{ textAlign: "center" }}>
-        Sealed.
-      </h1>
-      <p className="lead" style={{ textAlign: "center" }}>
-        Only {names} can open this, even with future super-computers.
-      </p>
+      <Headline text="Sealed." />
+      <m.p className="lead center" {...fadeUp(0.7)}>
+        Only {names} can open this.
+      </m.p>
 
-      <Card
-        title="Your I'm-still-here card"
-        blurb="Keep this safe, like a spare house key. It's how you tell us you're okay, so the letter stays sealed."
-        code={letter.ownerCard}
-        file="tabella-im-still-here-card.txt"
+      <PeopleMap
+        variant="night"
+        start={1.1}
+        people={letter.heirs.map((h) => h.name)}
+        guardian={letter.guardianName}
+        root={
+          <m.div className="seal-wrap" {...sealSettle}>
+            <WaxSeal />
+          </m.div>
+        }
       />
-      {letter.guardianCard && letter.guardianName && (
+
+      <m.div {...fadeUp(2.4)}>
         <Card
-          title={`${letter.guardianName}'s guardian card`}
-          blurb={`Give this to ${letter.guardianName}. It lets them tap “They're okay” if you go quiet.`}
-          code={letter.guardianCard}
-          file="tabella-guardian-card.txt"
+          title="Your I'm-still-here card"
+          blurb="Keep this safe, like a spare house key. It's how you tell us you're okay, so the letter stays sealed."
+          code={letter.ownerCard}
+          file="tabella-im-still-here-card.txt"
         />
-      )}
+        {letter.guardianCard && letter.guardianName && (
+          <Card
+            title={`${letter.guardianName}'s guardian card`}
+            blurb={`Give this to ${letter.guardianName}. It lets them tap “They're okay” if you go quiet.`}
+            code={letter.guardianCard}
+            file="tabella-guardian-card.txt"
+          />
+        )}
 
-      <label className="check">
-        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
-        <span>I've saved or printed {letter.guardianCard ? "these cards" : "this card"}.</span>
-      </label>
+        <label className="check">
+          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
+          <span>I've saved or printed {letter.guardianCard ? "these cards" : "this card"}.</span>
+        </label>
 
-      <p className="hint">
-        <a className="link" href={`${EXPLORER}/tx/${letter.txHash}`} target="_blank" rel="noreferrer">
-          See the public receipt
-        </a>
-      </p>
+        <p className="hint">
+          <a className="link" href={`${EXPLORER}/tx/${letter.txHash}`} target="_blank" rel="noreferrer">
+            See the public receipt
+          </a>
+        </p>
 
-      <div className="actions">
-        <Button disabled={!saved} onClick={onAnother}>
-          Write another letter
-        </Button>
-      </div>
+        <div className="actions static">
+          <Button disabled={!saved} arrow="forward" onClick={onAnother}>
+            Write another letter
+          </Button>
+        </div>
+      </m.div>
     </div>
   );
 }

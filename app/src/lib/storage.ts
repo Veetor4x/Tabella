@@ -7,6 +7,8 @@ export interface Person {
 
 /** What the person has typed so far. Kept on this device so a refresh does not lose the letter. */
 export interface Draft {
+  /** the owner's first name, optional: used to ask the questions ("Alex, who should read this one day?") */
+  owner?: string;
   text: string;
   heirs: Person[];
   /** null = no guardian */

@@ -24,10 +24,10 @@ function animatedKeys(value: unknown, out = new Set<string>()): Set<string> {
 }
 
 describe("animations only move and fade (transform + opacity)", () => {
-  const presets = Object.entries(motion).filter(([name]) => !/Transition$|^spring|^SLIDE$|^riseContainer$/.test(name));
+  const presets = Object.entries(motion).filter(([name]) => !/Transition$|^EASE$|^headlineContainer$/.test(name));
 
   it("has presets to check", () => {
-    expect(presets.length).toBeGreaterThan(25);
+    expect(presets.length).toBeGreaterThan(12);
   });
 
   it.each(presets)("preset %s", (_name, preset) => {

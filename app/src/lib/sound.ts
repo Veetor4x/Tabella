@@ -1,5 +1,5 @@
 /**
- * The soft thud when the seal lands. Off by default (and remembered once you switch it on).
+ * One soft low tone when the seal settles. Off by default (and remembered once you switch it on).
  * Made with the browser's audio engine, so there is no sound file to load.
  */
 const KEY = "tabella.sound.v1";
@@ -41,36 +41,29 @@ export function setSound(value: boolean): void {
   listeners.forEach((f) => f());
 }
 
-/** A low, soft "thud": a short falling tone plus a muffled tap. Quiet on purpose. */
-export function playThud(): void {
+/**
+ * One soft, low tone when the seal settles: a slow rise, a long fade, nothing sharp.
+ * (A sine near F3 with a very quiet octave above it, through a low-pass filter.)
+ */
+export function playSealTone(): void {
   if (!on) return;
   const c = primeAudio();
   if (!c) return;
-  const t = c.currentTime;
-
-  const osc = c.createOscillator();
-  const body = c.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(150, t);
-  osc.frequency.exponentialRampToValueAtTime(46, t + 0.17);
-  body.gain.setValueAtTime(0.0001, t);
-  body.gain.exponentialRampToValueAtTime(0.3, t + 0.012);
-  body.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-  osc.connect(body).connect(c.destination);
-  osc.start(t);
-  osc.stop(t + 0.36);
-
-  const n = Math.floor(c.sampleRate * 0.05);
-  const buf = c.createBuffer(1, n, c.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 2;
-  const tap = c.createBufferSource();
+  const t = c.currentTime + 0.02;
   const lp = c.createBiquadFilter();
-  const tapGain = c.createGain();
-  tap.buffer = buf;
   lp.type = "lowpass";
-  lp.frequency.value = 650;
-  tapGain.gain.value = 0.14;
-  tap.connect(lp).connect(tapGain).connect(c.destination);
-  tap.start(t);
+  lp.frequency.value = 700;
+  lp.connect(c.destination);
+  for (const [freq, peak] of [[174.6, 0.16], [349.2, 0.025]] as const) {
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.45);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 3.4);
+    osc.connect(g).connect(lp);
+    osc.start(t);
+    osc.stop(t + 3.5);
+  }
 }
