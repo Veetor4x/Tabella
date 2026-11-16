@@ -15,3 +15,8 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **I decided:** keep the probe tiny (check/act/keyStatus only); test with a tampered signature to prove false-not-revert.
 - **Generated (test #3):** `app/src/spike/KemSpike.tsx` (temporary `/#spike` page), hash route in `main.tsx`, `app/vercel.json` REST rewrites.
 - **I decided:** treat the QoreX registration as a manual check; CORS answer drives the need for a REST proxy in production.
+
+## 2026-11-16 (build step 2)
+- **Generated:** `contracts/src/TabellaRegistry.sol` (section 6 of the brief), `contracts/test/TabellaRegistry.t.sol` (54 tests incl. 1 fuzz), `contracts/test/mocks/MockPqc.sol`; installed forge-std as a submodule; turned on `via_ir` (createLetter has 9 params).
+- **I decided:** the brief's contract design (key hashes, signed message, 2-pause cap, timestamps only). Claude chose: string action names in the signed message, `letterId = letterCount + 1` starting at 1, create signs nonce 0, `heirKeyReady` returns `(registered, algorithmId)`.
+- **Notes:** the mock "verifies" with sig == keccak256(pubkey ++ message); real ML-DSA-87 verification was proven on testnet in spike 02.
