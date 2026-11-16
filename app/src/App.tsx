@@ -1,86 +1,69 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import {
-  QORECHAIN_REST_ENDPOINTS,
-  classifyEvmWindowRejection,
-  qorechainTestnet,
-  evmWindowStatus,
-  type EvmWindowRejection,
-} from "@qorechain/evm";
-import { useQuery } from "@tanstack/react-query";
-import { formatEther } from "viem";
-import { useAccount, useBalance, useBlockNumber, useSendTransaction } from "wagmi";
-
-const REMEDY: Record<EvmWindowRejection, string> = {
-  "no-pqc-key": "This account has no registered ML-DSA-87 key. Register one on the native lane first.",
-  "no-window": "No EVM authorisation window is open. Open one on the native lane, then retry.",
-  exhausted: "The window has run out of blocks, transactions or value. Open a new one.",
-  invalid: "The chain refused the window parameters.",
-};
-
-/**
- * The REST API of each chain, through the dev server's proxy (vite.config.ts):
- * the public REST endpoints send no CORS headers. Same chains as
- * QORECHAIN_REST_ENDPOINTS.
- */
-const REST_PROXY: Record<number, string | undefined> = Object.fromEntries(
-  Object.keys(QORECHAIN_REST_ENDPOINTS).map((id) => [
-    Number(id),
-    Number(id) === qorechainTestnet.id ? "/lcd-testnet" : "/lcd-mainnet",
-  ]),
-);
-
-/** The account's EVM authorisation window, read over the native-lane REST API. */
-function WindowStatus({ address, chainId }: { address: `0x${string}`; chainId: number }) {
-  const rest = REST_PROXY[chainId];
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["evm-window", chainId, address],
-    queryFn: () => evmWindowStatus({ rest: rest!, address }),
-    enabled: rest !== undefined,
-    refetchInterval: 10_000,
-  });
-  if (!rest) return <p>Unknown network.</p>;
-  if (isLoading) return <p>Reading the EVM window...</p>;
-  if (error) return <p>Could not read the window: {error.message}</p>;
-  if (!data?.found) {
-    return <p>EVM window: none. Sending from this account is refused until one is opened.</p>;
-  }
-  return (
-    <p>
-      EVM window: {data.live ? "live" : "not usable"} ({data.remainingBlocks.toString()} blocks,{" "}
-      {data.remainingTxs.toString()} transactions, {data.remainingValue.toString()} uqor left)
-    </p>
-  );
-}
+import { useEffect, useState } from "react";
+import { warmUp } from "./lib/helper";
+import { whenById } from "./lib/periods";
+import { clearDraft, emptyDraft, loadDraft, saveDraft, saveLetter, type Draft, type SealedLetter } from "./lib/storage";
+import { DoneScreen } from "./steps/DoneScreen";
+import { GuardianStep } from "./steps/GuardianStep";
+import { SealStep } from "./steps/SealStep";
+import { WhenStep } from "./steps/WhenStep";
+import { WhoStep } from "./steps/WhoStep";
+import { WriteStep } from "./steps/WriteStep";
+import { joinNames } from "./ui/steps";
+import { WaxSeal } from "./ui/WaxSeal";
 
 export function App() {
-  const { address, chainId, isConnected } = useAccount();
-  const { data: balance } = useBalance({ address });
-  const { data: block } = useBlockNumber({ watch: true });
-  const send = useSendTransaction();
-  const rejection = send.error ? classifyEvmWindowRejection(send.error) : undefined;
+  const [draft, setDraft] = useState<Draft>(() => loadDraft() ?? emptyDraft());
+  const [step, setStep] = useState(0);
+  const [sealed, setSealed] = useState<SealedLetter | null>(null);
+
+  // Wake the Postman now: by the time the letter is written it is up.
+  useEffect(() => {
+    warmUp().catch(() => {});
+  }, []);
+  useEffect(() => {
+    saveDraft(draft);
+  }, [draft]);
+
+  const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
+  const next = () => setStep((s) => Math.min(4, s + 1));
+  const back = () => setStep((s) => Math.max(0, s - 1));
+
+  function onSealed(letter: SealedLetter) {
+    saveLetter(letter);
+    clearDraft();
+    setSealed(letter);
+  }
+
+  function another() {
+    setSealed(null);
+    setDraft(emptyDraft());
+    setStep(0);
+  }
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
-      <h1>QoreChain EVM dApp</h1>
-      <ConnectButton />
-      <p>Latest block: {block?.toString() ?? "..."}</p>
-
-      {isConnected && address && chainId ? (
-        <section>
-          <p>
-            Account <code>{address}</code> on chain {chainId}
-          </p>
-          <p>Balance: {balance ? `${formatEther(balance.value)} QOR` : "..."}</p>
-          <WindowStatus address={address} chainId={chainId} />
-          <button type="button" disabled={send.isPending} onClick={() => send.sendTransaction({ to: address, value: 0n })}>
-            Send 0 QOR to yourself
-          </button>
-          {send.data && <p>Sent: {send.data}</p>}
-          {send.error && <p>Refused: {rejection ? REMEDY[rejection] : send.error.message}</p>}
-        </section>
-      ) : (
-        <p>Connect a wallet to read your account.</p>
-      )}
-    </main>
+    <div className="app">
+      <header className="brand">
+        <span className="brand-name">
+          <WaxSeal /> Tabella
+        </span>
+        <span className="brand-tag">Sealed today. Opened when it matters.</span>
+      </header>
+      <main>
+        {sealed ? (
+          <DoneScreen letter={sealed} onAnother={another} />
+        ) : step === 0 ? (
+          <WriteStep text={draft.text} onChange={(text) => patch({ text })} onNext={next} />
+        ) : step === 1 ? (
+          <WhoStep heirs={draft.heirs} onChange={(heirs) => patch({ heirs })} onBack={back} onNext={next} />
+        ) : step === 2 ? (
+          <GuardianStep guardian={draft.guardian} onChange={(guardian) => patch({ guardian })} onBack={back} onNext={next} />
+        ) : step === 3 ? (
+          <WhenStep when={draft.when} names={joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
+        ) : (
+          <SealStep draft={{ ...draft, when: whenById(draft.when).id }} onBack={back} onSealed={onSealed} />
+        )}
+      </main>
+      <footer>A demo on a test network. Please don't write real secrets yet.</footer>
+    </div>
   );
 }

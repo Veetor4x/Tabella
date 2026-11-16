@@ -42,3 +42,9 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 ## 2026-11-16 (Render: free plan)
 - **I decided:** free Render plan instead of Starter; a sleeping helper may delay a release, and that is documented.
 - **Claude did:** made `postman.start()` an awaited, reported catch-up pass (one full tick before the first 20 s wait), 7 tests (checked by breaking it: all 7 fail), logged at startup; README + render.yaml notes on the free-plan sleep.
+
+## 2026-11-16 (UI piece 1 of 4: look and feel + the owner's flow)
+- **Generated:** the whole `app/src` interface (paper/wax-red design system, 5 one-per-screen steps with progress dots, the sealing animation and "Sealed." screen), `lib/` (address handling, sealing glue on top of `shared/tabella-crypto.ts`, helper client with friendly errors), 29 tests, and `e2e/owner-flow.cjs` (drives it at iPhone width and seals a real letter).
+- **I decided:** demo names (Mia, Leo, Sofia), the step order and copy, 3/6/12 months + a hidden 2-minute demo, paste-an-address for now, "Ready ✓", the Render helper as the relay.
+- **Claude chose:** a 14-day countdown after the quiet period; 5 taps on the hourglass (or `?demo`) reveal the demo timer; the guardian card is made at sealing time; cards shown as text codes for now (QR/print comes with the cards piece).
+- **Found by looking at screenshots, not by the checks:** tagline crowding the wordmark, a tap-highlight wash on the choice cards, addresses cut off in their field. Found by tests: viem's `getAddress` does not verify a mixed-case checksum (a typo would have passed), now checked.

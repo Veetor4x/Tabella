@@ -12,7 +12,12 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "useDefineForClassFields": true,
-    "types": ["vite/client"]
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@qorechain/pqc": ["./node_modules/@qorechain/pqc"],
+      "@qorechain/qoreseal": ["./node_modules/@qorechain/qoreseal"],
+      "viem": ["./node_modules/viem"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

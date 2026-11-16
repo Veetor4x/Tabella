@@ -1,0 +1,70 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { App } from "../src/App";
+import { DoneScreen } from "../src/steps/DoneScreen";
+import { GuardianStep } from "../src/steps/GuardianStep";
+import { SealStep } from "../src/steps/SealStep";
+import { WhenStep } from "../src/steps/WhenStep";
+import { WhoStep } from "../src/steps/WhoStep";
+import { WriteStep } from "../src/steps/WriteStep";
+import type { SealedLetter } from "../src/lib/storage";
+
+// Words people must never meet (brief section 9). "key" is allowed only inside the brief's own
+// "spare house key" phrase, which is an everyday image, not a technical term.
+const FORBIDDEN =
+  /\b(ML-?KEM|ML-?DSA|KEM|DSA|post-quantum|ciphertext|cipher|encrypt\w*|decrypt\w*|signature|sign(ed|ing)?|wallet|mnemonic|seed|hash\w*|nonce|gas|blockchain|on-?chain|smart contract|private key|public key|keys?|token|crypto\w*|ethereum|solidity|tx)\b/i;
+
+const noop = () => {};
+const heirs = [
+  { name: "Mia", address: "0xE6EB9d3CFA9a2b7a57a30f47BE5161c5C21C6Ca3" },
+  { name: "Leo", address: "qor14tg7fvfe3zxq9t5vte83lnrh4z0q6c64tfu5qy" },
+];
+const sealed: SealedLetter = {
+  version: 1,
+  letterId: "4",
+  txHash: "0xabc",
+  createdAt: "2026-11-16T00:00:00Z",
+  registry: "0xC0808aF18e2283dFE4d026315a462349561fFd1c",
+  heirs: heirs.map((h) => ({ name: h.name, evm: h.address, qor: "qor1x" })),
+  guardianName: "Sofia",
+  whenLabel: "6 months",
+  quietSeconds: 1,
+  warningSeconds: 1,
+  ownerCard: "tbl1_OWNERCODE",
+  guardianCard: "tbl1_GUARDIANCODE",
+};
+// (the sample letter itself must not contain the words: only the app's own text is being checked)
+const draft = { text: "Dear Mia and Leo,\nThe spare door code is under the blue pot.", heirs, guardian: { name: "Sofia" }, when: "6m" as const };
+
+const screens: [string, () => string][] = [
+  ["write", () => renderToStaticMarkup(<WriteStep text="" onChange={noop} onNext={noop} />)],
+  ["write, filled", () => renderToStaticMarkup(<WriteStep text={draft.text} onChange={noop} onNext={noop} />)],
+  ["who", () => renderToStaticMarkup(<WhoStep heirs={heirs} onChange={noop} onBack={noop} onNext={noop} />)],
+  ["guardian, added", () => renderToStaticMarkup(<GuardianStep guardian={{ name: "Sofia" }} onChange={noop} onBack={noop} onNext={noop} />)],
+  ["guardian, skipped", () => renderToStaticMarkup(<GuardianStep guardian={null} onChange={noop} onBack={noop} onNext={noop} />)],
+  ["when", () => renderToStaticMarkup(<WhenStep when="6m" names="Mia and Leo" onChange={noop} onBack={noop} onNext={noop} />)],
+  ["when, with the hidden demo option", () => renderToStaticMarkup(<WhenStep when="demo" names="Mia and Leo" onChange={noop} onBack={noop} onNext={noop} />)],
+  ["seal", () => renderToStaticMarkup(<SealStep draft={draft} onBack={noop} onSealed={noop} />)],
+  ["done", () => renderToStaticMarkup(<DoneScreen letter={sealed} onAnother={noop} />)],
+  ["whole app, first screen", () => renderToStaticMarkup(<App />)],
+];
+
+describe("no technical words on screen", () => {
+  it.each(screens)("%s", (_name, render) => {
+    const html = render().replace(/spare house key/gi, "spare house ___");
+    // remove the sealed card codes: they are opaque on purpose
+    const text = html.replace(/tbl1_[A-Z]+/g, "").replace(/<[^>]+>/g, " ");
+    // what people read or hear: text and labels. Class names and link targets are invisible, so they are left out.
+    const visible = html.replace(/tbl1_[A-Z]+/g, "").replace(/\s(class|href|id|for|name|type|viewBox|d|fill|stroke\w*|r|cx|cy|x|y|font\w*|text-anchor|offset|stop\w*|style|rel|target|download|tabindex|autocomplete|autocapitalize|autocorrect|spellcheck|inputmode|role)="[^"]*"/g, "");
+    const hit = FORBIDDEN.exec(visible);
+    expect(hit?.[0], `found "${hit?.[0]}" in: ${text.replace(/\s+/g, " ").slice(0, 200)}`).toBeUndefined();
+  });
+
+  it("says the things the brief says", () => {
+    const html = renderToStaticMarkup(<DoneScreen letter={sealed} onAnother={noop} />);
+    expect(html).toContain("Only Mia and Leo can open this, even with future super-computers.");
+    expect(html).toContain("Keep this safe, like a spare house key.");
+    expect(html).toContain("Your I&#x27;m-still-here card");
+    expect(renderToStaticMarkup(<WriteStep text="" onChange={noop} onNext={noop} />)).toContain("Write something they&#x27;ll want to read one day.");
+  });
+});

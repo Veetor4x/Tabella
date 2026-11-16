@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/lcd-testnet/:path*", "destination": "https://api-testnet.qore.host/:path*" },
-    { "source": "/lcd-mainnet/:path*", "destination": "https://api.qore.host/:path*" }
+    { "source": "/lcd-mainnet/:path*", "destination": "https://api.qore.host/:path*" },
+    { "source": "/evm-testnet", "destination": "https://evm-testnet.qore.host" },
+    { "source": "/evm-testnet/:path*", "destination": "https://evm-testnet.qore.host/:path*" }
   ]
 }

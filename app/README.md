@@ -1,65 +1,29 @@
-# QoreChain viem + wagmi starter
+# Tabella app
 
-A Vite + React dApp for the QoreChain EVM built on [wagmi](https://wagmi.sh)
-and [RainbowKit](https://rainbowkit.com), with the QoreX wallet
-(`@qorechain/qorex-rainbowkit`) and the chain definitions from
-`@qorechain/evm`.
+React + Vite, mobile first. Built from QoreChain's `viem-wagmi` template (see the root README for credits).
 
-It connects a wallet, shows the latest block, the account's QOR balance and its
-EVM authorisation window, and sends a zero-value transaction to itself so you
-can see how the chain answers.
+## What is here (UI piece 1 of 4)
+
+The owner's flow, one step per screen: 💌 Write → 👨‍👩‍👧 Who should open it? → 🛡️ A guardian → ⏳ When should it open? → 🔏 Seal it.
+Sealing really creates the letter on testnet: the letter is locked in the browser with `../shared/tabella-crypto.ts`, and the
+helper (Render) pays the network fee and sends it. Nothing readable leaves the device. `/#spike` keeps the developer test page.
+
+- Hidden 2-minute demo timer: add `?demo` to the address, or tap the hourglass five times.
+- Words like "key", "wallet" or "signature" never appear on screen; a test checks every screen.
 
 ## Run
 
 ```sh
-pnpm install
-pnpm dev        # http://localhost:5173
-pnpm build      # type-check and build for production
+npm install
+npm run dev          # http://localhost:5173 (the dev server forwards /lcd-testnet and /evm-testnet; browsers cannot call those APIs directly)
+npm test             # 29 tests: addresses, timing, the request against the helper's own validator, no technical words
+npm run build
 ```
 
-The EVM window panel reads the chain's REST API, which sends no CORS headers, so
-the dev and preview servers forward `/lcd-testnet` and `/lcd-mainnet` to it
-(`vite.config.ts`). For production, serve the app behind a proxy that does the
-same.
+`VITE_HELPER_URL` and `VITE_REGISTRY_ADDRESS` are optional (defaults point at the live helper and registry).
+`e2e/owner-flow.cjs` drives the whole flow at iPhone width against the real helper (needs Playwright; it seals a real demo letter).
 
-## Networks
+## Deploying
 
-`src/wagmi.ts` lists both QoreChain EVM chains, testnet first:
-
-| Chain | Id | RPC |
-| --- | --- | --- |
-| `qorechainTestnet` | 9800 | `https://evm-testnet.qore.host` |
-| `qorechain` | 9801 | `https://evm.qore.host` |
-
-## Wallets
-
-- **QoreX** (`qorexWallet`): found through EIP-6963. It answers
-  `eth_chainId`, `eth_accounts`, `eth_requestAccounts` and
-  `wallet_switchEthereumChain` today; its EVM signing methods are not
-  available yet, so use it to connect and read.
-- **Injected** (`injectedWallet`): any browser wallet that exposes an EIP-1193
-  provider, for signing.
-
-Neither uses WalletConnect. To add a WalletConnect-based wallet, set
-`VITE_WALLETCONNECT_PROJECT_ID` in `.env`.
-
-## Sending: the EVM authorisation window
-
-QoreChain admits an EVM transaction only when the sender has a registered
-**ML-DSA-87** key and a live **EVM authorisation window**. Both are set up on
-QoreChain's native lane with the post-quantum key, so a browser wallet's
-secp256k1 key can never authorise spending on its own.
-
-The app reads the window with `evmWindowStatus` from `@qorechain/evm`. When a
-send is refused, `classifyEvmWindowRejection(error)` tells you why:
-
-| Result | Meaning |
-| --- | --- |
-| `no-pqc-key` | the account has no ML-DSA-87 key registered |
-| `no-window` | no window is open |
-| `exhausted` | the window ran out of blocks, transactions or value |
-| `invalid` | the window parameters were refused |
-
-Open the window from a wallet or tool that holds the account's post-quantum
-key (for example the `pnpm window open` helper in the `foundry` and `hardhat`
-templates), then send. Opening a window advances the account's nonce.
+Vercel, Root Directory `app`. `vercel.json` forwards the REST and EVM paths. The build needs the repo's `shared/` folder next to `app/`
+(Vercel: "Include source files outside of the Root Directory" on); `vite.config.ts` resolves its packages from `app/node_modules`.

@@ -6,7 +6,7 @@ Short sessions. HARD STOP: everything working on testnet by Nov 30, 2026. Dec 1�
 Build one component at a time, run it, test it, then move on. Prefer simple and working over clever.
 If something is mocked, say so clearly and list it in README "What's mocked".
 Log AI use as we go in AI_USAGE.md (what you generated, what I changed/decided). This is for the Best AI-Native Build award.
-All names, examples and copy are global/international. Demo people: Alex (owner), Ada and Sam (loved ones), Priya (guardian).
+All names, examples and copy are global/international. Demo people: Alex (owner), Mia and Leo (loved ones), Sofia (guardian).
 
 ## 1. Project
 Name: Tabella. Tagline: "Sealed today. Opened when it matters."
@@ -58,8 +58,8 @@ The Postman can delay a release but cannot read a letter (only has B) and cannot
 | Person | What the app creates (in browser) | Printable card (QR = 32/64-byte seed, base64url) |
 |---|---|---|
 | Owner (Alex) | ML-DSA-87 keypair from seed | "Your I'm-still-here card" |
-| Heir (Ada, Sam) | ML-KEM-1024 seal keys from seed (sealKeysFromSeed); public key registered on-chain via QoreX | "Your opening card" |
-| Guardian (Priya) | ML-DSA-87 keypair from seed | "Your guardian card" |
+| Heir (Mia, Leo) | ML-KEM-1024 seal keys from seed (sealKeysFromSeed); public key registered on-chain via QoreX | "Your opening card" |
+| Guardian (Sofia) | ML-DSA-87 keypair from seed | "Your guardian card" |
 
 - Seeds kept in localStorage AND exported as a printable card (QR + short text code) + download.
 - Mandatory gentle step after creating any card: "Keep this safe, like a spare house key." with checkbox "I've saved or printed it" before continuing.
@@ -123,7 +123,7 @@ Never show: ML-KEM, ML-DSA, ciphertext, key, gas, wallet jargon. Say: "sealed", 
 Flow: 💌 Write → 👨‍👩‍👧 Who should open it? → 🛡️ A guardian → ⏳ When should it open? → 🔏 Seal it → 🙋 I'm still here.
 Copy:
 - "Write something they'll want to read one day."
-- "Sealed. Only Ada and Sam can open this, even with future super-computers."
+- "Sealed. Only Mia and Leo can open this, even with future super-computers."
 - "Hi! Tap to let us know you're okay 💛"
 - "Your letter is still safely sealed."
 - "Keep this safe, like a spare house key."
@@ -169,12 +169,12 @@ README "Honest limits": Postman is trusted for liveness only; QoreSeal is v0.1 p
 - **Nov 30** — demo video + submit.
 
 ## 14. "Done" criteria for the demo
-- [ ] Alex seals a letter to Ada & Sam with Priya as guardian; tx visible on explorer with contract address.
-- [ ] Ada's account shows "ready / quantum-safe ✓" after registering her opening key through QoreX.
-- [ ] Ada tries to open early → "Still sealed 💛" (she has A but not B).
+- [ ] Alex seals a letter to Mia & Leo with Sofia as guardian; tx visible on explorer with contract address.
+- [ ] Mia's account shows "ready / quantum-safe ✓" after registering her opening key through QoreX.
+- [ ] Mia tries to open early → "Still sealed 💛" (she has A but not B).
 - [ ] Alex checks in → timer resets (pqcVerify succeeded on-chain).
-- [ ] Priya taps "They're okay" → timer resets; third pause is refused.
+- [ ] Sofia taps "They're okay" → timer resets; third pause is refused.
 - [ ] Alex "loses his phone": restores from I'm-still-here card on another browser and checks in.
 - [ ] No check-in → Warning → Released after demo timer; Postman publishes Part B automatically.
-- [ ] Ada opens: seal cracks, letter appears.
+- [ ] Mia opens: seal cracks, letter appears.
 - [ ] Foundry + Vitest tests pass; README, AI_USAGE.md, Apache-2.0 LICENSE, credits, testnet addresses listed.
