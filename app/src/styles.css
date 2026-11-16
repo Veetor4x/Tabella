@@ -561,3 +561,4 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .open-light { position: absolute; left: 50%; top: 50%; width: 330px; height: 330px; margin: -165px 0 0 -165px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 232, 196, 0.5), rgba(255, 220, 180, 0.14) 55%, rgba(255, 220, 180, 0)); will-change: transform, opacity; pointer-events: none; }
 .open-ray { position: absolute; left: 50%; bottom: 50%; width: 2px; height: 150px; margin-left: -1px; background: linear-gradient(to top, rgba(255, 236, 205, 0.75), rgba(255, 236, 205, 0)); transform-origin: 50% 100%; will-change: transform, opacity; pointer-events: none; }
 .open-seal .half { z-index: 2; }
+.camera, .cam-story, .cam-phone, .story { pointer-events: none; }

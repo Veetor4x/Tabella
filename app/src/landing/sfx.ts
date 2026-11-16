@@ -89,7 +89,10 @@ export function setIntroMuted(m: boolean): void {
 }
 
 /** The music drops while the voice speaks and comes back after. */
+let ducked = false;
 export function duckMusic(on: boolean): void {
+  if (on === ducked) return;
+  ducked = on;
   if (musicGain && ctx) musicGain.gain.setTargetAtTime(on ? MUSIC_DUCKED : MUSIC_LEVEL, ctx.currentTime, 0.3);
   log({ kind: on ? "duck" : "unduck" });
 }

@@ -29,9 +29,9 @@ describe("the voiceover script", () => {
     expect(starts[2]).toBeGreaterThan(starts[1]!);
     expect(starts[2]).toBeLessThan(6000);
   });
-  it("recordings are named 01.mp3 to 08.mp3 and the browser's own voice is never used", () => {
+  it("all eight recordings exist, named 01.mp3 to 08.mp3, and the browser's own voice is never used", () => {
     const files = readdirSync(new URL("../src/assets/voice/", import.meta.url)).filter((f) => f.endsWith(".mp3"));
-    expect(files.length).toBeGreaterThan(0);
+    expect(files.sort()).toEqual(["01.mp3", "02.mp3", "03.mp3", "04.mp3", "05.mp3", "06.mp3", "07.mp3", "08.mp3"]); // all eight lines are recorded
     for (const f of files) expect(f).toMatch(/^0[1-8]\.mp3$/);
     for (const f of ["../src/landing/Intro.tsx", "../src/landing/voice.ts", "../src/landing/sfx.ts"]) expect(readFileSync(new URL(f, import.meta.url), "utf8")).not.toMatch(/speechSynthesis|SpeechSynthesisUtterance/);
   });

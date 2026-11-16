@@ -18,8 +18,8 @@ export const VOICE_LINES = [
   "And if one day you can't, your letter reaches them. Sealed today. Opened when it matters.",
 ] as const;
 
-/** Guesses (in seconds) for how long each line takes to say, until the real recording says. Calm pace. */
-export const ESTIMATED_SECONDS = [4.4, 2.5, 2.3, 3.3, 4.8, 5.5, 3.4, 6.4];
+/** How long each recorded line takes (seconds). The player reads the real length from the file; this is for planning and tests. */
+export const ESTIMATED_SECONDS = [4.6, 2.5, 1.8, 2.8, 4.0, 5.5, 3.5, 6.8];
 
 /** The opener: about five seconds. */
 export const OPENER_MS = 5200;
