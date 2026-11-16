@@ -106,7 +106,9 @@ const ok = (cond, msg) => {
   await page.getByLabel("Their name").nth(1).fill("Leo");
   await page.getByLabel("Their address").nth(1).fill(LEO); // the qor1 form works too
   await page.getByText("Ready ✓", { exact: true }).nth(1).waitFor({ timeout: 30000 });
-  ok(await page.getByRole("button", { name: "Next" }).isEnabled(), "Who: Next is enabled once everyone is Ready ✓");
+  // the button follows the badges a moment later, so wait for it rather than sampling one instant
+  const nextEnabled = await page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Next" && !b.disabled), null, { timeout: 5000 }).then(() => true, () => false);
+  ok(nextEnabled, "Who: Next is enabled once everyone is Ready ✓");
   ok(await page.locator(".dots .sr-only").first().evaluate((el) => el.getBoundingClientRect().width <= 2), "Dots: their spoken labels stay invisible");
   await check("Who (ready)");
   await shot("04-who-ready", true);
