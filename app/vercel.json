@@ -35,6 +35,22 @@
     {
       "source": "/cards",
       "destination": "/index.html"
+    },
+    {
+      "source": "/me/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/write/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/guardian/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cards/",
+      "destination": "/index.html"
     }
   ]
 }
