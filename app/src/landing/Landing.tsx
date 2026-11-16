@@ -1,0 +1,89 @@
+import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
+import { Background } from "../ui/Background";
+import { Headline } from "../ui/Headline";
+import { IconArrow } from "../ui/icons";
+import { fadeUp } from "../ui/motion";
+import { Demo } from "./Demo";
+import { HeroLetter } from "./HeroLetter";
+import { Reveal } from "./Reveal";
+import { Trust } from "./Trust";
+import { Why } from "./Why";
+
+const REPO = "https://github.com/Veetor4x/Tabella";
+
+/** The front page. The owner's flow lives at /write. */
+export function Landing() {
+  return (
+    <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
+        <div className="root land">
+          <Background />
+          <header className="land-nav">
+            <a className="brand-name" href="/" aria-label="Tabella, home">
+              Tabella
+            </a>
+            <nav aria-label="Sections">
+              <a href="#why">Why</a>
+              <a href="#how">How</a>
+              <a href="#trust">Trust</a>
+            </nav>
+          </header>
+
+          <main>
+            <section className="hero">
+              <div className="hero-copy">
+                <Headline text="Sealed today. Opened when it *matters*." className="hero-h" />
+                <m.p className="hero-lead" {...fadeUp(0.9)}>
+                  A letter for the people you love, locked today and opened only for them, and only if you go quiet.
+                </m.p>
+                <m.div className="hero-actions" {...fadeUp(1.1)}>
+                  <a className="btn primary" href="/write">
+                    <span>Start here</span>
+                    <IconArrow size={18} />
+                  </a>
+                  <a className="btn glass" href="#how">
+                    <span>See how it works</span>
+                  </a>
+                </m.div>
+              </div>
+              <m.div className="hero-art" {...fadeUp(0.6)}>
+                <HeroLetter />
+              </m.div>
+            </section>
+
+            <Why />
+            <Demo />
+
+            <section className="land-section start" id="start">
+              <Reveal>
+                <p className="start-lead">It takes a few minutes. No account needed.</p>
+                <a className="btn primary big" href="/write">
+                  <span>Start here</span>
+                  <IconArrow size={20} />
+                </a>
+              </Reveal>
+            </section>
+
+            <Trust />
+          </main>
+
+          <footer className="land-footer">
+            <p className="build">
+              <strong>QoreChain</strong> · Build Before Q-Day
+            </p>
+            <p>
+              <a href={REPO} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+              <span aria-hidden="true"> · </span>
+              <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noreferrer">
+                Apache-2.0 licence
+              </a>
+            </p>
+            <p className="fine">A demo on a test network. Please don't write real secrets yet.</p>
+          </footer>
+        </div>
+      </MotionConfig>
+    </LazyMotion>
+  );
+}

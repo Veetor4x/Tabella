@@ -107,7 +107,7 @@ export function App() {
           <div className="app">
             <header className="brand">
               <div className="brand-text">
-                <span className="brand-name">Tabella</span>
+                <a className="brand-name" href="/" aria-label="Tabella, home">Tabella</a>
                 <span className="brand-tag">Sealed today. Opened when it matters.</span>
               </div>
               <SoundToggle />

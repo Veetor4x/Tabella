@@ -4,7 +4,7 @@ import * as motion from "../src/ui/motion";
 
 // The rule for smooth motion on phones: animate only transform and opacity.
 const ANIMATABLE = new Set(["x", "y", "scale", "scaleX", "scaleY", "rotate", "rotateX", "rotateY", "opacity"]);
-const STRUCTURE = new Set(["initial", "animate", "exit", "hidden", "show", "enter", "center"]);
+const STRUCTURE = new Set(["initial", "animate", "exit", "hidden", "show", "enter", "center", "whileInView"]);
 
 /** Every property name an animation preset touches (timing settings under `transition` are not properties). */
 function animatedKeys(value: unknown, out = new Set<string>()): Set<string> {
@@ -37,13 +37,13 @@ describe("animations only move and fade (transform + opacity)", () => {
   });
 
   it("inline animation props in components also only use transform and opacity", () => {
-    const dirs = ["src", "src/ui", "src/steps"];
+    const dirs = ["src", "src/ui", "src/steps", "src/landing"];
     const bad: string[] = [];
     for (const d of dirs) {
       for (const f of readdirSync(new URL(`../${d}/`, import.meta.url)).filter((n) => n.endsWith(".tsx"))) {
         const src = readFileSync(new URL(`../${d}/${f}`, import.meta.url), "utf8");
         expect(src, `${f} must not use layout animations`).not.toMatch(/\slayout(Id)?[=\s>]/);
-        for (const mm of src.matchAll(/\b(initial|animate|exit|whileTap|whileHover)=\{\{([^}]*)\}\}/g)) {
+        for (const mm of src.matchAll(/\b(initial|animate|exit|whileTap|whileHover|whileInView)=\{\{([^}]*)\}\}/g)) {
           for (const key of mm[2]!.matchAll(/(?:^|,)\s*([A-Za-z]+)\s*:/g)) {
             if (!ANIMATABLE.has(key[1]!) && key[1] !== "transition") bad.push(`${f}: ${key[1]}`);
           }

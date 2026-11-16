@@ -11,7 +11,8 @@ const { chromium, devices } = require("playwright");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const BASE = process.argv[2] || "http://localhost:5173/";
+// the owner's flow lives at /write (the front page is at /)
+const BASE = new URL("write", process.argv[2] || "http://localhost:5173/").href;
 const OUT = process.argv[3] || path.join(__dirname, "..", "..", "docs", "screenshots", "ui-3");
 fs.mkdirSync(OUT, { recursive: true });
 

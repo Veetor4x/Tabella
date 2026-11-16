@@ -67,10 +67,7 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
 
   // One soft low tone as the seal settles (only if sound was switched on).
   useEffect(() => {
-    const t = setTimeout(() => {
-      playSealTone();
-      window.dispatchEvent(new Event("tabella:seal-settled")); // the wax glow in the background warms a little
-    }, 1300);
+    const t = setTimeout(playSealTone, 1300);
     return () => clearTimeout(t);
   }, []);
 

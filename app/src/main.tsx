@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { Landing } from "./landing/Landing";
 import "@fontsource-variable/inter";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
@@ -15,9 +16,7 @@ window.addEventListener("hashchange", () => window.location.reload());
 if (window.location.hash === "#spike") {
   void import("./spike/KemSpike").then(({ KemSpike }) => root.render(<KemSpike />));
 } else {
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  );
+  // "/" is the front page; "/write" is the owner's flow
+  const onWrite = window.location.pathname.replace(/\/+$/, "") === "/write";
+  root.render(<React.StrictMode>{onWrite ? <App /> : <Landing />}</React.StrictMode>);
 }
