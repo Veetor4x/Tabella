@@ -1,14 +1,14 @@
 /* Tabella: pearl light, thin lines, one editorial serif and a clean sans. Wax-red appears only on the seal and the main button. */
 :root {
-  --pearl: #f5f4f0;
+  --pearl: #f4f3ef;
   --ink: #15171c;
   --soft: #50555f;
   --faint: #6c717c;
   --line: rgba(21, 23, 28, 0.14);
   --line-strong: rgba(21, 23, 28, 0.3);
-  --glass: rgba(255, 255, 255, 0.52);
-  --glass-edge: rgba(255, 255, 255, 0.85);
-  --glass-shadow: 0 14px 44px -22px rgba(40, 50, 90, 0.28);
+  --glass: rgba(255, 255, 255, 0.58);
+  --glass-edge: rgba(21, 23, 28, 0.09);
+  --glass-shadow: 0 1px 2px rgba(21, 23, 28, 0.04), 0 10px 26px -16px rgba(21, 23, 28, 0.16);
   --wax: #8a1c27;
   --wax-deep: #6b1520;
   --ready: #2b6a56;
@@ -19,43 +19,34 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 .night {
-  --pearl: #0a0c13;
+  --pearl: #0c0e13;
   --ink: #eef0f6;
   --soft: #b4bac7;
   --faint: #8b92a1;
   --line: rgba(238, 240, 246, 0.16);
   --line-strong: rgba(238, 240, 246, 0.34);
-  --glass: rgba(255, 255, 255, 0.055);
-  --glass-edge: rgba(255, 255, 255, 0.13);
-  --glass-shadow: 0 14px 44px -22px rgba(0, 0, 0, 0.7);
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px -16px rgba(0, 0, 0, 0.6);
   --ready: #8fd0b8;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { -webkit-text-size-adjust: 100%; background: #f5f4f0; }
+html { -webkit-text-size-adjust: 100%; background: #f4f3ef; }
 body { margin: 0; font-family: var(--sans); font-size: 16px; line-height: 1.55; color: var(--ink); overflow-x: hidden; font-feature-settings: "ss01", "cv11"; }
 .root { position: relative; z-index: 0; background: var(--pearl); color: var(--ink); min-height: 100vh; min-height: 100dvh; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
 
-/* ---------- background: pearl with soft iridescent streaks that drift slowly ---------- */
-.bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--pearl); }
-.streak { position: absolute; width: 150vmax; height: 30vmax; left: -40vmax; border-radius: 50%; opacity: 0.78; will-change: transform; }
-.s1 { top: 4vh; background: radial-gradient(closest-side, rgba(150, 185, 255, 0.7), rgba(206, 170, 255, 0.4) 50%, transparent 100%); transform: rotate(-22deg); animation: drift-a 46s ease-in-out infinite alternate; }
-.s2 { top: 40vh; background: radial-gradient(closest-side, rgba(255, 170, 214, 0.55), rgba(255, 214, 160, 0.34) 50%, transparent 100%); transform: rotate(-18deg); animation: drift-b 58s ease-in-out infinite alternate; }
-.s3 { bottom: -22vmax; background: radial-gradient(closest-side, rgba(150, 235, 210, 0.55), rgba(160, 205, 255, 0.34) 50%, transparent 100%); transform: rotate(-26deg); animation: drift-c 52s ease-in-out infinite alternate; }
-.bg-night { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; background: #0a0c13; }
-.night .bg-night { opacity: 1; }
-.n1 { top: -10vmax; background: radial-gradient(closest-side, rgba(86, 104, 190, 0.34), rgba(120, 84, 170, 0.16) 55%, transparent 100%); transform: rotate(-20deg); animation: drift-a 60s ease-in-out infinite alternate; }
-.n2 { bottom: -16vmax; background: radial-gradient(closest-side, rgba(60, 130, 150, 0.26), rgba(70, 90, 170, 0.14) 55%, transparent 100%); transform: rotate(-24deg); animation: drift-c 70s ease-in-out infinite alternate; }
-@keyframes drift-a { from { transform: rotate(-22deg) translate3d(-8vw, 0, 0); } to { transform: rotate(-22deg) translate3d(10vw, 5vh, 0); } }
-@keyframes drift-b { from { transform: rotate(-18deg) translate3d(8vw, 2vh, 0); } to { transform: rotate(-18deg) translate3d(-10vw, -4vh, 0); } }
-@keyframes drift-c { from { transform: rotate(-26deg) translate3d(-6vw, 3vh, 0); } to { transform: rotate(-26deg) translate3d(9vw, -5vh, 0); } }
+/* ---------- background: flat calm pearl (deep ink at night) with a very faint paper grain; nothing moves ---------- */
+.bg { position: fixed; inset: 0; z-index: -1; background: var(--pearl); }
+.bg::after { content: ""; position: absolute; inset: 0; opacity: 0.05; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; pointer-events: none; }
+.night .bg::after { opacity: 0.07; filter: invert(1); }
 @keyframes shimmer { from { transform: translate3d(-130%, 0, 0) skewX(-18deg); } to { transform: translate3d(330%, 0, 0) skewX(-18deg); } }
 @keyframes sheen { from { transform: translate3d(-120%, 0, 0); } to { transform: translate3d(320%, 0, 0); } }
 @keyframes glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
-.veil { position: fixed; inset: 0; z-index: 50; background: #0a0c13; opacity: 0; }
+.veil { position: fixed; inset: 0; z-index: 50; background: #0c0e13; opacity: 0; }
 
 /* ---------- layout ---------- */
 .app { max-width: 480px; margin: 0 auto; padding: max(18px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
@@ -80,7 +71,7 @@ footer { margin-top: 28px; font-size: 12px; color: var(--faint); text-align: cen
 .hair-fill { height: 1px; background: var(--ink); transform-origin: left center; will-change: transform; }
 
 .pills { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
-.pill { font-size: 13px; line-height: 1; padding: 9px 13px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: var(--soft); transform-origin: left center; white-space: nowrap; box-shadow: 0 6px 20px -14px rgba(40, 50, 90, 0.35); }
+.pill { font-size: 13px; line-height: 1; padding: 9px 13px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--soft); transform-origin: left center; white-space: nowrap; box-shadow: 0 1px 2px rgba(21, 23, 28, 0.04); }
 
 /* ---------- type ---------- */
 .step { padding-top: 10px; }
@@ -97,10 +88,9 @@ strong { font-weight: 600; }
 .mono { font-family: var(--mono); font-size: 13.5px; letter-spacing: 0; }
 
 /* ---------- glass ---------- */
-.glass { background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 22px; backdrop-filter: blur(20px) saturate(1.25); -webkit-backdrop-filter: blur(20px) saturate(1.25); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), var(--glass-shadow); }
-.night .glass { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--glass-shadow); }
+.glass { background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--glass-shadow); }
 
-.field input, .letter-wrap textarea { width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 16px; padding: 15px 16px; outline: none; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.field input, .letter-wrap textarea { width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 16px; padding: 15px 16px; outline: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .field input:focus { border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(21, 23, 28, 0.07); }
 .night .field input:focus { box-shadow: 0 0 0 3px rgba(238, 240, 246, 0.1); }
 .field input::placeholder, textarea::placeholder { color: #9a9fa9; }
@@ -116,7 +106,7 @@ strong { font-weight: 600; }
 .actions .btn.primary { flex: 1; }
 .btn { appearance: none; font: inherit; font-size: 16px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: 999px; padding: 16px 24px; min-height: 54px; cursor: pointer; color: var(--ink); background: none; transition: transform 0.2s, opacity 0.2s; }
 .btn.primary { background: linear-gradient(180deg, #96222e, var(--wax)); color: #fbeff0; box-shadow: 0 14px 30px -16px rgba(138, 28, 39, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.btn.glass { background: var(--glass); border-color: var(--glass-edge); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); width: 100%; margin-top: 12px; }
+.btn.glass { background: var(--glass); border-color: var(--glass-edge); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); width: 100%; margin-top: 12px; }
 .btn.quiet { color: var(--soft); padding-left: 10px; padding-right: 14px; }
 .btn:disabled { opacity: 0.38; cursor: default; box-shadow: none; }
 .inline-icon { display: inline-flex; align-items: center; gap: 8px; }
@@ -199,7 +189,7 @@ a.link { color: var(--soft); }
 .guard-label { position: absolute; top: calc(100% + 6px); left: 4px; width: 64px; text-align: center; display: flex; flex-direction: column; line-height: 1.25; }
 .guard-label b { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .guard-label i { font-style: normal; font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.map-shimmer { position: absolute; top: 0; bottom: 0; left: 0; width: 34%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent); mix-blend-mode: soft-light; animation: shimmer 2.8s ease-in-out infinite; will-change: transform; }
+.map-shimmer { position: absolute; top: 0; bottom: 0; left: 0; width: 34%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 2.8s ease-in-out infinite; will-change: transform; }
 
 /* ---------- night: the sealed state ---------- */
 .done-screen { padding-top: 40px; text-align: center; }
@@ -207,7 +197,7 @@ a.link { color: var(--soft); }
 .night-map { margin-top: 26px; padding-bottom: 8px; }
 .night-map .map-root { width: 84px; }
 .night-map .point.guard { width: 50px; height: 50px; justify-content: center; padding: 0; }
-.night-map .ln-v, .night-map .ln-h { background: linear-gradient(var(--line-strong), rgba(238, 240, 246, 0.5)); box-shadow: 0 0 8px rgba(160, 180, 255, 0.35); }
+.night-map .ln-v, .night-map .ln-h { background: rgba(238, 240, 246, 0.4); }
 .night-map .ln-h { background: rgba(238, 240, 246, 0.4); }
 .seal-wrap { width: 84px; height: 84px; margin: 0 auto; filter: drop-shadow(0 0 22px rgba(190, 50, 70, 0.35)); will-change: transform, opacity; }
 .seal-wrap .wax { width: 100%; height: 100%; display: block; }
@@ -226,6 +216,6 @@ a.link { color: var(--soft); }
 .done-screen .hint { text-align: left; }
 
 @media (prefers-reduced-motion: reduce) {
-  .streak, .sheen, .map-shimmer, .point .dot { animation: none !important; }
+  .sheen, .map-shimmer, .point .dot { animation: none !important; }
   * { transition-duration: 0.01ms !important; }
 }

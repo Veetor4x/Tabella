@@ -64,7 +64,7 @@ describe("animations only move and fade (transform + opacity)", () => {
 
   it("CSS keyframes only change transform or opacity", () => {
     const blocks = [...css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)];
-    expect(blocks.length).toBeGreaterThanOrEqual(5);
+    expect(blocks.length).toBeGreaterThanOrEqual(3);
     for (const [, name, body] of blocks) {
       const props = [...body!.matchAll(/([a-z-]+)\s*:/g)].map((mm) => mm[1]);
       expect(props.filter((p) => p !== "transform" && p !== "opacity"), `@keyframes ${name}`).toEqual([]);
