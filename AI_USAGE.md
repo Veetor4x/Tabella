@@ -11,3 +11,5 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **Generated:** `spike/01-helper-setup.ts` (helper account: addresses, balance, ML-DSA-87 registration via `ensurePqcRegistered`, EVM window open + status) and `spike/package.json`.
 - **I decided:** scope = risky-part test #1 only; helper mnemonic comes from the environment and is never printed.
 - **Notes:** the SDK's preset RPC host doesn't resolve, so Claude switched the broadcast to REST with offline signing; hybrid signing also needed `resolveSignBytesVersion`.
+- **Generated (test #2):** `contracts/src/spike/PqcProbe.sol`, `spike/02-pqc-verify.ts`, and `spike/common.ts` (shared REST tx client + window helper, refactored out of 01).
+- **I decided:** keep the probe tiny (check/act/keyStatus only); test with a tampered signature to prove false-not-revert.
