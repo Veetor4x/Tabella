@@ -13,11 +13,12 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import type { Context } from "hono";
-import { RevertError, type Chain } from "./chain.js";
+import type { Chain } from "./chain.js";
 import type { Config } from "./config.js";
 import { clientIp, createRateLimiter, type RateLimiter } from "./ratelimit.js";
+import { describe, submit, type Json } from "./submit.js";
 import { parseRelayRequest } from "./validate.js";
-import { Mutex, WindowError, ensureWindow, windowIsLow } from "./window.js";
+import { Mutex, windowIsLow } from "./window.js";
 
 export interface AppDeps {
   chain: Chain;
@@ -26,12 +27,10 @@ export interface AppDeps {
   now?: () => number;
   /** Log sink; default console.log. Never pass secrets in. */
   log?: (line: string) => void;
-}
-
-type Json = Record<string, unknown>;
-interface Outcome {
-  status: 200 | 422 | 502 | 503;
-  body: Json;
+  /** Serialises every tx the helper sends. Share it with the Postman (same nonce counter). */
+  mutex?: Mutex;
+  /** Public Postman info for /health (public key, last run). Omitted when the Postman is off. */
+  postmanInfo?: () => Json;
 }
 
 const HEALTH_CACHE_MS = 5_000;
@@ -44,7 +43,7 @@ export function createApp(deps: AppDeps): Hono {
   const perIp = createRateLimiter({ limit: cfg.rateLimitPerMin, now });
   const everyone = createRateLimiter({ limit: cfg.globalRateLimitPerMin, now });
   const healthPerIp = createRateLimiter({ limit: 30, now });
-  const mutex = new Mutex();
+  const mutex = deps.mutex ?? new Mutex();
 
   const app = new Hono();
 
@@ -107,6 +106,7 @@ export function createApp(deps: AppDeps): Hono {
             low: windowIsLow(w, cfg),
           },
           limits: { relayPerMinutePerIp: cfg.rateLimitPerMin, relayPerMinuteGlobal: cfg.globalRateLimitPerMin },
+          ...(deps.postmanInfo ? { postman: deps.postmanInfo() } : {}),
           time: new Date(now()).toISOString(),
         },
       };
@@ -154,71 +154,9 @@ export function createApp(deps: AppDeps): Hono {
   );
 
   /** Everything after validation. Runs one at a time (shared nonce / sequence). */
-  async function relayOne(fn: string, data: `0x${string}`): Promise<Outcome> {
-    const to = cfg.registry;
-    try {
-      // 1. Is the helper able to pay at all?
-      const balance = await chain.balanceUqor();
-      if (balance < cfg.minBalanceUqor) return fail(503, "relayer_out_of_funds");
-
-      // 2. Simulate. Anything that would revert is refused here, for free.
-      let gasEstimate: bigint;
-      try {
-        gasEstimate = await chain.simulate({ to, data });
-      } catch (err) {
-        if (err instanceof RevertError && err.kind === "window") {
-          // The simulation was refused only because the window ran out: open one and look again.
-          await ensureWindow(chain, cfg);
-          gasEstimate = await chain.simulate({ to, data });
-        } else {
-          throw err;
-        }
-      }
-      if (gasEstimate > cfg.maxTxGas) return fail(422, "too_expensive", { gas: gasEstimate.toString(), maxGas: cfg.maxTxGas.toString() });
-
-      // 3. Fee: never above the cap the window is sized for.
-      const gasPrice = await chain.gasPrice();
-      if (gasPrice > cfg.maxFeePerGasCap) return fail(503, "gas_price_too_high");
-      const maxFeePerGas = gasPrice * 2n > cfg.maxFeePerGasCap ? cfg.maxFeePerGasCap : gasPrice * 2n;
-      const gasLimit = min((gasEstimate * 125n) / 100n, cfg.maxTxGas);
-
-      // 4. Make sure a window with room is open (reuse it; reopen only when low).
-      const windowTx = await ensureWindow(chain, cfg);
-
-      // 5. Send.
-      const r = await chain.send({ to, data, gas: gasLimit, maxFeePerGas });
-      if (r.status !== "success") {
-        return { status: 502, body: { ok: false, error: "reverted_onchain", txHash: r.txHash } };
-      }
-      return {
-        status: 200,
-        body: {
-          ok: true,
-          fn,
-          txHash: r.txHash,
-          gasUsed: r.gasUsed.toString(),
-          blockNumber: r.blockNumber.toString(),
-          ...(windowTx ? { windowOpenedTx: windowTx } : {}),
-        },
-      };
-    } catch (err) {
-      if (err instanceof RevertError) return fail(422, "would_revert", { reason: err.reason });
-      if (err instanceof WindowError) return fail(503, "window_unavailable");
-      log(`relay: chain error (${describe(err)})`);
-      return fail(503, "chain_unavailable");
-    }
+  function relayOne(fn: string, data: `0x${string}`) {
+    return submit(chain, cfg, { fn, to: cfg.registry, data }, log);
   }
 
   return app;
-}
-
-function fail(status: Outcome["status"], error: string, extra: Json = {}): Outcome {
-  return { status, body: { ok: false, error, ...extra } };
-}
-
-const min = (a: bigint, b: bigint) => (a < b ? a : b);
-
-/** Name + message only. Never the error object itself, so nothing unexpected reaches the logs. */
-function describe(err: unknown): string {
-  return err instanceof Error ? `${err.name}: ${err.message.slice(0, 200)}` : "unknown error";
 }

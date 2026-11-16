@@ -2,10 +2,10 @@
  * Everything that touches QoreChain, behind one small interface so tests can swap in a mock.
  *
  * Two lanes, as the brief explains:
- *   - native lane (REST): ensure the helper's ML-DSA-87 key is registered, open the EVM window.
+ *   - native lane (REST): ensure an ML-DSA-87 key is registered, open the EVM window, register a KEM key.
  *     Signed offline with the SDK's EthNativeSigner and broadcast over REST, because the SDK's
  *     preset consensus-RPC host does not resolve (found in spike 01).
- *   - EVM lane (JSON-RPC): simulate and send the TabellaRegistry transactions.
+ *   - EVM lane (JSON-RPC): simulate, read and send the TabellaRegistry transactions.
  */
 import { createHash } from "node:crypto";
 import { classifyEvmWindowRejection, evmWindowCost, qorechainTestnet } from "@qorechain/evm";
@@ -15,8 +15,10 @@ import {
   deriveUnifiedAccount,
   ensurePqcRegistered,
   fetchEvmWindow,
+  fetchKemKey,
   getNetwork,
   openEvmWindowMsg,
+  qorechainRegistry,
   resolveSignBytesVersion,
   type UnifiedAccount,
 } from "@qorechain/sdk";
@@ -51,6 +53,12 @@ export interface SendResult {
   contractAddress?: Hex;
 }
 
+/** A protobuf `Any` as QoreSeal's message builders return it. */
+export interface EncodedMessage {
+  typeUrl: string;
+  value: Uint8Array;
+}
+
 /** The call would revert (or is otherwise refused by the chain). `reason` is safe to show a user. */
 export class RevertError extends Error {
   /**
@@ -80,6 +88,110 @@ export interface Chain {
   simulate(tx: { to?: Hex; data: Hex }): Promise<bigint>;
   /** Sign with the helper's key, broadcast, wait for the receipt. `to` omitted = contract deployment. */
   send(tx: { to?: Hex; data: Hex; gas: bigint; maxFeePerGas: bigint }): Promise<SendResult>;
+  /** Read-only contract call (eth_call). Returns the raw return data. */
+  call(tx: { to: Hex; data: Hex }): Promise<Hex>;
+  /** The ML-KEM-1024 key an address registered on-chain (`qor1...` or `0x...`), or undefined if none. */
+  kemKey(address: string): Promise<Uint8Array | undefined>;
+  /** Native-lane messages signed by the helper (hybrid). Pre-encoded `Any`s are accepted. Returns the tx hash. */
+  broadcastNative(messages: EncodedMessage[]): Promise<string>;
+}
+
+// -------------------------------------------------------------- native lane
+
+export const NATIVE_FEE = { amount: [{ denom: "uqor", amount: "100000" }], gas: "800000" };
+
+export interface NativeLane {
+  /** For SDK helpers such as ensurePqcRegistered. */
+  tx: TxClient;
+  /**
+   * Sign (hybrid, unless it is the bare key registration) and broadcast; waits for the block.
+   * A message may be a plain SDK message object, or a pre-encoded `Any` from QoreSeal.
+   */
+  broadcast(messages: { typeUrl: string; value: unknown }[], fee?: typeof NATIVE_FEE): Promise<string>;
+}
+
+/**
+ * A native-lane client for any account: offline signing + REST broadcast. A minimal stand-in for the part of
+ * cosmjs's SigningStargateClient that the SDK's TxClient uses. Used for the helper and for the E2E heirs.
+ */
+export function createNativeLane(acc: UnifiedAccount, rest: string): NativeLane {
+  const net = getNetwork("testnet");
+  const registry = qorechainRegistry();
+
+  async function accountSequence() {
+    const res = await fetch(`${rest}/cosmos/auth/v1beta1/accounts/${acc.cosmos}`);
+    if (!res.ok) throw new Error(`account query failed: HTTP ${res.status}`);
+    const body = (await res.json()) as { account?: Record<string, any> };
+    const a = body.account?.base_account ?? body.account ?? {};
+    return { accountNumber: BigInt(a.account_number ?? "0"), sequence: BigInt(a.sequence ?? "0") };
+  }
+
+  /** A pre-encoded Any (raw bytes) becomes the object the SDK's registry encodes. */
+  const toEncodeObject = (m: { typeUrl: string; value: unknown }) =>
+    m.value instanceof Uint8Array ? { typeUrl: m.typeUrl, value: registry.decode({ typeUrl: m.typeUrl, value: m.value }) } : m;
+
+  const signingClient = {
+    async simulate(): Promise<number> {
+      throw new Error("simulate is not available over REST here; pass an explicit fee");
+    },
+    async signAndBroadcast(_addr: string, messages: any[], fee: any, memo?: string) {
+      // Only the bare key registration may be signed classically; everything else is hybrid.
+      const isRegistration = messages.length === 1 && /MsgRegisterPQCKey/.test(messages[0].typeUrl);
+      const signer = new EthNativeSigner(acc, { signMode: isRegistration ? "classical" : "hybrid", rest });
+      const { accountNumber, sequence } = await accountSequence();
+      const signBytesVersion = isRegistration ? undefined : await resolveSignBytesVersion({ chainId: net.chainId, rest });
+      const signed = signer.sign({
+        chainId: net.chainId,
+        accountNumber,
+        sequence,
+        fee,
+        memo,
+        messages: messages.map(toEncodeObject),
+        signBytesVersion,
+      });
+      const hash = createHash("sha256").update(signed.txRawBytes).digest("hex").toUpperCase();
+      const post = await fetch(`${rest}/cosmos/tx/v1beta1/txs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tx_bytes: Buffer.from(signed.txRawBytes).toString("base64"), mode: "BROADCAST_MODE_SYNC" }),
+      });
+      const sync = (await post.json()) as { tx_response?: { code?: number; raw_log?: string } };
+      if (!post.ok || (sync.tx_response?.code ?? 0) !== 0) {
+        throw new Error(`native broadcast rejected (HTTP ${post.status}, code ${sync.tx_response?.code}): ${sync.tx_response?.raw_log}`);
+      }
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const r = await fetch(`${rest}/cosmos/tx/v1beta1/txs/${hash}`);
+        if (!r.ok) continue;
+        const t = ((await r.json()) as any).tx_response;
+        if (Number(t.code ?? 0) !== 0) throw new Error(`native tx ${hash} failed (code ${t.code}): ${t.raw_log}`);
+        return {
+          code: 0,
+          transactionHash: hash,
+          height: Number(t.height),
+          gasUsed: BigInt(t.gas_used ?? 0),
+          gasWanted: BigInt(t.gas_wanted ?? 0),
+          rawLog: t.raw_log,
+          events: [],
+          msgResponses: [],
+          txIndex: 0,
+        };
+      }
+      throw new Error(`native tx ${hash} was accepted but not seen in a block after 60 s`);
+    },
+    async signAndBroadcastSync(): Promise<string> {
+      throw new Error("not used");
+    },
+  };
+  const tx = new TxClient({ signingClient: signingClient as any, senderAddress: acc.cosmos });
+
+  return {
+    tx,
+    async broadcast(messages, fee = NATIVE_FEE) {
+      const res = await tx.signAndBroadcast(messages as any, fee);
+      return res.transactionHash;
+    },
+  };
 }
 
 // --------------------------------------------------------------------- real
@@ -98,73 +210,16 @@ export interface RealChainOptions {
   abi: Abi;
 }
 
-const NATIVE_FEE = { amount: [{ denom: "uqor", amount: "100000" }], gas: "800000" };
-
 export async function createRealChain(opts: RealChainOptions): Promise<RealChain> {
-  const net = getNetwork("testnet");
   const { restUrl: rest, evmRpcUrl: evmRpc } = opts;
   const acc: UnifiedAccount = await deriveUnifiedAccount(opts.mnemonic, 0);
+  const lane = createNativeLane(acc, rest);
 
   // ---- EVM lane (viem)
   const chain = defineChain({ ...qorechainTestnet, rpcUrls: { default: { http: [evmRpc] } } });
   const publicClient = createPublicClient({ chain, transport: http(evmRpc) });
   const evmAccount = privateKeyToAccount(acc.privateKey as Hex);
   const wallet = createWalletClient({ account: evmAccount, chain, transport: http(evmRpc) });
-
-  // ---- native lane (REST): a minimal stand-in for cosmjs's SigningStargateClient
-  async function accountSequence() {
-    const res = await fetch(`${rest}/cosmos/auth/v1beta1/accounts/${acc.cosmos}`);
-    if (!res.ok) throw new Error(`account query failed: HTTP ${res.status}`);
-    const body = (await res.json()) as { account?: Record<string, any> };
-    const a = body.account?.base_account ?? body.account ?? {};
-    return { accountNumber: BigInt(a.account_number ?? "0"), sequence: BigInt(a.sequence ?? "0") };
-  }
-
-  const signingClient = {
-    async simulate(): Promise<number> {
-      throw new Error("simulate is not available over REST here; pass an explicit fee");
-    },
-    async signAndBroadcast(_addr: string, messages: any[], fee: any, memo?: string) {
-      // Only the bare key registration may be signed classically; everything else is hybrid.
-      const isRegistration = messages.length === 1 && /MsgRegisterPQCKey/.test(messages[0].typeUrl);
-      const signer = new EthNativeSigner(acc, { signMode: isRegistration ? "classical" : "hybrid", rest });
-      const { accountNumber, sequence } = await accountSequence();
-      const signBytesVersion = isRegistration ? undefined : await resolveSignBytesVersion({ chainId: net.chainId, rest });
-      const signed = signer.sign({ chainId: net.chainId, accountNumber, sequence, fee, memo, messages, signBytesVersion });
-      const hash = createHash("sha256").update(signed.txRawBytes).digest("hex").toUpperCase();
-      const post = await fetch(`${rest}/cosmos/tx/v1beta1/txs`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tx_bytes: Buffer.from(signed.txRawBytes).toString("base64"), mode: "BROADCAST_MODE_SYNC" }),
-      });
-      const sync = (await post.json()) as { tx_response?: { code?: number; raw_log?: string } };
-      if (!post.ok || (sync.tx_response?.code ?? 0) !== 0) {
-        throw new Error(`native broadcast rejected (HTTP ${post.status}, code ${sync.tx_response?.code}): ${sync.tx_response?.raw_log}`);
-      }
-      for (let i = 0; i < 30; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const r = await fetch(`${rest}/cosmos/tx/v1beta1/txs/${hash}`);
-        if (!r.ok) continue;
-        const t = ((await r.json()) as any).tx_response;
-        return {
-          code: Number(t.code ?? 0),
-          transactionHash: hash,
-          height: Number(t.height),
-          gasUsed: BigInt(t.gas_used ?? 0),
-          gasWanted: BigInt(t.gas_wanted ?? 0),
-          rawLog: t.raw_log,
-          events: [],
-          msgResponses: [],
-          txIndex: 0,
-        };
-      }
-      throw new Error(`native tx ${hash} was accepted but not seen in a block after 60 s`);
-    },
-    async signAndBroadcastSync(): Promise<string> {
-      throw new Error("not used");
-    },
-  };
-  const tx = new TxClient({ signingClient: signingClient as any, senderAddress: acc.cosmos });
 
   /** Turn a viem error into a RevertError with a readable reason. */
   function toRevert(err: unknown): RevertError | undefined {
@@ -212,9 +267,7 @@ export async function createRealChain(opts: RealChainOptions): Promise<RealChain
     },
 
     async openWindow({ blocks, maxTxs, maxValue }) {
-      const msg = openEvmWindowMsg({ sender: acc.cosmos, blocks, maxTxs, maxValue });
-      const res = await tx.signAndBroadcast([msg], NATIVE_FEE);
-      return res.transactionHash;
+      return lane.broadcast([openEvmWindowMsg({ sender: acc.cosmos, blocks, maxTxs, maxValue })]);
     },
 
     async gasPrice() {
@@ -247,8 +300,22 @@ export async function createRealChain(opts: RealChainOptions): Promise<RealChain
       };
     },
 
+    async call({ to, data }) {
+      const r = await publicClient.call({ to, data });
+      return (r.data ?? "0x") as Hex;
+    },
+
+    async kemKey(address) {
+      const r = await fetchKemKey({ rest, address });
+      return r.found && r.key ? r.key.publicKey : undefined;
+    },
+
+    async broadcastNative(messages) {
+      return lane.broadcast(messages);
+    },
+
     async ensurePqcKey() {
-      const res = await ensurePqcRegistered(tx, { pqcKeypair: acc.pqc, rest, fee: NATIVE_FEE });
+      const res = await ensurePqcRegistered(lane.tx, { pqcKeypair: acc.pqc, rest, fee: NATIVE_FEE });
       return res.alreadyRegistered ? undefined : res.txHash;
     },
   };

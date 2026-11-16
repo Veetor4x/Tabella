@@ -1,17 +1,20 @@
 /**
- * Tabella helper service: starts the HTTP server.
+ * Tabella helper service: the HTTP relay and the Postman, in one process.
  *
  *   HELPER_MNEMONIC    testnet-only account that pays gas (required, never logged)
  *   REGISTRY_ADDRESS   deployed TabellaRegistry (required)
  *   see .env.example for the optional limits
  *
- * The Postman (release helper) will be added to this same process later.
+ * The Postman's opening key is derived from HELPER_MNEMONIC (no extra secret).
  */
 import { serve } from "@hono/node-server";
 import { registryAbi } from "./abi.js";
 import { createRealChain } from "./chain.js";
 import { loadConfig } from "./config.js";
+import { createPostman } from "./postman.js";
+import { derivePostmanKeys, ensurePostmanKemKey } from "./postmanKeys.js";
 import { createApp } from "./relay.js";
+import { Mutex } from "./window.js";
 
 async function main() {
   const cfg = loadConfig();
@@ -25,14 +28,28 @@ async function main() {
   console.log(`registry:  ${cfg.registry}`);
   const balance = await chain.balanceUqor();
   console.log(`balance:   ${balance} uqor`);
-  if (balance < cfg.minBalanceUqor) console.warn("WARNING: balance is below MIN_BALANCE_UQOR; /relay will refuse requests until it is funded");
+  if (balance < cfg.minBalanceUqor) console.warn("WARNING: balance is below MIN_BALANCE_UQOR; sending will be refused until it is funded");
 
   // The helper must hold a registered ML-DSA-87 key to send anything (idempotent).
   const keyTx = await chain.ensurePqcKey();
   if (keyTx) console.log(`PQC key:   registered, tx ${keyTx}`);
 
-  const app = createApp({ chain, cfg });
+  const mutex = new Mutex(); // shared by /relay and the Postman: one nonce counter
+  let postman: ReturnType<typeof createPostman> | undefined;
+
+  if (cfg.postmanEnabled) {
+    const keys = derivePostmanKeys(mnemonic);
+    const kemTx = await ensurePostmanKemKey(chain, keys);
+    console.log(`Postman:   opening key ${kemTx ? `registered on-chain, tx ${kemTx}` : "already registered on-chain"}`);
+    postman = createPostman({ chain, cfg, keys, mutex });
+  } else {
+    console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
+  }
+
+  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info });
   serve({ fetch: app.fetch, port: cfg.port }, (info) => console.log(`listening: http://localhost:${info.port}  (POST /relay, GET /health)`));
+  postman?.start();
+  if (postman) console.log(`Postman:   looking for released letters every ${cfg.postmanIntervalMs / 1000} s`);
 }
 
 main().catch((err) => {

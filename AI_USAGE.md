@@ -32,3 +32,8 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **I decided:** only four calls relayed; refuse anything that would revert; bigger demo-day window; no Postman yet.
 - **Claude chose:** the `{fn, args, pubkey, sig}` request shape; trusted-proxy-hops rule for X-Forwarded-For (rightmost entry); 25% gas headroom, fee = min(2 x gas price, 250 gwei); small module split instead of the single relay.ts/chain.ts in the brief's tree.
 - **Learned from the real run:** createLetter costs ~4.2M gas (envelopes are stored on-chain), so the per-tx cap default went from 6M to 12M; the EVM window charges gasLimit x maxFee against its value budget but the account is only charged actual use.
+
+## 2026-11-16 (build step 3, part 3: the Postman)
+- **Generated:** `helper/src/postman.ts` (release loop), `postmanKeys.ts` (opening key from HELPER_MNEMONIC + on-chain registration), `submit.ts` (the simulate-first pipeline, extracted so /relay and the Postman share it), a native-lane client reusable for any account, 31 new tests, and `scripts/e2e-postman.ts` (real heirs, guardian pauses, release, both heirs open the letter).
+- **I decided:** the Postman key comes from HELPER_MNEMONIC (no new secret), a 20 s loop, safe retries, never publish twice.
+- **Claude chose:** a fixed non-secret BIP-39 passphrase for key separation; layered "never twice" (contract + simulate-first + reading the on-chain flag + backoff + no overlapping ticks); waiting for all heirs' keys with a 30-minute grace before sealing to a subset; `postmanAbi` kept separate from `registryAbi` so /relay can never encode publishPartB.
