@@ -20,3 +20,9 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **Generated:** `contracts/src/TabellaRegistry.sol` (section 6 of the brief), `contracts/test/TabellaRegistry.t.sol` (54 tests incl. 1 fuzz), `contracts/test/mocks/MockPqc.sol`; installed forge-std as a submodule; turned on `via_ir` (createLetter has 9 params).
 - **I decided:** the brief's contract design (key hashes, signed message, 2-pause cap, timestamps only). Claude chose: string action names in the signed message, `letterId = letterCount + 1` starting at 1, create signs nonce 0, `heirKeyReady` returns `(registered, algorithmId)`.
 - **Notes:** the mock "verifies" with sig == keccak256(pubkey ++ message); real ML-DSA-87 verification was proven on testnet in spike 02.
+
+## 2026-11-16 (build step 3, part 1)
+- **Generated:** `shared/tabella-crypto.ts` (brief section 7) + 28 Vitest tests; `contracts/test/{Fixtures,ExportVectors,LibSignature}.t.sol`; `shared/scripts/` fixture generator; vector files in `shared/test-vectors/`; updated the environment setup script (forge-std via `git submodule update --init`).
+- **I decided:** the library's shape (functions, 12-byte nonce + tag layout, A xor B split) and the test list from the brief.
+- **Claude chose:** card code = `tbl1_` + base64url(32-byte seed + 4-byte checksum) so typos are caught; `sealPartB` also accepts an array (Postman re-seals B to the heirs); 32-byte seeds only (both ML-DSA-87 and QoreSeal need exactly 32).
+- **Checked:** deliberately changed the domain string in TS and then in Solidity; both are caught by the cross-checked vectors.

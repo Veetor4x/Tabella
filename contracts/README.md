@@ -19,7 +19,7 @@ authorisation window your deployer needs.
 
 ```sh
 pnpm install          # the window helper's dependencies
-pnpm forge-std        # forge install foundry-rs/forge-std --no-git
+git submodule update --init lib/forge-std   # forge-std is a git submodule (same as: pnpm forge-std)
 cp .env.example .env  # the scaffolder already did this
 ```
 

@@ -1,0 +1,22 @@
+{
+  "name": "tabella-shared",
+  "private": true,
+  "type": "module",
+  "description": "Crypto shared by the Tabella app (browser) and helper (Node): letter encryption, key split, QoreSeal, ML-DSA-87 action signing, cards.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "fixtures": "tsx scripts/make-signature-fixture.ts"
+  },
+  "dependencies": {
+    "@qorechain/pqc": "^0.2.3",
+    "@qorechain/qoreseal": "^0.1.0",
+    "viem": "~2.53.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
