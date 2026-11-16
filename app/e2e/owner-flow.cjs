@@ -57,6 +57,8 @@ const ok = (cond, msg) => {
     ok(!EMOJI.test(text), `${label}: no emoji`);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     ok(!wide, `${label}: no sideways scrolling`);
+    const vp = await page.evaluate(() => [innerWidth, visualViewport.scale]);
+    ok(vp[0] === 390 && vp[1] === 1, `${label}: the page is not zoomed out (${vp.join(", ")})`);
   };
   const next = async (name = /^Continue/) => page.getByRole("button", { name }).click();
   const pillTexts = () => page.locator(".pills .pill").allInnerTexts();
