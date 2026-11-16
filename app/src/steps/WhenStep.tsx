@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { WARNING_DAYS, WHEN_OPTIONS, type WhenId } from "../lib/periods";
+import { ChoiceCard } from "../ui/ChoiceCard";
+import { Hourglass } from "../ui/Hourglass";
 import { StepFrame } from "../ui/StepFrame";
 
 /** The 2-minute demo timer is hidden: add ?demo to the address, or tap the hourglass five times. */
 const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
+
+/** How full the hourglass is for each choice: a longer wait, more sand. */
+const SAND: Record<WhenId, number> = { demo: 0.08, "3m": 0.34, "6m": 0.64, "12m": 1 };
 
 export function WhenStep(props: { when: WhenId; names: string; onChange: (w: WhenId) => void; onBack: () => void; onNext: () => void }) {
   const [taps, setTaps] = useState(0);
@@ -11,20 +16,17 @@ export function WhenStep(props: { when: WhenId; names: string; onChange: (w: Whe
   const options = WHEN_OPTIONS.filter((o) => !o.hidden || demo);
   return (
     <StepFrame step={3} lead="If you go quiet for this long, your letter opens." onBack={props.onBack} onNext={props.onNext} onEmojiTap={() => setTaps((t) => t + 1)}>
+      <Hourglass level={SAND[props.when]} />
       <div className="choices" role="radiogroup" aria-label="How long before it opens">
         {options.map((o) => (
-          <label className="choice" key={o.id}>
-            <input type="radio" name="when" checked={props.when === o.id} onChange={() => props.onChange(o.id)} />
-            <span className="box">
-              <span className="mark" aria-hidden="true" />
-              <span>
-                <strong>{o.label}</strong>
-                <span className="sub">
-                  {o.hidden ? "For demos only. Opens after 2 quiet minutes and a 1-minute countdown." : `of quiet, then a ${WARNING_DAYS}-day countdown`}
-                </span>
-              </span>
-            </span>
-          </label>
+          <ChoiceCard
+            key={o.id}
+            name="when"
+            checked={props.when === o.id}
+            onChange={() => props.onChange(o.id)}
+            title={o.label}
+            sub={o.hidden ? "For demos only. Opens after 2 quiet minutes and a 1-minute countdown." : `of quiet, then a ${WARNING_DAYS}-day countdown`}
+          />
         ))}
       </div>
       <p className="hint">

@@ -1,5 +1,7 @@
+import { m } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
-import { ProgressDots } from "./ProgressDots";
+import { Button } from "./Button";
+import { emojiPop, rise, riseContainer } from "./motion";
 import { STEPS } from "./steps";
 
 interface Props {
@@ -14,7 +16,7 @@ interface Props {
   onEmojiTap?: () => void;
 }
 
-/** One step per screen: progress dots, a calm heading, the content, and big Back / Next buttons. */
+/** One step per screen: a calm heading, the content, and big Back / Next buttons. (The dots live above, in App.) */
 export function StepFrame({ step, lead, children, onBack, onNext, nextLabel = "Next", nextDisabled, onEmojiTap }: Props) {
   const heading = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
@@ -31,29 +33,29 @@ export function StepFrame({ step, lead, children, onBack, onNext, nextLabel = "N
 
   const s = STEPS[step]!;
   return (
-    <>
-      <ProgressDots step={step} />
-      <p className="step-count" aria-hidden="true">
-        Step {step + 1} of {STEPS.length}
-      </p>
-      <h1 ref={heading} tabIndex={-1}>
-        <span className="emoji" aria-hidden="true" onClick={onEmojiTap}>
+    <m.div variants={riseContainer} initial="hidden" animate="show">
+      <m.h1 ref={heading} tabIndex={-1} variants={rise}>
+        <m.span className="emoji" aria-hidden="true" onClick={onEmojiTap} {...emojiPop}>
           {s.emoji}
-        </span>
+        </m.span>
         {s.title}
-      </h1>
-      {lead && <p className="lead">{lead}</p>}
-      {children}
-      <div className="actions">
+      </m.h1>
+      {lead && (
+        <m.p className="lead" variants={rise}>
+          {lead}
+        </m.p>
+      )}
+      <m.div variants={rise}>{children}</m.div>
+      <m.div className="actions" variants={rise}>
         {onBack && (
-          <button type="button" className="btn secondary" onClick={onBack}>
+          <Button variant="secondary" onClick={onBack}>
             Back
-          </button>
+          </Button>
         )}
-        <button type="button" className="btn primary" onClick={onNext} disabled={nextDisabled}>
+        <Button onClick={onNext} disabled={nextDisabled}>
           {nextLabel}
-        </button>
-      </div>
-    </>
+        </Button>
+      </m.div>
+    </m.div>
   );
 }

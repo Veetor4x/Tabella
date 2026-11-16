@@ -48,3 +48,8 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **I decided:** demo names (Mia, Leo, Sofia), the step order and copy, 3/6/12 months + a hidden 2-minute demo, paste-an-address for now, "Ready ✓", the Render helper as the relay.
 - **Claude chose:** a 14-day countdown after the quiet period; 5 taps on the hourglass (or `?demo`) reveal the demo timer; the guardian card is made at sealing time; cards shown as text codes for now (QR/print comes with the cards piece).
 - **Found by looking at screenshots, not by the checks:** tagline crowding the wordmark, a tap-highlight wash on the choice cards, addresses cut off in their field. Found by tests: viem's `getAddress` does not verify a mixed-case checksum (a typo would have passed), now checked.
+
+## 2026-11-16 (UI: the "lively" pass)
+- **Generated:** Framer Motion throughout the owner's flow: frosted-glass cards over a drifting warm background, sliding steps (forward and back differ), a gliding progress pill, squishy buttons, tilting choice cards, the people stack, the filling hourglass, the sealing ceremony (fold, envelope, wax drop, stamp, ripple, shake, optional thud), and sparkles on success. `ui/motion.ts` holds every preset.
+- **I decided:** the list of effects, glass + warm identity, sound off by default, no wording or sealing-logic changes.
+- **Claude chose:** how to keep to "transform and opacity only" (focus glow and selected-card frame are always drawn and fade in; the letter box resizes instantly while a glass plate eases behind it), a test that enforces the rule on presets, inline props and CSS, and the calm reduced-motion version.

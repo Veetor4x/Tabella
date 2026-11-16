@@ -2,6 +2,8 @@ import { useState } from "react";
 import { EXPLORER } from "../lib/config";
 import type { SealedLetter } from "../lib/storage";
 import { joinNames } from "../ui/steps";
+import { Button } from "../ui/Button";
+import { Sparkles } from "../ui/Sparkles";
 import { WaxSeal } from "../ui/WaxSeal";
 
 async function copyText(text: string): Promise<boolean> {
@@ -33,24 +35,23 @@ function download(filename: string, text: string) {
 function Card(props: { title: string; blurb: string; code: string; file: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <section className="card-box" aria-label={props.title}>
+    <section className="card-box glass" aria-label={props.title}>
       <h2>{props.title}</h2>
       <p>{props.blurb}</p>
       <code className="code mono">{props.code}</code>
       <div className="card-actions">
-        <button
-          type="button"
-          className="btn secondary small"
+        <Button
+          variant="small"
           onClick={async () => {
             setCopied(await copyText(props.code));
             setTimeout(() => setCopied(false), 2500);
           }}
         >
           {copied ? "Copied ✓" : "Copy"}
-        </button>
-        <button type="button" className="btn secondary small" onClick={() => download(props.file, `Tabella: ${props.title}\nKeep this safe, like a spare house key.\n\n${props.code}\n`)}>
+        </Button>
+        <Button variant="small" onClick={() => download(props.file, `Tabella: ${props.title}\nKeep this safe, like a spare house key.\n\n${props.code}\n`)}>
           Save a copy
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -60,7 +61,8 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
   const [saved, setSaved] = useState(false);
   const names = joinNames(letter.heirs.map((h) => h.name));
   return (
-    <>
+    <div className="done-screen">
+      <Sparkles />
       <div className="done-seal">
         <WaxSeal stamp />
       </div>
@@ -98,10 +100,10 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
       </p>
 
       <div className="actions">
-        <button type="button" className="btn primary" disabled={!saved} onClick={onAnother}>
+        <Button disabled={!saved} onClick={onAnother}>
           Write another letter
-        </button>
+        </Button>
       </div>
-    </>
+    </div>
   );
 }
