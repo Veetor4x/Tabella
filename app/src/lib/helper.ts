@@ -73,6 +73,13 @@ export async function relay(body: unknown): Promise<{ txHash: string }> {
 /** A kind sentence for whatever went wrong. No jargon, and it always says what to do next. */
 export function friendlyError(err: unknown): string {
   if (err instanceof HelperError) {
+    if (err.code === "wrong_card") return "That card doesn't belong to this letter.";
+    if (err.code === "would_revert") {
+      if (err.reason === "PauseLimitReached") return "Both pauses have already been used for this letter.";
+      if (err.reason === "NotOpen") return "This letter has already opened or been cancelled, so nothing can change now.";
+      if (err.reason === "WrongKey") return "That card doesn't belong to this letter.";
+      if (err.reason === "NoGuardian") return "This letter has no guardian.";
+    }
     switch (err.code) {
       case "helper_unreachable":
       case "helper_unavailable":

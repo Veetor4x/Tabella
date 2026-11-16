@@ -53,6 +53,7 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
             text: draft.text,
             heirs,
             guardianName: draft.guardian ? draft.guardian.name.trim() : null,
+            ownerName: draft.owner,
             quiet: when.quiet,
             warning: when.warning,
             whenLabel: when.label,

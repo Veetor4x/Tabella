@@ -22,6 +22,8 @@ export const emptyDraft = (): Draft => ({ text: "", heirs: [{ name: "", address:
 export interface SealedLetter {
   version: 1;
   letterId: string;
+  /** the owner's first name, for "Thanks, Alex." (absent on a letter restored from its card) */
+  ownerName?: string;
   txHash: string;
   createdAt: string;
   registry: string;
@@ -74,4 +76,22 @@ export function clearDraft() {
 export const loadLetters = (): SealedLetter[] => read<SealedLetter[]>(LETTERS_KEY) ?? [];
 export function saveLetter(letter: SealedLetter): boolean {
   return write(LETTERS_KEY, [...loadLetters().filter((l) => l.letterId !== letter.letterId), letter]);
+}
+
+// ------------------------------------------------------------- cards kept on this device
+
+/** A guardian card restored on this device. */
+export interface GuardianEntry {
+  letterId: string;
+  card: string;
+  /** their name, when this is the device that sealed the letter */
+  name?: string;
+}
+const GUARDIAN_KEY = "tabella.guardian.v1";
+export const loadGuardian = (): GuardianEntry[] => read<GuardianEntry[]>(GUARDIAN_KEY) ?? [];
+export function saveGuardian(e: GuardianEntry): boolean {
+  return write(GUARDIAN_KEY, [...loadGuardian().filter((g) => g.letterId !== e.letterId), e]);
+}
+export function removeLetter(letterId: string): boolean {
+  return write(LETTERS_KEY, loadLetters().filter((l) => l.letterId !== letterId));
 }

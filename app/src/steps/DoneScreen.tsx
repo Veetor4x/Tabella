@@ -112,6 +112,14 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
         </label>
 
         <p className="hint">
+          <a className="link" href={`/cards?letter=${letter.letterId}`}>
+            Print or save your cards
+          </a>
+          {" · "}
+          <a className="link" href="/me">
+            See my letters
+          </a>
+          {" · "}
           <a className="link" href={`${EXPLORER}/tx/${letter.txHash}`} target="_blank" rel="noreferrer">
             See the public receipt
           </a>

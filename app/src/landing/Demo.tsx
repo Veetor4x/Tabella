@@ -6,13 +6,15 @@ import { IconClock, IconLetter, IconShield, IconUser } from "../ui/icons";
 import { EASE } from "../ui/motion";
 import { PeopleMap } from "../ui/PeopleMap";
 import { WaxSeal } from "../ui/WaxSeal";
+import type { LetterView } from "../lib/registry";
+import { CheckInView } from "../me/parts";
 import { Reveal } from "./Reveal";
 
 /**
  * The how-it-works walkthrough: the real screens, played inside a phone frame, with sample people.
  * One clock (step + milliseconds into the step) drives every screen, so play, pause and jumping all work.
- * The first five screens are the app's own screens (with sample data); the last three (checking in, time passing,
- * Mia opening it) are previews of screens that are still being built.
+ * The first six screens are the app's own screens (with sample data); the last two (time passing, Mia opening it)
+ * are previews of screens that are still being built.
  */
 const STEPS = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 7000 },
@@ -186,25 +188,19 @@ function SealScreen({ t }: { t: number }) {
     </div>
   );
 }
+/** The real check-in screen (the same component as My letters), with a sample letter and a tap played for you. */
+const DAY = 86400;
+const SAMPLE_NOW = 1_800_000_000;
+const sample = (lastCheckIn: number): LetterView => ({
+  id: 7n, state: "Sealed", lastCheckIn, quiet: 180 * DAY, warning: 14 * DAY, nonce: 1, pausesUsed: 0, hasGuardian: true,
+  heirs: ["0x1", "0x2"], ownerKeyHash: "0x01", guardianKeyHash: "0x02", chainNow: SAMPLE_NOW, fetchedAt: 0,
+});
 function StillHere({ t }: { t: number }) {
-  const tapped = at(t, 2000);
+  const tapped = at(t, 2400);
+  const phase = tapped ? "done" : at(t, 1600) ? "working" : "idle";
   return (
-    <div className="done-screen" style={{ paddingTop: 30 }}>
-      <Headline text="Still here?" />
-      <p className="lead center">One tap tells everyone you're okay.</p>
-      <div className="still-wrap">
-        <m.span className="ripple" initial={false} animate={tapped ? { scale: 2.1, opacity: 0 } : { scale: 1, opacity: 0.5 }} transition={{ duration: 1.4, ease: EASE }} />
-        <m.div className="still-btn glass" initial={false} animate={{ scale: tapped && !at(t, 2300) ? 0.93 : 1 }} transition={{ duration: 0.25 }}>
-          <span>{tapped ? "Thank you" : "I'm still here"}</span>
-        </m.div>
-      </div>
-      <div className="still-meta">
-        <span>Next check-in</span>
-        <div className="hair">
-          <m.div className="hair-fill" initial={{ scaleX: 0.08 }} animate={{ scaleX: tapped ? 1 : 0.08 }} transition={{ duration: 1.6, ease: EASE, delay: 0.3 }} />
-        </div>
-        <strong>{tapped ? "in 6 months" : "in 2 days"}</strong>
-      </div>
+    <div className="step" style={{ paddingTop: 20 }}>
+      <CheckInView view={sample(tapped ? SAMPLE_NOW : SAMPLE_NOW - 178 * DAY)} now={0} ownerName="Alex" phase={phase} onTap={() => {}} />
     </div>
   );
 }
@@ -340,7 +336,7 @@ export function Demo() {
               ))}
             </ol>
           </div>
-          <p className="demo-fine">A preview with sample people. The first five screens are the real ones; checking in and opening are still being built.</p>
+          <p className="demo-fine">A preview with sample people. The first six screens are the real ones; time passing and opening are still being built.</p>
         </div>
       </Reveal>
     </section>

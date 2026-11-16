@@ -37,7 +37,7 @@ describe("animations only move and fade (transform + opacity)", () => {
   });
 
   it("inline animation props in components also only use transform and opacity", () => {
-    const dirs = ["src", "src/ui", "src/steps", "src/landing"];
+    const dirs = ["src", "src/ui", "src/steps", "src/landing", "src/me"];
     const bad: string[] = [];
     for (const d of dirs) {
       for (const f of readdirSync(new URL(`../${d}/`, import.meta.url)).filter((n) => n.endsWith(".tsx"))) {

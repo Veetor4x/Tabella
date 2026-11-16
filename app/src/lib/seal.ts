@@ -34,6 +34,7 @@ export interface SealInput {
   text: string;
   heirs: { name: string; evm: Hex; qor: string }[];
   guardianName: string | null;
+  ownerName?: string;
   quiet: number;
   warning: number;
   whenLabel: string;
@@ -146,6 +147,7 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
   return {
     version: 1,
     letterId: letterId.toString(),
+    ownerName: input.ownerName?.trim() || undefined,
     txHash,
     createdAt: new Date().toISOString(),
     registry: REGISTRY,

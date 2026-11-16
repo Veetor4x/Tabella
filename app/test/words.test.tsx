@@ -101,7 +101,7 @@ describe("no emoji", () => {
   });
   it("in the source", () => {
     const dir = (d: string) => readdirSync(new URL(`../src/${d}`, import.meta.url)).filter((f) => /\.(tsx?|css)$/.test(f)).map((f) => `${d}${f}`);
-    for (const f of [...dir(""), ...dir("ui/"), ...dir("steps/"), ...dir("landing/")]) {
+    for (const f of [...dir(""), ...dir("ui/"), ...dir("steps/"), ...dir("landing/"), ...dir("me/")]) {
       const src = readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
       expect(EMOJI.exec(src)?.[0], f).toBeUndefined();
     }
