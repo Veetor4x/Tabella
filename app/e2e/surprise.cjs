@@ -55,7 +55,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const same = (a) => a === LETTER.replace(/\s+/g, " ").trim();
 
   // ----------------------------------------------------------------- 1. Alex
-  const A = await fresh("Alex");
+  const A = await fresh("Alex", { record: true });
   const a = A.page;
   await a.goto(url("write?demo"), { waitUntil: "networkidle" });
   await a.getByLabel("Your letter").fill(LETTER);
@@ -231,7 +231,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(true, "the right answer (different case, extra spaces) plays the envelope scene");
   await sleep(2600); await shot(m, "mia-05-opening");
   await m.locator(".reader").waitFor({ timeout: 20000 });
-  await m.waitForTimeout(900); await shot(m, "mia-05b-decoding");
+  await m.waitForTimeout(450); await m.screenshot({ path: path.join(OUT, "mia-05b-decoding.png") });
   await m.locator(".decode.settled").waitFor({ timeout: 20000 });
   await m.waitForTimeout(3200); await shot(m, "mia-05c-signed");
   ok(same(await text(m)), "Mia opened the letter: exactly what Alex wrote");
