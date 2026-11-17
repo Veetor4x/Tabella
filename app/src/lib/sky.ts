@@ -22,7 +22,7 @@ export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
 export const PALETTE: Record<PartOfDay, Sky> = {
   morning: { top: [247, 230, 214], bot: [252, 241, 231], lit: [255, 247, 240], shade: [243, 199, 177], cloud: 0.9, stars: 0, night: 0 },
   afternoon: { top: [237, 240, 244], bot: [246, 242, 239], lit: [255, 255, 255], shade: [241, 202, 207], cloud: 0.9, stars: 0, night: 0 },
-  evening: { top: [221, 189, 199], bot: [238, 213, 210], lit: [250, 226, 221], shade: [188, 132, 151], cloud: 0.95, stars: 0, night: 0 },
+  evening: { top: [229, 199, 208], bot: [240, 217, 214], lit: [250, 226, 221], shade: [188, 132, 151], cloud: 0.95, stars: 0, night: 0 },
   night: { top: [7, 9, 14], bot: [16, 19, 28], lit: [104, 114, 136], shade: [36, 42, 58], cloud: 0.55, stars: 1, night: 1 },
 };
 
@@ -55,7 +55,11 @@ export function skyAtHour(hour: number): Sky {
     const [h1, p1] = STOPS[i + 1]!;
     if (h >= h0 && h <= h1) {
       const t = h1 === h0 ? 0 : (h - h0) / (h1 - h0);
-      const e = t * t * (3 - 2 * t); // ease the change, so it is slow at both ends
+      // ease the change, so it is slow at both ends; and into or out of night, hold the old look and then cross the dim middle
+      // (where neither dark nor light text reads well) quickly, instead of lingering in it
+      const edge = (p0 === "night") !== (p1 === "night");
+      const u = edge ? Math.min(1, Math.max(0, (t - 0.32) / 0.36)) : t;
+      const e = u * u * (3 - 2 * u);
       return blend(PALETTE[p0], PALETTE[p1], e);
     }
   }
@@ -76,7 +80,12 @@ export function skyFor(mode: Mode, hour: number): Sky {
 }
 
 export const rgb = (c: Rgb) => `${Math.round(c[0])} ${Math.round(c[1])} ${Math.round(c[2])}`;
-export const isDark = (s: Sky) => s.night > 0.5;
+/** Light text goes on once the sky is darker than the point where light and dark text read equally well. */
+const lum = (c: Rgb) => {
+  const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+};
+export const isDark = (s: Sky) => lum(s.bot) < 0.18;
 export const hex = (c: Rgb) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
 
 export function parseMode(v: unknown): Mode | null {

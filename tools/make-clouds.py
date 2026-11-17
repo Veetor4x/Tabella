@@ -91,15 +91,15 @@ def layer(seed, *, beta, sx, sy, cover, bill, warp_px, soft, strength, bottom_he
     return a_lit, a_shade
 
 
-def hero_cloud(seed=11, w=900, h=360):
+def hero_cloud(seed=11, w=900, h=420):
     """One small cumulus bank for the letter to sit on: flat soft base, billowing top."""
     rng = np.random.default_rng(seed)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     d = np.zeros((h, w), np.float32)
-    base_y = h * 0.72
-    for _ in range(26):
-        cx = rng.uniform(w * 0.14, w * 0.86)
-        r = rng.uniform(34, 92) * (1.15 - abs(cx - w / 2) / w)
+    base_y = h * 0.8
+    for _ in range(34):
+        cx = rng.uniform(w * 0.1, w * 0.9)
+        r = rng.uniform(52, 130) * (1.2 - abs(cx - w / 2) / w * 1.1)
         cy = base_y - r * rng.uniform(0.15, 0.85)
         blob = np.exp(-(((xx - cx) / r) ** 2 + ((yy - cy) / (r * 0.9)) ** 2) * 1.6)
         d = np.maximum(d, blob)
@@ -147,7 +147,7 @@ def main():
                 al = (a * op)[..., None]
                 img = img * (1 - al) + col * al
         Image.fromarray(img.clip(0, 255).astype(np.uint8)).save("/tmp/clouds-preview.png")
-        hero = np.broadcast_to(np.array([244, 241, 238.0]), (360, 900, 3)).copy()
+        hero = np.broadcast_to(np.array([244, 241, 238.0]), (420, 900, 3)).copy()
         for a, col in ((hs, np.array([236, 196, 200.0])), (hl, np.array([255, 253, 252.0]))):
             al = a[..., None]
             hero = hero * (1 - al) + col * al

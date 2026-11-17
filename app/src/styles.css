@@ -142,7 +142,9 @@ strong { font-weight: 600; }
 .counter .over { color: var(--alert); }
 
 /* ---------- buttons ---------- */
-.actions { display: flex; align-items: center; gap: 10px; position: sticky; bottom: 0; z-index: 5; margin-top: 30px; padding: 18px 0 max(6px, env(safe-area-inset-bottom)); background: linear-gradient(to top, rgb(var(--sky-bot) / 0.94) 55%, rgb(var(--sky-bot) / 0)); }
+.actions { display: flex; align-items: center; gap: 10px; position: sticky; bottom: 0; z-index: 5; margin-top: 30px; padding: 18px 0 max(6px, env(safe-area-inset-bottom)); isolation: isolate; }
+.actions::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: -60vw; right: -60vw; background: linear-gradient(to top, rgb(var(--sky-bot) / 0.9) 45%, rgb(var(--sky-bot) / 0)); pointer-events: none; }
+.actions.static::before { display: none; }
 .actions.static { position: static; background: none; }
 .actions .btn.primary { flex: 1; }
 .btn { appearance: none; font: inherit; font-size: 16px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: 999px; padding: 16px 24px; min-height: 54px; cursor: pointer; color: var(--ink); background: none; transition: transform 0.2s, opacity 0.2s; }
@@ -717,11 +719,12 @@ html[data-fx="1"]:not([data-fx-calm]) .btn.primary:not(:disabled)::after { conte
 .decode p { margin: 0 0 10px; }
 .dw { position: relative; display: inline-block; }
 .dw-real { display: inline-block; }
-.dw-sym { position: absolute; left: 0; top: 0; right: 0; overflow: hidden; white-space: nowrap; color: var(--faint); opacity: 0; pointer-events: none; user-select: none; }
+.dw-sym { display: none; position: absolute; left: 0; top: 0; right: 0; overflow: hidden; white-space: nowrap; color: var(--faint); opacity: 0; pointer-events: none; user-select: none; }
 .decode.run .dw-real { opacity: 0; transition: opacity 0.7s ease; }
-.decode.run .dw-sym { opacity: 0.75; transition: opacity 0.55s ease; }
+.decode.run .dw-sym { display: block; opacity: 0.75; transition: opacity 0.55s ease; }
 .decode.run .dw.on .dw-real { opacity: 1; }
 .decode.run .dw.on .dw-sym { opacity: 0; }
+.decode.settled .dw-sym { display: none; }
 
 /* writing from left to right by sliding a window (and the content back) */
 .wipe { display: inline-block; overflow: hidden; vertical-align: top; }
@@ -762,13 +765,13 @@ html[data-fx="1"]:not([data-fx-calm]) .btn.primary:not(:disabled)::after { conte
 .hold-tap:disabled { opacity: 0.4; }
 
 /* the letter on a cloud, in the hero */
-.hero-art { position: relative; padding-bottom: 54px; }
-.perch { position: absolute; right: 0; bottom: 0; width: 220px; height: 100px; pointer-events: none; }
-.perch-cloud { position: absolute; left: 0; right: 0; bottom: 0; height: 88px; animation: perch-cloud 9s ease-in-out infinite; will-change: transform; }
+.hero-art { position: relative; padding-bottom: 150px; }
+.perch { position: absolute; right: -6px; bottom: 0; width: 260px; height: 132px; pointer-events: none; }
+.perch-cloud { position: absolute; left: 0; right: 0; bottom: 0; height: 122px; filter: drop-shadow(0 8px 12px rgb(var(--cloud-shade) / 0.5)); animation: perch-cloud 9s ease-in-out infinite; will-change: transform; }
 .pc-shade, .pc-lit { position: absolute; inset: 0; display: block; opacity: 0.96; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
 .pc-shade { background: rgb(var(--cloud-shade)); -webkit-mask-image: url("./assets/sky/hero-shade.webp"); mask-image: url("./assets/sky/hero-shade.webp"); }
 .pc-lit { background: rgb(var(--cloud-lit)); -webkit-mask-image: url("./assets/sky/hero-lit.webp"); mask-image: url("./assets/sky/hero-lit.webp"); }
-.perch-lift { position: absolute; left: 50%; bottom: 32px; width: 74px; margin-left: -37px; will-change: transform, opacity; }
+.perch-lift { position: absolute; left: 50%; bottom: 42px; width: 74px; margin-left: -37px; will-change: transform, opacity; }
 .perch-env { position: relative; width: 74px; height: 50px; animation: perch-bob 5.6s ease-in-out infinite; will-change: transform; }
 .pe-body { position: absolute; inset: 0; border-radius: 6px; background: rgb(var(--cloud-lit) / 0.96); border: 1px solid var(--line-strong); box-shadow: 0 8px 14px -8px rgba(21, 23, 28, 0.4); }
 .pe-flap { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: var(--line-strong); clip-path: polygon(0 0, 100% 0, 50% 100%); }
@@ -776,7 +779,7 @@ html[data-fx="1"]:not([data-fx-calm]) .btn.primary:not(:disabled)::after { conte
 .pe-seal { position: absolute; left: 50%; top: 16px; width: 22px; height: 22px; margin-left: -11px; display: block; }
 @keyframes perch-bob { 0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.2deg); } 50% { transform: translate3d(0, -5px, 0) rotate(1.2deg); } }
 @keyframes perch-cloud { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, 2px, 0); } }
-@media (min-width: 860px) { .perch { right: 6%; width: 250px; height: 114px; } .perch-cloud { height: 100px; } .perch-lift { bottom: 36px; } }
+@media (min-width: 860px) { .hero-art { padding-bottom: 170px; } .perch { right: 4%; width: 300px; height: 150px; } .perch-cloud { height: 140px; } .perch-lift { bottom: 50px; } }
 
 /* a soft wax-red highlighter behind key phrases, sweeping in as they scroll into view */
 .hl { position: relative; background: none; color: inherit; white-space: nowrap; z-index: 0; }

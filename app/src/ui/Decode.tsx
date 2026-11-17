@@ -46,7 +46,10 @@ export function DecodedText({ text, onDone }: { text: string; onDone?: () => voi
       if (left > 0) raf = requestAnimationFrame(tick);
       else if (!finished) {
         finished = true;
-        setTimeout(() => done.current?.(), 600);
+        setTimeout(() => {
+          el.classList.add("settled"); // the soft marks leave the page altogether
+          done.current?.();
+        }, 800);
       }
     };
     raf = requestAnimationFrame(tick);
