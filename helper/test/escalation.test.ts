@@ -321,13 +321,16 @@ describe("a provider that says no", () => {
     expect((await esc.run("3", pkg("real"))).failed).toEqual(["r:email"]); // after ten minutes it tries once more
     expect(logs.at(-1)).toMatch(/failed \(provider answered HTTP 403 \(validation_error\)\); will retry in 600 s/);
     mode = "503";
-    now += 10 * 60_000 + 1;
-    await esc.run("3", pkg("real")); // fails with 503: 30 s
-    expect(logs.at(-1)).toMatch(/will retry in 30 s/);
-    now += 30_001; await esc.run("3", pkg("real"));
-    expect(logs.at(-1)).toMatch(/will retry in 60 s/);
+    const delays: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      now += 10 * 60_000 + 1; // always past the wait
+      await esc.run("3", pkg("real"));
+      delays.push(Number(/will retry in (\d+) s/.exec(logs.at(-1)!)![1]));
+    }
+    expect(delays.every((d, i) => i === 0 || d >= delays[i - 1]!)).toBe(true); // it only ever backs off further
+    expect(Math.max(...delays)).toBe(300); // never longer than five minutes for a hiccup
     mode = "ok";
-    now += 60_001;
+    now += 5 * 60_000 + 1;
     expect((await esc.run("3", pkg("real"))).sent).toEqual(["r:email"]);
     expect(n.sent).toHaveLength(1);
   });
