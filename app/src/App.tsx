@@ -14,6 +14,7 @@ import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
 import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
 import { SoundToggle } from "./ui/SoundToggle";
+import { ThemeToggle } from "./ui/ThemeToggle";
 import { STEP_COUNT, countWords, joinNames } from "./ui/steps";
 
 const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
@@ -110,7 +111,10 @@ export function App() {
                 <a className="brand-name" href="/" aria-label="Tabella, home">Tabella</a>
                 <span className="brand-tag">Sealed today. Opened when it matters.</span>
               </div>
-              <SoundToggle />
+              <div className="head-tools">
+                <ThemeToggle />
+                <SoundToggle />
+              </div>
             </header>
             <main>
               {!sealed && (

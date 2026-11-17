@@ -37,7 +37,7 @@ const sealed: SealedLetter = {
   guardianCard: "tbl1_GUARDIANCODE",
 };
 // (the sample letter itself must not contain the words: only the app's own text is being checked)
-const draft = { text: "Dear Mia and Leo,\nThe spare door code is under the blue pot.", heirs, guardian: { name: "Sofia" }, when: "6m" as const };
+const draft = { text: "Dear Mia and Leo,\nThe house papers are in the blue folder.", heirs, guardian: { name: "Sofia" }, when: "6m" as const };
 
 const screens: [string, () => string][] = [
   ["write", () => renderToStaticMarkup(<WriteStep text="" owner="" onChange={noop} onOwner={noop} onNext={noop} />)],

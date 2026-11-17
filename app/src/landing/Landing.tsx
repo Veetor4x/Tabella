@@ -2,6 +2,7 @@ import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "fram
 import { useCallback, useEffect, useState } from "react";
 import { getIntroChoice, setIntroChoice, type IntroChoice } from "../lib/intro";
 import { Background } from "../ui/Background";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { Headline } from "../ui/Headline";
 import { IconArrow, IconPlay } from "../ui/icons";
 import { fadeUp } from "../ui/motion";
@@ -58,6 +59,7 @@ export function Landing() {
               <a href="#why">Why</a>
               <a href="#how">How</a>
               <a href="#trust">Trust</a>
+              <ThemeToggle />
             </nav>
           </header>
 

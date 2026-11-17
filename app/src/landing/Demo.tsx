@@ -9,6 +9,7 @@ import { WaxSeal } from "../ui/WaxSeal";
 import type { LetterView } from "../lib/registry";
 import { CheckInView } from "../me/parts";
 import { Reveal } from "./Reveal";
+import { lettersAt, rhythmFor } from "./rhythm";
 
 /**
  * The how-it-works walkthrough: the real screens, played inside a phone frame, with sample people.
@@ -27,7 +28,7 @@ export const STEPS = [
   { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 9500 },
 ] as const;
 
-const LETTER = "Dear Mia and Leo,\n\nThe spare door code is under the blue pot by the back gate.\n\nBe kind to each other.\n\nLove, Alex";
+const LETTER = "Dear Mia and Leo,\n\nthe house papers are in the blue folder in my desk…\n\nBe kind to each other.\n\nLove, Alex";
 const ADDRESS = "0xE6EB…6Ca3";
 
 const at = (t: number, ms: number) => t >= ms;
@@ -79,8 +80,10 @@ const letterRoot = (
 );
 
 /* ---------- the eight screens ---------- */
+const WRITE_RHYTHM = rhythmFor(LETTER);
 function Write({ t }: { t: number }) {
-  const text = typed(LETTER, t, 900, 48);
+  // the letter appears at an irregular, human pace (and follows the recorded key taps when there are some)
+  const text = LETTER.slice(0, lettersAt(WRITE_RHYTHM, t - 900));
   return (
     <div className="step">
       <Headline text="What do you want them to *read* one day?" />

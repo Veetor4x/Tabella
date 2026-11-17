@@ -6,8 +6,8 @@ import { EASE } from "../ui/motion";
 import { Background } from "../ui/Background";
 import { WaxSeal } from "../ui/WaxSeal";
 import { PhoneView } from "./Demo";
-import { BEATS, ESTIMATED_SECONDS, STEPS as DEMO_STEPS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences } from "./introScript";
-import { duckMusic, pauseMusic, playSfx, setIntroMuted, startIntroSound, stopIntroSound } from "./sfx";
+import { BEATS, ESTIMATED_SECONDS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences } from "./introScript";
+import { duckMusic, pauseMusic, playSfx, setIntroMuted, startIntroSound, stopIntroSound, stopSfx } from "./sfx";
 import { Story } from "./stories";
 import { allVoice, hasVoice, stopVoice, voiceAudio } from "./voice";
 
@@ -162,7 +162,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   // sound effects fire at their moments in the beat
   useEffect(() => {
     if (!running) return;
-    for (const c of cuesBetween(beat, prevT.current, t)) playSfx(c.sfx, c.gain);
+    for (const c of cuesBetween(beat, prevT.current, t)) playSfx(c.sfx, { gain: c.gain, fadeAfter: c.fadeAfter, fadeMs: c.fadeMs });
     prevT.current = t;
   }, [t, beat, running]);
   useEffect(() => {
@@ -215,7 +215,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
     }
   }, [ended]);
 
-  const { phase, screenT } = calm ? { phase: calmSub, screenT: b.phoneMs - 100 } : phaseAt(beat, t, lineSecs);
+  const { phase, screenT } = calm ? { phase: b.noPhone ? ('story' as const) : calmSub, screenT: b.phoneMs - 100 } : phaseAt(beat, t, lineSecs);
   const step = b.step;
   const veilOn = step === 4 && screenT >= 7000 && screenT < 8400 && !calm;
   const progress = Math.min(1, t / length);
@@ -232,6 +232,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   };
   const jump = (n: number) => {
     stopVoice();
+    stopSfx();
     duckMusic(false);
     if (n < 0) return;
     if (n >= BEATS.length) {
@@ -246,6 +247,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   const toneReset = () => {};
   const replay = () => {
     stopVoice();
+    stopSfx();
     setEnded(false);
     setPaused(false);
     setBeat(0);
@@ -254,17 +256,17 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   };
   const goPrev = () => {
     if (calm && !ended && beat > 0 && calmSub === "phone") return setCalmSub("story");
-    if (calm) setCalmSub("phone");
+    if (calm) setCalmSub(BEATS[Math.max(0, (ended ? BEATS.length : beat) - 1)]!.noPhone ? "story" : "phone");
     jump(ended ? BEATS.length - 1 : beat - 1);
   };
   const goNext = () => {
-    if (calm && !ended && beat > 0 && calmSub === "story") return setCalmSub("phone");
+    if (calm && !ended && beat > 0 && calmSub === "story" && !b.noPhone) return setCalmSub("phone");
     setCalmSub("story");
     jump(beat + 1);
   };
 
   const inStory = phase === "story";
-  const inPhone = phase !== "story";
+  const inPhone = phase !== "story" && !b.noPhone;
 
   return (
     <m.div className="intro night" role="dialog" aria-modal="true" aria-label="Introduction to Tabella" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9, ease: EASE }}>
@@ -314,14 +316,14 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="camera">
             {/* the illustrated scene: it fades in, then the camera pushes into the phone */}
-            <m.div className="cam-story" initial={false} animate={{ opacity: inStory ? 1 : 0, scale: inStory ? 1 : 1.5 }} transition={{ duration: inStory ? 0.7 : ZOOM_MS / 1000, ease: EASE }} >
+            <m.div className="cam-story" initial={false} animate={{ opacity: inStory ? 1 : 0, scale: inStory || b.noPhone ? 1 : 1.5 }} transition={{ duration: inStory ? 0.7 : ZOOM_MS / 1000, ease: EASE }} >
               <Story key={`${beat}-${calm}`} id={b.story!} still={calm} />
             </m.div>
             {/* the phone: it grows out of the scene, and shrinks away at the end */}
             <m.div className="cam-phone" initial={false} animate={{ opacity: inPhone ? (phase === "zoom-out" ? 0 : 1) : 0, scale: phase === "zoom-out" ? 0.78 : inPhone ? 1 : 0.5 }} transition={{ duration: phase === "zoom-out" ? ZOOM_OUT_MS / 1000 : ZOOM_MS / 1000, ease: EASE }}>
               <div className="intro-phone" style={{ height: 600 * k, width: 292 * k }}>
                 <div className="intro-phone-in" style={{ transform: `scale(${k})` }}>
-                  <PhoneView step={step!} t={screenT} shownT={screenT} still={!running} veilOn={veilOn} />
+                  {step !== null && <PhoneView step={step} t={screenT} shownT={screenT} still={!running} veilOn={veilOn} />}
                 </div>
               </div>
             </m.div>
@@ -341,7 +343,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
             <div className="intro-caption" aria-hidden="true" />
           )}
           <p className="intro-step" aria-hidden="true">
-            {beat === 0 || step === null ? "" : DEMO_STEPS[step]!.label}
+            {beat === 0 ? "" : b.label}
           </p>
         </>
       )}

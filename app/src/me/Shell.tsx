@@ -2,6 +2,7 @@ import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import type { ReactNode } from "react";
 import { Background } from "../ui/Background";
 import { SoundToggle } from "../ui/SoundToggle";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 /** The frame around My letters, the guardian page and the cards: the same pearl, ink and glass as the rest. */
 export function Shell({ children, here, className = "" }: { children: ReactNode; here: "me" | "guardian" | "cards"; className?: string }) {
@@ -26,7 +27,10 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
                   <a href="/write">Write</a>
                 </nav>
               </div>
-              <SoundToggle />
+              <div className="head-tools">
+                <ThemeToggle />
+                <SoundToggle />
+              </div>
             </header>
             <main>{children}</main>
             <footer>A demo on a test network. Please don't write real secrets yet.</footer>

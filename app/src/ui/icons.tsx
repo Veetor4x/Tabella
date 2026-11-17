@@ -97,3 +97,14 @@ export const IconReplay = (p: P) => (
     <path d="M5 12a7 7 0 1 0 2.2-5.1M5 5v4h4" />
   </Icon>
 );
+export const IconSun = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="3.6" />
+    <path d="M12 4.2v1.8M12 18v1.8M4.2 12H6M18 12h1.8M6.5 6.5l1.3 1.3M16.2 16.2l1.3 1.3M17.5 6.5l-1.3 1.3M7.8 16.2l-1.3 1.3" />
+  </Icon>
+);
+export const IconMoon = (p: P) => (
+  <Icon {...p}>
+    <path d="M19 14.6A7.4 7.4 0 0 1 9.4 5 7.4 7.4 0 1 0 19 14.6Z" />
+  </Icon>
+);

@@ -7,7 +7,7 @@ import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
 import { fadeUp, sealSettle } from "../ui/motion";
 import { PeopleMap } from "../ui/PeopleMap";
-import { playSealTone } from "../lib/sound";
+import { playSealPress } from "../landing/sfx";
 import { WaxSeal } from "../ui/WaxSeal";
 
 async function copyText(text: string): Promise<boolean> {
@@ -67,7 +67,7 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
 
   // One soft low tone as the seal settles (only if sound was switched on).
   useEffect(() => {
-    const t = setTimeout(playSealTone, 1300);
+    const t = setTimeout(() => void playSealPress(), 1300);
     return () => clearTimeout(t);
   }, []);
 

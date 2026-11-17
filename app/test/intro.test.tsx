@@ -5,7 +5,9 @@ import { getIntroChoice, setIntroChoice } from "../src/lib/intro";
 import { IntroPlayer, IntroPrompt } from "../src/landing/Intro";
 import { Story, STORY_ALT, type StoryId } from "../src/landing/stories";
 import { readFileSync } from "node:fs";
-import { BEATS, ESTIMATED_SECONDS, OPENER_MS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences, totalMs } from "../src/landing/introScript";
+import { BEATS, ESTIMATED_SECONDS, FINAL_STORY_MS, OPENER_MS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences, totalMs } from "../src/landing/introScript";
+import { LEVEL, MUSIC_DUCKED, MUSIC_LEVEL } from "../src/landing/sfx";
+import { lettersAt, seededRhythm } from "../src/landing/rhythm";
 import { STEPS } from "../src/landing/Demo";
 
 describe("the voiceover script", () => {
@@ -27,7 +29,7 @@ describe("the voiceover script", () => {
     const starts = sentenceStarts(VOICE_LINES[7], 6);
     expect(starts[0]).toBe(0);
     expect(starts[2]).toBeGreaterThan(starts[1]!);
-    expect(starts[2]).toBeLessThan(6000);
+    expect(starts[2]).toBeLessThan(5300);
   });
   it("all eight recordings exist, named 01.mp3 to 08.mp3, and the browser's own voice is never used", () => {
     const files = readdirSync(new URL("../src/assets/voice/", import.meta.url)).filter((f) => f.endsWith(".mp3"));
@@ -37,92 +39,150 @@ describe("the voiceover script", () => {
   });
 });
 
-describe("the film: opener, then a story scene, a zoom and a screen for each step", () => {
-  it("has the opener and eight beats, each demo screen preceded by its own illustrated scene", () => {
+describe("the film: opener, then a scene, a zoom and a screen for each step, and a final scene with no phone", () => {
+  it("has the opener and eight beats, each demo screen preceded by its own scene", () => {
     expect(BEATS).toHaveLength(9);
-    expect(BEATS.map((b) => b.story)).toEqual([null, "desk", "family", "thumbs", "calendar", "seal", "beach", "race", "gift"]);
-    expect(BEATS.map((b) => b.step)).toEqual([null, 0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(BEATS.map((b) => b.story)).toEqual([null, "desk", "chairs", "shield", "calendar", "seal", "horizon", "clock", "open"]);
+    expect(BEATS.map((b) => b.step)).toEqual([null, 0, 1, 2, 3, 4, 5, 6, null]);
     expect(BEATS.filter((b) => b.line !== null).map((b) => b.line)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
-    expect(BEATS[7]!.line).toBeNull(); // time passes: music, ticks and the race, no voice
+    expect(BEATS[7]!.line).toBeNull(); // time passes: the clock, the music, no voice
+    expect(BEATS[8]!.noPhone).toBe(true);
   });
-  it("every beat is long enough for its story, the zoom, its screen and its line", () => {
+  it("every beat is long enough for its scene, the zoom, its screen and its line", () => {
     BEATS.forEach((b, i) => {
       if (i === 0) return expect(beatMs(0)).toBeGreaterThanOrEqual(OPENER_MS);
-      expect(beatMs(i)).toBeGreaterThanOrEqual(STORY_MS + ZOOM_MS + b.phoneMs + ZOOM_OUT_MS);
+      expect(beatMs(i)).toBeGreaterThanOrEqual(b.noPhone ? b.storyMs : b.storyMs + ZOOM_MS + b.phoneMs + ZOOM_OUT_MS);
       if (b.line !== null) expect(beatMs(i, 40)).toBeGreaterThan(40_000); // a long recording stretches the beat, never cuts it off
     });
-    expect(STORY_MS).toBeGreaterThanOrEqual(2000);
-    expect(STORY_MS).toBeLessThanOrEqual(3200); // "a 2 to 3 second scene"
+    BEATS.filter((b) => !b.noPhone && b.story).forEach((b) => expect(b.storyMs).toBeLessThanOrEqual(3200)); // "a 2 to 3 second scene"
     expect(totalMs()).toBeGreaterThan(70_000);
-    expect(totalMs()).toBeLessThan(130_000);
+    expect(totalMs()).toBeLessThan(140_000);
+  });
+  it("the final scene gives the zoom time: the envelope opens, then the camera comes in over 2 to 3 seconds and holds", () => {
+    expect(FINAL_STORY_MS).toBeGreaterThanOrEqual(8000);
+    const src = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
+    const zoom = /a="zoom-read" d=\{([0-9.]+)\} dur=\{([0-9.]+)\}/.exec(src)!;
+    expect(+zoom[2]!).toBeGreaterThanOrEqual(2);
+    expect(+zoom[2]!).toBeLessThanOrEqual(3);
+    expect(FINAL_STORY_MS / 1000 - (+zoom[1]! + +zoom[2]!)).toBeGreaterThanOrEqual(1.5); // a moment to hold on the message
+    expect(src).toContain("cubic-bezier"); // eased
   });
   it("the screen plays no longer than the demo screen's own schedule", () => {
     BEATS.forEach((b) => b.step !== null && expect(b.phoneMs).toBeLessThanOrEqual(STEPS[b.step]!.ms + 400));
   });
-  it("the camera goes story, zoom in, phone, zoom out", () => {
+  it("the camera goes scene, zoom in, phone, zoom out (and stays on the scene when there is no phone)", () => {
     const last = beatMs(1);
     expect(phaseAt(1, 500).phase).toBe("story");
     expect(phaseAt(1, STORY_MS + 100).phase).toBe("zoom-in");
     expect(phaseAt(1, STORY_MS + ZOOM_MS + 500)).toEqual({ phase: "phone", screenT: 500 });
     expect(phaseAt(1, last - 100).phase).toBe("zoom-out");
+    expect(phaseAt(8, 7000).phase).toBe("story");
   });
   it("the voice starts inside its beat and the line fits before the beat ends", () => {
     BEATS.forEach((b, i) => b.line !== null && i > 0 && expect(VOICE_AT[i]! + ESTIMATED_SECONDS[b.line]! * 1000).toBeLessThan(beatMs(i)));
   });
 });
 
-describe("sound effects and music", () => {
-  it("every cue names an effect that exists as a file, inside its beat, in time order within reason", () => {
-    const names = new Set(readdirSync(new URL("../src/assets/sfx/", import.meta.url)).map((f) => f.replace(".wav", "")));
-    BEATS.forEach((b, i) => {
-      for (const c of b.cues) {
-        expect(names.has(c.sfx), c.sfx).toBe(true);
-        expect(c.at).toBeGreaterThanOrEqual(0);
-        expect(c.at).toBeLessThan(beatMs(i));
-      }
-    });
+describe("sound: recorded-style effects only", () => {
+  const names = () => new Set(readdirSync(new URL("../src/assets/sfx/", import.meta.url)).map((f) => f.replace(/\.mp3$/, "")));
+  it("has no whoosh, no chime, no tone, no glint and no synthesised files (all are mp3 recordings)", () => {
+    const files = readdirSync(new URL("../src/assets/sfx/", import.meta.url));
+    for (const f of files) expect(f).toMatch(/\.mp3$/);
+    for (const banned of ["whoosh", "swoosh", "chime", "tone", "glint", "pop", "tick"]) expect(files.some((f) => f.includes(banned)), banned).toBe(false);
+    const code = readFileSync(new URL("../src/landing/introScript.ts", import.meta.url), "utf8") + readFileSync(new URL("../src/landing/sfx.ts", import.meta.url), "utf8");
+    expect(code).not.toMatch(/"whoosh"|"chime"|"glint"|"tone"|createOscillator/);
   });
-  it("covers what the brief asks: typing, rustle and fold, whoosh, pop, wax stamp, clock ticks, a chime when the letter opens", () => {
+  it("every cue names an effect that exists as a file, inside its beat", () => {
+    const have = names();
+    BEATS.forEach((b, i) => b.cues.forEach((c) => {
+      expect(have.has(c.sfx), c.sfx).toBe(true);
+      expect(c.at).toBeGreaterThanOrEqual(0);
+      expect(c.at).toBeLessThan(beatMs(i));
+    }));
+  });
+  it("each scene has its own quiet transition, all different, at the very start, and each lower than the other effects", () => {
+    const transitions = BEATS.slice(1).map((b) => b.cues.find((c) => c.at === 0 && c.sfx.startsWith("t-"))?.sfx);
+    expect(transitions.every(Boolean)).toBe(true);
+    expect(new Set(transitions).size).toBe(8);
+    for (const t of transitions) expect(LEVEL[t!]).toBeLessThanOrEqual(0.16);
+    const others = Object.entries(LEVEL).filter(([k]) => !k.startsWith("t-")).map(([, v]) => v);
+    expect(Math.max(...Object.entries(LEVEL).filter(([k]) => k.startsWith("t-")).map(([, v]) => v))).toBeLessThan(Math.min(...others));
+  });
+  it("covers the scenes: keyboard typing, paper, fold, calendar flips, wax stamp, a real clock, the seal cracking, the envelope opening", () => {
     const all = new Set(BEATS.flatMap((b) => b.cues.map((c) => c.sfx)));
-    for (const n of ["type", "rustle", "fold", "whoosh", "pop", "stamp", "tick", "chime"]) expect(all.has(n as never), n).toBe(true);
-    expect(BEATS[1]!.cues.filter((c) => c.sfx === "type").length).toBeGreaterThan(20); // typing while the letter is written
-    expect(BEATS[7]!.cues.filter((c) => c.sfx === "tick").length).toBeGreaterThan(10);
-    expect(BEATS[8]!.cues.some((c) => c.sfx === "chime")).toBe(true);
-    expect(BEATS[5]!.cues.some((c) => c.sfx === "stamp")).toBe(true);
+    for (const n of ["type", "rustle", "fold", "flip", "stamp", "clock", "crack", "open"]) expect(all.has(n as never), n).toBe(true);
+    expect(BEATS[1]!.cues.some((c) => c.sfx === "type")).toBe(true);
+    expect(BEATS[4]!.cues.filter((c) => c.sfx === "flip").length).toBeGreaterThanOrEqual(4);
+  });
+  it("the clock is one natural recording that fades away, not a sped-up series of ticks", () => {
+    const clocks = BEATS.flatMap((b) => b.cues.filter((c) => c.sfx === "clock"));
+    expect(clocks).toHaveLength(1);
+    expect(clocks[0]!.fadeAfter).toBeGreaterThan(3000);
+    expect(clocks[0]!.fadeMs).toBeGreaterThanOrEqual(2500);
+    expect(BEATS.flatMap((b) => b.cues).filter((c) => c.sfx === "tap").length).toBeGreaterThan(0);
   });
   it("a window of time returns exactly the cues inside it", () => {
-    expect(cuesBetween(2, 0, 2000).map((c) => c.sfx)).toEqual(["pop", "whoosh", "pop"]);
+    expect(cuesBetween(2, -1, 2000).map((c) => c.sfx)).toEqual(["t-air", "tap", "tap"]);
     expect(cuesBetween(2, 500, 600)).toHaveLength(1);
     expect(cuesBetween(2, 600, 700)).toHaveLength(0);
   });
-  it("is soft: no effect is louder than 0.6 of full, the bed is quiet and ducks lower under the voice", async () => {
-    const src = readFileSync(new URL("../src/landing/sfx.ts", import.meta.url), "utf8");
-    const levels = [...src.matchAll(/(\w+): ([0-9.]+)[,}]/g)].map((m) => +m[2]!).filter((n) => n > 0 && n <= 1);
-    expect(Math.max(...levels)).toBeLessThanOrEqual(0.6);
-    const { MUSIC_LEVEL, MUSIC_DUCKED } = await import("../src/landing/sfx");
+  it("is soft: no effect louder than 0.45, the bed quiet and ducking lower under the voice", () => {
+    expect(Math.max(...Object.values(LEVEL))).toBeLessThanOrEqual(0.45);
     expect(MUSIC_DUCKED).toBeLessThan(MUSIC_LEVEL);
     expect(MUSIC_LEVEL).toBeLessThanOrEqual(0.3);
   });
 });
 
+describe("the typing follows a natural, irregular rhythm", () => {
+  const text = "Dear Mia and Leo,\n\nthe house papers are in the blue folder in my desk…";
+  it("is not a metronome, and shows every letter by the end", () => {
+    const at = seededRhythm(text);
+    expect(at).toHaveLength(text.length);
+    const gaps = at.slice(1).map((v, i) => v - at[i]!);
+    expect(new Set(gaps).size).toBeGreaterThan(15); // many different gaps
+    expect(Math.max(...gaps)).toBeGreaterThan(Math.min(...gaps) * 3);
+    expect(lettersAt(at, -1)).toBe(0);
+    expect(lettersAt(at, at.at(-1)!)).toBe(text.length);
+    expect(at.at(-1)!).toBeLessThan(5300);
+  });
+});
+
+describe("the demo letter never shows anything secret", () => {
+  it("is about the house papers in the blue folder, with no door codes or passwords", () => {
+    const demo = readFileSync(new URL("../src/landing/Demo.tsx", import.meta.url), "utf8");
+    const stories = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
+    for (const src of [demo, stories]) {
+      expect(src).not.toMatch(/door code|password|passcode|\bPIN\b|recovery phrase|spare door/i);
+    }
+    expect(demo).toContain("the house papers are in the blue folder in my desk");
+    expect(stories).toContain("the house papers are in the");
+    expect(stories).toContain("blue folder in my desk");
+  });
+});
+
 describe("the illustrated scenes", () => {
-  const ids = ["desk", "family", "thumbs", "calendar", "seal", "beach", "race", "gift"] as StoryId[];
-  it.each(ids)("%s draws, with only the four characters and no emoji", (id) => {
+  const ids = ["desk", "chairs", "shield", "calendar", "seal", "horizon", "clock", "open"] as StoryId[];
+  it.each(ids)("%s draws, with thin lines, no emoji and only the four names", (id) => {
     const html = renderToStaticMarkup(<Story id={id} />);
     expect(html).toContain("<svg");
     expect(html.replace(/&#x27;/g, "'")).toContain(STORY_ALT[id]);
     expect(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(html)).toBe(false);
-    const names = [...html.matchAll(/class="nm"[^>]*>([^<]*)</g)].map((m) => m[1]).filter(Boolean);
-    for (const n of names) expect(["Alex", "Mia", "Leo", "Sofia"]).toContain(n);
+    for (const n of [...html.matchAll(/class="nm"[^>]*>([^<]*)</g)].map((m) => m[1]).filter(Boolean)) expect(["Alex", "Mia", "Leo", "Sofia"]).toContain(n);
   });
-  it("the still version has no animation, and no scene lines stroke dashes or filters", () => {
-    expect(renderToStaticMarkup(<Story id="desk" still />)).toContain("still");
+  it("is clean: no figures, no big grey circles, no floating squares, no ripples, at most one wax-red accent per scene", () => {
     const src = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
-    expect(src).not.toMatch(/strokeDash|filter=|feGaussianBlur/);
+    expect(src).not.toMatch(/Person|Head|Scraps|lamp|gift-light|a="ring"|ripple/);
+    const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+    expect(css).not.toMatch(/lamp-light|gift-light|@keyframes ring|@keyframes scrap|\.ripple/);
+    for (const id of ids) {
+      const html = renderToStaticMarkup(<Story id={id} />);
+      const accents = (html.match(/class="(wx|wxl)"/g) ?? []).length;
+      expect(accents, id).toBeLessThanOrEqual(5); // one accent object (a few strokes at most)
+    }
   });
-  it("only the four characters appear across all the scenes", () => {
-    const all = ids.map((id) => renderToStaticMarkup(<Story id={id} />)).join(" ");
-    for (const n of ["Alex", "Mia", "Leo", "Sofia"]) expect(all).toContain(n);
+  it("the still version has no animation, and the scenes use no stroke dashes or filters", () => {
+    expect(renderToStaticMarkup(<Story id="desk" still />)).toContain("still");
+    expect(readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8")).not.toMatch(/strokeDash|filter=|feGaussianBlur/);
   });
 });
 

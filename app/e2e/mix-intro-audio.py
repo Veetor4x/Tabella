@@ -34,7 +34,9 @@ voice = np.zeros(N, dtype=np.float32)
 sfx = np.zeros(N, dtype=np.float32)
 music = np.zeros(N, dtype=np.float32)
 cache = {}
-LEVEL = {"type": 0.32, "rustle": 0.4, "fold": 0.4, "whoosh": 0.32, "pop": 0.5, "stamp": 0.55, "tick": 0.3, "flip": 0.35, "chime": 0.5, "glint": 0.28, "tone": 0.55}
+# the same levels as landing/sfx.ts
+LEVEL = {"type": 0.34, "clock": 0.3, "rustle": 0.3, "fold": 0.3, "flip": 0.3, "tap": 0.32, "stamp": 0.42, "crack": 0.4, "open": 0.42,
+         "t-page": 0.16, "t-air": 0.14, "t-slide": 0.15, "t-felt": 0.16, "t-fabric": 0.14, "t-sea": 0.13, "t-room": 0.12, "t-tissue": 0.14}
 MUSIC_LEVEL, MUSIC_DUCKED = 0.22, 0.08
 
 # voice: the last play of each line is the one that counts (the first is the silent "unlock" at the tap)
@@ -54,11 +56,19 @@ for line, p in sorted(last.items()):
 # sound effects, from the log the page kept
 for e in t.get("audio", []):
     if e["kind"] == "sfx":
-        f = root / "sfx" / f"{e['name']}.wav"
+        f = root / "sfx" / f"{e['name']}.mp3"
         if not f.exists():
             continue
         cache.setdefault(e["name"], decode(f))
-        put(sfx, cache[e["name"]], at(e["at"]), LEVEL.get(e["name"], 0.4) * e.get("gain", 1.0))
+        clip = cache[e["name"]].copy()
+        if e.get("fadeAfter") is not None:  # a sound that fades away (the old wall clock)
+            a0 = int(e["fadeAfter"] / 1000 * SR)
+            n = max(1, int(e.get("fadeMs", 1500) / 1000 * SR))
+            ramp = np.ones(len(clip), dtype=np.float32)
+            ramp[a0:a0 + n] = np.linspace(1, 0, min(n, max(0, len(clip) - a0)))[: max(0, min(n, len(clip) - a0))]
+            ramp[a0 + n:] = 0
+            clip *= ramp
+        put(sfx, clip, at(e["at"]), LEVEL.get(e["name"], 0.4) * (e.get("gain") or 1.0))
 
 # music: starts where the log says, loops, fades in, ducks under the voice
 mus_files = sorted((root / "music").glob("*.mp3")) if (root / "music").exists() else []
