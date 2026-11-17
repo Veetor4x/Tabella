@@ -19,8 +19,11 @@ import { extractCode } from "../src/lib/cards";
 import { notify, getToasts, dismiss } from "../src/lib/notices";
 import { APP_HOST, CARD_URL } from "../src/lib/config";
 import { Landing } from "../src/landing/Landing";
+import { skyAtHour } from "../src/lib/sky";
 import { SpareCardRow } from "../src/me/SpareCards";
 import * as storage from "../src/lib/storage";
+import { stuckLabel } from "../src/me/StuckLetter";
+import { REGISTRY, REGISTRIES, PAST_REGISTRIES, isCurrentRegistry } from "../src/lib/config";
 import type { SealedLetter } from "../src/lib/storage";
 
 const html = (el: JSX.Element) => renderToStaticMarkup(<LazyMotion features={domAnimation}>{el}</LazyMotion>);
@@ -167,6 +170,68 @@ describe("removing cards that have no sealed letter", () => {
     const h = html(<CardsView letter={letter()} />);
     expect(h).not.toContain("Remove from this device");
     expect("removeLetter" in storage).toBe(false);
+  });
+});
+
+describe("letters on every registry version", () => {
+  it("keeps every deployed registry, with the current one first", () => {
+    expect(REGISTRIES[0]!.address).toBe(REGISTRY);
+    expect(PAST_REGISTRIES.map((v) => v.address)).toEqual(expect.arrayContaining(["0xC0808aF18e2283dFE4d026315a462349561fFd1c", "0x48E4e0B4957d7C8ED6ac3d38cF45A7e5fa03b78D"]));
+    expect(isCurrentRegistry("0xC0808aF18e2283dFE4d026315a462349561fFd1c")).toBe(false);
+    expect(isCurrentRegistry(REGISTRY.toLowerCase())).toBe(true);
+  });
+  it("labels plainly, and never leaves 'We couldn't look just now' as the answer", () => {
+    expect(stuckLabel({ kind: "older", view: null })!.title).toBe("From an older test version");
+    expect(stuckLabel({ kind: "missing" })!.title).toBe("This letter didn't finish sealing");
+    expect(stuckLabel({ kind: "older", view: null })!.why).toBe("older");
+    expect(stuckLabel({ kind: "missing" })!.why).toBe("unfinished");
+    expect(stuckLabel({ kind: "unreachable" })!.why).toBeNull(); // no removal while we simply cannot see the network
+    expect(css + html(<SpareCardRow title="x" line="y" onRemove={() => {}} />)).not.toContain("We couldn't look just now");
+  });
+  it("removal from the list is refused for a letter sealed on the current version", () => {
+    const store = new Map<string, string>();
+    (globalThis as unknown as { window: unknown }).window = { localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) } };
+    const cur = letter({ letterId: "5", registry: REGISTRY });
+    const old = letter({ letterId: "28", registry: "0xC0808aF18e2283dFE4d026315a462349561fFd1c" });
+    const unknown = letter({ letterId: "15", registry: "" });
+    for (const l of [cur, old, unknown]) storage.saveLetter(l);
+    expect(storage.loadLetters().length).toBe(3);
+    expect(storage.removeFromList(cur, "older")).toBe(false); // the current version is never "older"
+    expect(storage.removeFromList(unknown, "older")).toBe(false); // an unknown version is not proven older
+    expect(storage.removeFromList(old, "older")).toBe(true);
+    expect(storage.removeFromList(unknown, "unfinished")).toBe(true); // looked up everywhere and found nowhere
+    expect(storage.loadLetters().map((l) => l.letterId)).toEqual(["5"]);
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+  it("the same letter number on two versions is two letters", () => {
+    const store = new Map<string, string>();
+    (globalThis as unknown as { window: unknown }).window = { localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) } };
+    storage.saveLetter(letter({ letterId: "7", registry: REGISTRY }));
+    storage.saveLetter(letter({ letterId: "7", registry: "0xC0808aF18e2283dFE4d026315a462349561fFd1c" }));
+    expect(storage.loadLetters().length).toBe(2);
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+});
+
+describe("the light page is warm pearl, with pink only in the clouds", () => {
+  const lum = (c: number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+  it("every light sky base is warm off-white: red barely above green, never a pink wash", () => {
+    for (const h of [8, 10, 12, 14, 16, 18, 19.5, 20]) {
+      const s = skyAtHour(h);
+      for (const c of [s.top, s.bot]) {
+        expect(c[0]! - c[1]!, `${h}h red minus green`).toBeLessThan(10); // pink would be 15 or more
+        expect(c[0]! - c[2]!, `${h}h red minus blue`).toBeLessThan(16);
+        expect(lum(c)).toBeGreaterThan(226);
+      }
+    }
+    expect(skyAtHour(14).bot).toEqual([247, 244, 237]); // shows as about #F4F1EA with the fine grain on top
+  });
+  it("the glass stays neutral white, and the clouds are the only pink", () => {
+    const rule = /:root:not\(\[data-theme="dark"\]\) \.glass:not\(\.night \.glass\) \{([^}]*)\}/.exec(css)![1]!;
+    expect(rule).toMatch(/background: rgba\(255, 255, 255, 0\.\d+\)/);
+    expect(rule).not.toMatch(/rgba\((2[0-4]\d|1\d\d), (1\d\d|[0-9]{1,2}),/);
+    const tint = /--cloud-tint: (\d+) (\d+) (\d+)/.exec(css)!;
+    expect(Number(tint[1]) - Number(tint[3])).toBeGreaterThan(30); // a clear blush
   });
 });
 

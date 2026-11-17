@@ -1,6 +1,7 @@
 /**
  * The colours of the sky, from the visitor's own clock. Pure functions: nothing here touches the page.
- * Morning is warm cream and peach, afternoon is pearl and blush, evening is dusky rose, night is deep ink with
+ * The light page is always warm pearl (these values show as about #F4F1EA once the fine grain is on top); only the clouds change colour through the day: peach in the morning, blush by day,
+ * dusky rose in the evening. Night is deep ink with
  * moonlit grey clouds and a few faint stars. Between two moments the colours blend, so nothing ever jumps.
  */
 export type Rgb = [number, number, number];
@@ -20,9 +21,9 @@ export type Mode = "auto" | "day" | "night";
 export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
 
 export const PALETTE: Record<PartOfDay, Sky> = {
-  morning: { top: [246, 235, 224], bot: [247, 239, 229], lit: [247, 220, 202], shade: [239, 192, 172], cloud: 1, stars: 0, night: 0 },
-  afternoon: { top: [237, 234, 229], bot: [238, 235, 230], lit: [238, 210, 208], shade: [224, 186, 190], cloud: 1, stars: 0, night: 0 },
-  evening: { top: [231, 205, 212], bot: [239, 218, 216], lit: [238, 207, 209], shade: [210, 162, 178], cloud: 1, stars: 0, night: 0 },
+    morning: { top: [250, 246, 238], bot: [249, 245, 237], lit: [246, 212, 194], shade: [236, 178, 162], cloud: 1, stars: 0, night: 0 },
+    afternoon: { top: [248, 245, 238], bot: [247, 244, 237], lit: [240, 205, 208], shade: [226, 170, 182], cloud: 1, stars: 0, night: 0 },
+    evening: { top: [246, 242, 236], bot: [245, 241, 235], lit: [236, 198, 204], shade: [208, 154, 172], cloud: 1, stars: 0, night: 0 },
   night: { top: [8, 10, 15], bot: [16, 19, 28], lit: [72, 80, 102], shade: [36, 42, 60], cloud: 0.8, stars: 1, night: 1 },
 };
 

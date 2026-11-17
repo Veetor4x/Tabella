@@ -10,7 +10,8 @@ import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
 import { EASE, cardAppear } from "../ui/motion";
 import { Ring } from "../ui/Ring";
-import { useLetter, useNow, useRoute } from "./hooks";
+import { useResolvedLetter, useNow, useRoute } from "./hooks";
+import { RemoveFromList, StuckPanel, stuckLabel } from "./StuckLetter";
 import { CheckInView, StatePill, namesOf, nextLine, type CheckInPhase } from "./parts";
 import { RestorePanel } from "./Restore";
 import { SpareCards } from "./SpareCards";
@@ -34,28 +35,54 @@ function HowThisWorks() {
   );
 }
 
-function ListRow({ saved, go }: { saved: SealedLetter; go: (p: string) => void }) {
-  const { view, failed } = useLetter(saved.letterId, 15_000);
+function ListRow({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string) => void; onChanged: () => void }) {
+  const { resolved, view } = useResolvedLetter(saved, 15_000);
   const now = useNow();
   const names = namesOf(saved.heirs.map((h) => h.name), saved.heirs.map((h) => h.evm));
+  const label = stuckLabel(resolved);
+  const text = label ? label.title : view ? nextLine(view, now) : "Looking…";
   return (
     <m.li {...cardAppear}>
       <a className="letter-row glass" href={`/me/${saved.letterId}`} onClick={(e) => { e.preventDefault(); go(`/me/${saved.letterId}`); }}>
-        <Ring fraction={view && view.state !== "Cancelled" && view.state !== "Opened" ? countdown(view, now).fraction : 0} tone={view?.state === "Warning" ? "alert" : view && view.state === "Sealed" ? "ink" : "faint"} size={76} thickness={4} label="Time left" />
+        <Ring fraction={view && !label && view.state !== "Cancelled" && view.state !== "Opened" ? countdown(view, now).fraction : 0} tone={!label && view?.state === "Warning" ? "alert" : !label && view && view.state === "Sealed" ? "ink" : "faint"} size={76} thickness={4} label="Time left" />
         <span className="letter-row-text">
           <strong>
             Letter {saved.letterId} · for {names}
           </strong>
-          <span>{view ? nextLine(view, now) : failed ? "We couldn't look just now." : "Looking…"}</span>
+          <span>{text}</span>
+          {label && <span className="row-sub">{label.line}</span>}
         </span>
-        {view && <StatePill state={view.state} />}
+        {view && !label && <StatePill state={view.state} />}
       </a>
+      {label?.why && (
+        <div className="row-remove">
+          <RemoveFromList letter={saved} why={label.why} onRemoved={onChanged} />
+        </div>
+      )}
     </m.li>
   );
 }
 
+/** One letter's page: the real check-in screen for a letter on the current version; a plain label (and Remove from this list) for any other. */
 function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string) => void; onChanged: () => void }) {
-  const { view, refresh } = useLetter(saved.letterId, 6_000);
+  const { resolved, view, refresh, retry } = useResolvedLetter(saved, 6_000);
+  if (!resolved) return <p className="lead">Looking for your letter…</p>;
+  if (resolved.kind !== "current" || !view)
+    return (
+      <StuckPanel
+        saved={saved}
+        resolved={resolved}
+        retry={retry}
+        onRemoved={() => {
+          onChanged();
+          go("/me");
+        }}
+      />
+    );
+  return <CurrentDetail saved={saved} go={go} onChanged={onChanged} view={view} refresh={refresh} />;
+}
+
+function CurrentDetail({ saved, go, onChanged, view, refresh }: { saved: SealedLetter; go: (p: string) => void; onChanged: () => void; view: LetterView; refresh: () => Promise<LetterView | null> }) {
   const now = useNow();
   const [phase, setPhase] = useState<CheckInPhase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +101,6 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
     return () => clearTimeout(t);
   }, [phase]);
 
-  if (!view) return <p className="lead">Looking for your letter…</p>;
   const names = namesOf(saved.heirs.map((h) => h.name), saved.heirs.map((h) => h.evm));
 
   async function tap() {
@@ -202,7 +228,7 @@ export function MePage() {
           ) : (
             <ul className="letter-list">
               {[...letters].reverse().map((l) => (
-                <ListRow key={l.letterId} saved={l} go={go} />
+                <ListRow key={`${l.registry}|${l.letterId}`} saved={l} go={go} onChanged={reload} />
               ))}
             </ul>
           )}

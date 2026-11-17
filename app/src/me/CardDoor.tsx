@@ -11,6 +11,7 @@ import { QrScanner } from "../ui/QrScanner";
 import { HOWTO_TITLE, HowTo } from "./HowTo";
 import { restoreFromCard } from "./Restore";
 import { SpareCards } from "./SpareCards";
+import { StuckLetters } from "./StuckLetter";
 
 const TILES: { kind: CardKind; title: string; line: string }[] = [
   { kind: "owner", title: HOWTO_TITLE.owner, line: "Your I'm-still-here card: check in, manage your letters." },
@@ -138,6 +139,7 @@ export function CardDoor() {
         </div>
       </section>
       <SpareCards />
+      <StuckLetters />
     </div>
   );
 }

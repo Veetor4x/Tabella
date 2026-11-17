@@ -3,7 +3,7 @@
  * Reading needs no card and no helper: it is public.
  */
 import { createPublicClient, http, parseAbi, type Hex } from "viem";
-import { REGISTRY, evmRpcUrl } from "./config";
+import { REGISTRIES, REGISTRY, evmRpcUrl, versionOf } from "./config";
 
 const abi = parseAbi([
   "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 releaseAt; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
@@ -11,6 +11,14 @@ const abi = parseAbi([
   "function status(uint256 letterId) view returns (uint8)",
   "function getLetter(uint256 letterId) view returns (Letter)",
 ]);
+/** The first test version, from before dated letters: the same record without a release date. */
+const abiV1 = parseAbi([
+  "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
+  "function letterCount() view returns (uint256)",
+  "function status(uint256 letterId) view returns (uint8)",
+  "function getLetter(uint256 letterId) view returns (Letter)",
+]);
+const abiFor = (registry: string) => (versionOf(registry)?.dated === false ? (abiV1 as unknown as typeof abi) : abi);
 
 export const MAX_PAUSES = 2;
 export type LetterState = "Sealed" | "Warning" | "Opened" | "Cancelled";
@@ -40,11 +48,13 @@ export interface LetterView {
 const client = () => createPublicClient({ transport: http(evmRpcUrl()) });
 const ZERO = `0x${"00".repeat(32)}`;
 
-export async function readLetter(id: bigint): Promise<LetterView> {
+/** One letter, read on a given registry version (the current one unless said otherwise). */
+export async function readLetter(id: bigint, registry: string = REGISTRY): Promise<LetterView> {
   const c = client();
+  const a = abiFor(registry);
   const [l, st, block] = await Promise.all([
-    c.readContract({ address: REGISTRY, abi, functionName: "getLetter", args: [id] }),
-    c.readContract({ address: REGISTRY, abi, functionName: "status", args: [id] }),
+    c.readContract({ address: registry as Hex, abi: a, functionName: "getLetter", args: [id] }),
+    c.readContract({ address: registry as Hex, abi: a, functionName: "status", args: [id] }),
     c.getBlock({ blockTag: "latest" }),
   ]);
   return {
@@ -54,7 +64,7 @@ export async function readLetter(id: bigint): Promise<LetterView> {
     quiet: Number(l.quietPeriod),
     warning: Number(l.warningPeriod),
     nonce: Number(l.nonce),
-    releaseAt: Number(l.releaseAt),
+    releaseAt: Number((l as { releaseAt?: bigint }).releaseAt ?? 0),
     pausesUsed: l.pausesUsed,
     hasGuardian: l.guardianKeyHash !== ZERO,
     heirs: [...l.heirs],
@@ -66,24 +76,37 @@ export async function readLetter(id: bigint): Promise<LetterView> {
   };
 }
 
-export type Match = Pick<LetterView, "id" | "heirs" | "quiet" | "warning" | "hasGuardian">;
+export type Match = Pick<LetterView, "id" | "heirs" | "quiet" | "warning" | "hasGuardian"> & { /** the registry version it was found on */ registry: string };
 
-/** Every letter that belongs to this card (found by the card's fingerprint). One read per letter: fine at this size. */
+/** Every letter that belongs to this card, on every registry version we have deployed (found by the card's fingerprint). */
 export async function findLetters(fingerprint: Hex): Promise<{ owner: Match[]; guardian: Match[] }> {
   const c = client();
-  const count = Number(await c.readContract({ address: REGISTRY, abi, functionName: "letterCount" }));
   const out = { owner: [] as Match[], guardian: [] as Match[] };
-  const ids = Array.from({ length: count }, (_, i) => BigInt(i + 1));
   const want = fingerprint.toLowerCase();
-  for (let i = 0; i < ids.length; i += 8) {
-    const batch = await Promise.all(ids.slice(i, i + 8).map((id) => c.readContract({ address: REGISTRY, abi, functionName: "getLetter", args: [id] }).then((l) => ({ id, l })).catch(() => null)));
-    for (const b of batch) {
-      if (!b) continue;
-      const m: Match = { id: b.id, heirs: [...b.l.heirs], quiet: Number(b.l.quietPeriod), warning: Number(b.l.warningPeriod), hasGuardian: b.l.guardianKeyHash !== ZERO };
-      if (b.l.ownerKeyHash.toLowerCase() === want) out.owner.push(m);
-      else if (m.hasGuardian && b.l.guardianKeyHash.toLowerCase() === want) out.guardian.push(m);
+  let answered = 0;
+  let lastError: unknown;
+  for (const v of REGISTRIES) {
+    const a = abiFor(v.address);
+    let count = 0;
+    try {
+      count = Number(await c.readContract({ address: v.address, abi: a, functionName: "letterCount" }));
+      answered++;
+    } catch (e) {
+      lastError = e;
+      continue; // this version cannot be read right now: the others still can
+    }
+    const ids = Array.from({ length: count }, (_, i) => BigInt(i + 1));
+    for (let i = 0; i < ids.length; i += 8) {
+      const batch = await Promise.all(ids.slice(i, i + 8).map((id) => c.readContract({ address: v.address, abi: a, functionName: "getLetter", args: [id] }).then((l) => ({ id, l })).catch(() => null)));
+      for (const b of batch) {
+        if (!b) continue;
+        const m: Match = { id: b.id, heirs: [...b.l.heirs], quiet: Number(b.l.quietPeriod), warning: Number(b.l.warningPeriod), hasGuardian: b.l.guardianKeyHash !== ZERO, registry: v.address };
+        if (b.l.ownerKeyHash.toLowerCase() === want) out.owner.push(m);
+        else if (m.hasGuardian && b.l.guardianKeyHash.toLowerCase() === want) out.guardian.push(m);
+      }
     }
   }
+  if (!answered) throw lastError ?? new Error("The network could not be reached.");
   return out;
 }
 

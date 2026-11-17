@@ -19,7 +19,7 @@ describe("the sky follows the clock", () => {
     let prev = skyAtHour(0);
     for (let h = 0.05; h <= 24; h += 0.05) {
       const s = skyAtHour(h);
-      for (let i = 0; i < 3; i++) expect(Math.abs(s.top[i]! - prev.top[i]!)).toBeLessThan(24);
+      for (let i = 0; i < 3; i++) expect(Math.abs(s.top[i]! - prev.top[i]!)).toBeLessThan(30);
       expect(Math.abs(s.night - prev.night)).toBeLessThan(0.3);
       prev = s;
     }

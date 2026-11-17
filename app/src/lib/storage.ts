@@ -1,3 +1,4 @@
+import { REGISTRY } from "./config";
 import type { WhenId } from "./periods";
 
 export interface Person {
@@ -105,7 +106,8 @@ export function clearDraft() {
 
 export const loadLetters = (): SealedLetter[] => read<SealedLetter[]>(LETTERS_KEY) ?? [];
 export function saveLetter(letter: SealedLetter): boolean {
-  return write(LETTERS_KEY, [...loadLetters().filter((l) => l.letterId !== letter.letterId), letter]);
+  // a letter's number only means something on its own registry version, so the same number on two versions is two letters
+  return write(LETTERS_KEY, [...loadLetters().filter((l) => !(l.letterId === letter.letterId && (l.registry || "").toLowerCase() === (letter.registry || "").toLowerCase())), letter]);
 }
 
 // ------------------------------------------------------------- cards kept on this device
@@ -149,4 +151,15 @@ export function clearJoinCard(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * "Remove from this list": only for a saved letter that is NOT sealed on the current version: one from an older test version, or one that
+ * never finished sealing (the caller has looked it up on every version and found it nowhere). A letter that is really sealed on the current
+ * version can never be removed, here or anywhere else. This only clears the entry from this phone; it never touches the network.
+ */
+export function removeFromList(letter: SealedLetter, why: "older" | "unfinished"): boolean {
+  const onCurrent = !!letter.registry && letter.registry.toLowerCase() === REGISTRY.toLowerCase();
+  if (why === "older" && (!letter.registry || onCurrent)) return false; // not provably an older version: refuse
+  return write(LETTERS_KEY, loadLetters().filter((l) => !(l.letterId === letter.letterId && (l.registry || "").toLowerCase() === (letter.registry || "").toLowerCase())));
 }

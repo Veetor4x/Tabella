@@ -16,10 +16,10 @@ export async function restoreFromCard(code: string): Promise<Found> {
   const clean = code.replace(/\s+/g, "");
   const { owner, guardian } = await findLetters(cardFingerprint(clean));
   for (const v of owner) {
-    const have = loadLetters().find((l) => l.letterId === v.id.toString());
+    const have = loadLetters().find((l) => l.letterId === v.id.toString() && (!l.registry || l.registry.toLowerCase() === v.registry.toLowerCase()));
     const letter: SealedLetter = have
-      ? { ...have, ownerCard: clean }
-      : { version: 1, letterId: v.id.toString(), txHash: "", createdAt: new Date().toISOString(), registry: "", heirs: v.heirs.map((evm) => ({ name: "", evm, qor: "" })), guardianName: v.hasGuardian ? "" : null, whenLabel: "", quietSeconds: v.quiet, warningSeconds: v.warning, ownerCard: clean, guardianCard: null };
+      ? { ...have, registry: have.registry || v.registry, ownerCard: clean }
+      : { version: 1, letterId: v.id.toString(), txHash: "", createdAt: new Date().toISOString(), registry: v.registry, heirs: v.heirs.map((evm) => ({ name: "", evm, qor: "" })), guardianName: v.hasGuardian ? "" : null, whenLabel: "", quietSeconds: v.quiet, warningSeconds: v.warning, ownerCard: clean, guardianCard: null };
     saveLetter(letter);
   }
   for (const v of guardian) {
