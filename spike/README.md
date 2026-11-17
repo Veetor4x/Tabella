@@ -23,7 +23,8 @@ Checks:
 ## Deployed probe (check 2, run on 2026-11-16)
 - **PqcProbe on qorechain-diana:** `0xa9231db415a62a25d657e8d8011d283f935e0bdf` (explorer: https://explore.qore.network/address/0xa9231db415a62a25d657e8d8011d283f935e0bdf).
 - Checked on 2026-11-17 over the EVM RPC (`https://evm-testnet.qore.host`): `eth_getCode` returns 1477 bytes of contract code containing the selectors of `act(bytes,bytes,bytes)` (`97ae4422`), `check(bytes,bytes,bytes)` (`f26c45d7`) and `keyStatus(address)` (`deb1fd42`), and `eth_call keyStatus(<helper>)` answers.
-- Not matched byte for byte: today's local build of `PqcProbe.sol` is 1229 bytes, so the code on chain was compiled with a different setup (or an earlier edit of the file). The three functions are the same; treat the address as the probe from the run, not as a verified-source contract.
+- **Rebuilt with `via_ir` off: it matches.** `PqcProbe.sol` compiled alone with solc 0.8.28, optimizer on (200 runs), `via_ir = false` (the settings before `via_ir = true` was added to `foundry.toml` for `TabellaRegistry`) is 1477 bytes, the same length as the code on chain, and identical byte for byte except the trailing compiler metadata hash (which depends on the file path and project layout). With `via_ir = true` it is 1229 bytes. So the mismatch was only the compiler setting, and the address is the PqcProbe from spike 02.
+- To redo the check, build `PqcProbe.sol` in a scratch Foundry project (building it inside `contracts/` also compiles `TabellaRegistry`, which needs `via_ir`) and compare with `eth_getCode`.
 - The explorer page is rendered in the browser, so it could not be read from the build environment; the check above used the RPC instead.
 
 ## Notes from check 3 (app/src/spike/KemSpike.tsx, route `/#spike`)
