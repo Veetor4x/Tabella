@@ -10,6 +10,19 @@ A small Node + [Hono](https://hono.dev) service with two jobs in one process:
 `POST /relay` accepts exactly four contract calls: `createLetter`, `checkIn`, `guardianPause`,
 `cancel`. Anything else (including `publishPartB` and `setPostman`) is refused with 403.
 
+`POST /fund` gives a brand-new address a tiny amount of **test** coins so it can register its opening card (this is what
+the loved one's `/join` page uses; the browser then registers the key itself, no wallet). Body: `{ "address": "qor1…" }`.
+
+- one-time per address: remembered in memory, and also refused when the account already holds anything (so a restart
+  cannot be used to ask twice);
+- a fixed amount chosen by the helper (`FUND_AMOUNT_UQOR`, default 400000 uqor = 0.4 QOR, two registrations and a bit
+  more); the caller cannot ask for more;
+- strict limits: 3 per IP per hour (`FUND_PER_IP_PER_HOUR`) and 40 per hour for everyone (`FUND_GLOBAL_PER_HOUR`);
+- the helper's own reserve (`MIN_BALANCE_UQOR`) is never used;
+- testnet only: it is off unless `QORE_REST_URL` is a testnet endpoint, and can be switched off with `FUND_ENABLED=false`;
+- answers: `200 { ok, txHash, amountUqor }`, `400 invalid_address`, `409 already_funded`, `429 rate_limited`,
+  `503 fund_unavailable`, `403 fund_disabled`.
+
 The relay is **not trusted**. Every action carries the owner's or guardian's ML-DSA-87 signature,
 which `TabellaRegistry` verifies on-chain (`pqcVerify`). The helper can submit or withhold a call,
 but it cannot forge or change one.

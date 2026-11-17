@@ -8,14 +8,16 @@ import { PeopleMap } from "../ui/PeopleMap";
 import { WaxSeal } from "../ui/WaxSeal";
 import type { LetterView } from "../lib/registry";
 import { CheckInView } from "../me/parts";
+import { HeirStateView, Panel } from "../open/OpenPage";
+import { DEMO_SHEET, Story } from "./stories";
 import { Reveal } from "./Reveal";
 import { fitRhythm, lettersAt, rhythmFor } from "./rhythm";
 
 /**
  * The how-it-works walkthrough: the real screens, played inside a phone frame, with sample people.
  * One clock (step + milliseconds into the step) drives every screen, so play, pause and jumping all work.
- * The first six screens are the app's own screens (with sample data); the last two (time passing, Mia opening it)
- * are previews of screens that are still being built.
+ * Every screen is the app's own (with sample people): the owner's flow, the check-in screen, the "your letter has
+ * opened" screen, and the loved one's /open screens, with the real envelope scene.
  */
 export const STEPS = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
@@ -25,7 +27,7 @@ export const STEPS = [
   { label: "Seal", caption: "Sealed on the phone. Only Mia and Leo can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
-  { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 9500 },
+  { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 13500 },
 ] as const;
 
 /** The demo letter. No recovery words, no codes, no amounts: it only says where things are and who can help. */
@@ -210,58 +212,34 @@ function StillHere({ t }: { t: number }) {
     </div>
   );
 }
+/** Time passes: the app's own check-in screen, nobody taps, the quiet time runs out and it says the letter has opened. */
 function TimePasses({ t }: { t: number }) {
-  const spin = at(t, 600);
-  const days = Math.round(Math.min(1, t / 5200) ** 0.8 * 760);
-  const done = at(t, 5400);
+  const opened = at(t, 4600);
+  const base = sample(SAMPLE_NOW - (180 + 13) * DAY); // the last days of the countdown: the app's urgent look
+  const view: LetterView = opened ? { ...base, state: "Opened", released: true } : { ...base, state: "Warning" };
   return (
-    <div className="done-screen" style={{ paddingTop: 30 }}>
-      <Headline text="Time passes." />
-      <div className="clock" aria-hidden="true">
-        <span className="clock-ring" />
-        <m.span className="hand-h" initial={false} animate={{ rotate: spin ? 720 : 0 }} transition={{ duration: 5.2, ease: [0.5, 0, 0.2, 1] }} />
-        <m.span className="hand-m" initial={false} animate={{ rotate: spin ? 8640 : 0 }} transition={{ duration: 5.2, ease: [0.5, 0, 0.2, 1] }} />
-        <span className="clock-dot" />
-      </div>
-      <p className="clock-days">
-        <strong>{done ? "Released" : `Day ${days}`}</strong>
-        <span>{done ? "The countdown has run out. Mia and Leo are told." : "No check-in. The quiet period is running."}</span>
-      </p>
+    <div className="step" style={{ paddingTop: 20 }}>
+      <CheckInView view={view} now={0} ownerName="Alex" phase="idle" onTap={() => {}} />
     </div>
   );
 }
+/** Mia opens it: the same screens as /open (on its way, here, the envelope opening and the zoom). */
 function Open({ t }: { t: number }) {
-  const cracked = at(t, 1700);
-  const half = (side: "l" | "r") => (
-    <m.span
-      className="half"
-      style={{ clipPath: side === "l" ? "inset(0 50% 0 0)" : "inset(0 0 0 50%)" }}
-      initial={false}
-      animate={cracked ? { x: side === "l" ? -46 : 46, y: 34, rotate: side === "l" ? -24 : 24, opacity: 0 } : { x: 0, y: 0, rotate: 0, opacity: 1 }}
-      transition={{ duration: 1.3, ease: EASE }}
-    >
-      <WaxSeal />
-    </m.span>
-  );
+  const ready = at(t, 2600);
+  const pressed = at(t, 3800);
+  const scene = at(t, 4200);
   return (
-    <div className="done-screen" style={{ paddingTop: 30 }}>
-      <Headline text="Mia, this is for you." />
-      <div className="open-seal">
-        <m.span className="open-light" aria-hidden="true" initial={false} animate={cracked ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.3 }} transition={{ duration: 1.4, ease: EASE }} />
-        {Array.from({ length: 9 }, (_, i) => (
-          <m.span key={i} className="open-ray" aria-hidden="true" style={{ rotate: -80 + i * 20 }} initial={false} animate={cracked ? { opacity: [0, 0.9, 0.35], scaleY: [0.2, 1.1, 0.9] } : { opacity: 0, scaleY: 0.2 }} transition={{ duration: 1.6, ease: EASE, delay: 0.1 + i * 0.04 }} />
-        ))}
-        {half("l")}
-        {half("r")}
-        <m.span className="crack" initial={false} animate={{ opacity: at(t, 1300) && !cracked ? 1 : 0 }} transition={{ duration: 0.3 }} />
-      </div>
-      <m.div className="open-letter glass" initial={false} animate={at(t, 2900) ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }} transition={{ duration: 1, ease: EASE }}>
-        {LETTER.split("\n\n").map((l, i) => (
-          <m.p key={i} initial={false} animate={{ opacity: at(t, 3400 + i * 900) ? 1 : 0, y: at(t, 3400 + i * 900) ? 0 : 6 }} transition={{ duration: 0.6 }}>
-            {l}
-          </m.p>
-        ))}
-      </m.div>
+    <div className="step" style={{ paddingTop: 14 }}>
+      <Headline text="Your *letter*." />
+      {scene ? (
+        <div className="letter-open">
+          <Panel>
+            <Story id="open" lines={DEMO_SHEET} />
+          </Panel>
+        </div>
+      ) : (
+        <HeirStateView state={ready ? "ready" : "on-its-way"} pressed={pressed} onOpen={() => {}} />
+      )}
     </div>
   );
 }
@@ -354,7 +332,7 @@ export function Demo() {
               ))}
             </ol>
           </div>
-          <p className="demo-fine">A preview with sample people. The first six screens are the real ones; time passing and opening are still being built.</p>
+          <p className="demo-fine">Sample people, the real screens.</p>
         </div>
       </Reveal>
     </section>

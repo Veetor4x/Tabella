@@ -91,7 +91,7 @@ function CardFinder({ onFound }: { onFound: (id: Identity, letters: HeirLetter[]
 }
 
 /** The sealed envelope on a dark panel (the same line drawing as the film), still. */
-function Panel({ children, soft = false }: { children: React.ReactNode; soft?: boolean }) {
+export function Panel({ children, soft = false }: { children: React.ReactNode; soft?: boolean }) {
   return <div className={`scene-stage ${soft ? "soft" : ""}`}>{children}</div>;
 }
 
@@ -161,13 +161,18 @@ function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
       </m.article>
     );
 
+  return <HeirStateView state={letter.state} busy={busy} error={error} onOpen={open} />;
+}
+
+/** What a loved one sees while the letter is not open: only sealed, on its way, or here. Presentational, so the front page can show the same screen. */
+export function HeirStateView({ state, busy = false, pressed = false, error, onOpen }: { state: HeirLetter["state"]; busy?: boolean; pressed?: boolean; error?: string | null; onOpen: () => void }) {
   return (
     <m.div className="letter-state" {...cardAppear}>
-      <Panel soft={letter.state === "on-its-way"}>
+      <Panel soft={state === "on-its-way"}>
         <Story id="seal" still />
       </Panel>
-      {letter.state === "sealed" && <h2 className="state-line">Your letter is still safely sealed.</h2>}
-      {letter.state === "on-its-way" && (
+      {state === "sealed" && <h2 className="state-line">Your letter is still safely sealed.</h2>}
+      {state === "on-its-way" && (
         <>
           <h2 className="state-line">Your letter is on its way.</h2>
           <p className="lead small" role="status" aria-live="polite">
@@ -180,17 +185,17 @@ function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
           </div>
         </>
       )}
-      {letter.state === "ready" && (
+      {state === "ready" && (
         <>
           <h2 className="state-line">Your letter is here.</h2>
           <div className="actions static">
-            <Button arrow="forward" disabled={busy} onClick={open}>
+            <Button arrow="forward" disabled={busy || pressed} onClick={onOpen}>
               Open your letter
             </Button>
           </div>
         </>
       )}
-      {letter.state === "withdrawn" && <h2 className="state-line">This letter was taken back.</h2>}
+      {state === "withdrawn" && <h2 className="state-line">This letter was taken back.</h2>}
       {error && (
         <p className="status-line" role="alert">
           {error}
