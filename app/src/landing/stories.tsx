@@ -121,26 +121,13 @@ function Calendar() {
 }
 
 /** An envelope: the letter slides in, the flap closes, the seal is pressed. */
-function SealScene({ bare = false }: { bare?: boolean }) {
+function SealScene() {
   return (
     <g transform="translate(180 230)">
       {/* the letter sliding down into the envelope (it ends hidden behind the front) */}
       <A a="letter-in" d={0.3} dur={1.1} ease="ease-in-out" fill="backwards">
-        <rect className="letter-sheet" x="104" y="100" width="152" height="134" rx="2" />
-        {!bare && (
-          <>
-        <text className="hand" x="114" y="114.0" fontSize="7.4">Dear Mia and Leo,</text>
-        <text className="hand" x="114" y="133.2" fontSize="6.6">I've put aside 2 Bitcoin for you</text>
-        <text className="hand" x="114" y="142.8" fontSize="6.6">both, my gift for your futures.</text>
-        <text className="hand" x="114" y="152.4" fontSize="6.6">The hardware wallet is in the small</text>
-        <text className="hand" x="114" y="162.0" fontSize="6.6">safe in my study, and its recovery</text>
-        <text className="hand" x="114" y="171.6" fontSize="6.6">card is sealed with Mr. Hart, our</text>
-        <text className="hand" x="114" y="181.2" fontSize="6.6">lawyer. Show him this letter and</text>
-        <text className="hand" x="114" y="190.8" fontSize="6.6">he'll help you. Split it fairly</text>
-        <text className="hand" x="114" y="200.4" fontSize="6.6">and look after each other.</text>
-        <text className="hand" x="114" y="219.6" fontSize="6.6">All my love, Alex.</text>
-          </>
-        )}
+        <rect className="letter-sheet" x="-60" y="-42" width="120" height="94" rx="2" />
+        <path className="ln" d="M-42 -24 H42 M-42 -10 H42 M-42 4 H42 M-42 18 H12" />
       </A>
       <rect className="cover" x="-91" y="-49" width="182" height="109" />
       <path className="sk" d="M-90 -50 H90 V60 H-90 Z M-90 60 L-18 6 M90 60 L18 6" />
@@ -245,22 +232,27 @@ export function sheetLines(text: string, width = 34, max = 12): string[] {
 /** The last scene: the seal cracks, the flap lifts, the letter slides out, and the camera comes in until it can be read. */
 export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[]; dur?: number; delay?: number }) {
   return (
-    <A a="zoom-read" d={delay} dur={dur} origin="180px 168px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
+    <A a="zoom-read" d={delay} dur={dur} origin="180px 96px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
       {/* the open flap, behind the letter */}
       <A a="flap-open" d={1.3} dur={0.6} fill="backwards">
         <path className="sk" d="M90 190 L180 128 L270 190" />
       </A>
-      {/* the letter, sliding out */}
+      {/* the letter, sliding out (nothing of it shows below the envelope while it starts inside) */}
+      <clipPath id="tbl-envelope-clip">
+        <rect x="0" y="0" width="360" height="311" />
+      </clipPath>
+      <g clipPath="url(#tbl-envelope-clip)">
       <A a="letter-out" d={1.7} dur={1.5} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
-        <rect className="letter-sheet" x="104" y="100" width="152" height="134" rx="2" />
+        <rect className="letter-sheet" x="104" y="46" width="152" height="134" rx="2" />
         {lines.map((l, i) =>
           l ? (
-            <text key={i} className="hand" x="114" y={114 + i * 9.6} fontSize={i === 0 ? 7.4 : 6.6}>
+            <text key={i} className="hand" x="114" y={61 + i * 9.6} fontSize={i === 0 ? 7.4 : 6.6}>
               {l}
             </text>
           ) : null,
         )}
       </A>
+      </g>
       {/* the front of the envelope */}
       <rect className="cover" x="89" y="189" width="182" height="122" />
       <path className="sk" d="M90 190 H270 V310 H90 Z M90 310 L162 254 M270 310 L198 254" />
@@ -284,7 +276,7 @@ const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs,
 
 /** One scene, on its own transparent canvas (the intro puts it on the ink). */
 export function Story({ id, still = false, lines }: { id: StoryId; still?: boolean; lines?: string[] }) {
-  const Scene = id === "open" && lines ? () => <EnvelopeOpen lines={lines} /> : id === "seal" && lines ? () => <SealScene bare /> : SCENES[id];
+  const Scene = id === "open" && lines ? () => <EnvelopeOpen lines={lines} /> : id === "seal" && lines ? () => <SealScene /> : SCENES[id];
   return (
     <svg className={`story ${still ? "still" : ""}`} viewBox="0 0 360 420" role="img" aria-label={STORY_ALT[id]} preserveAspectRatio="xMidYMid meet">
       <Scene />
