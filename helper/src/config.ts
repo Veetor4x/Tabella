@@ -40,6 +40,13 @@ export interface Config {
   windowLowTxs: bigint;
   windowLowBlocks: bigint;
 
+  // --- /fund: a tiny amount of test QOR so a new person can register their opening card (testnet only)
+  fundEnabled: boolean;
+  /** Sent once to each new address (uqor). Enough for two registrations, no more. */
+  fundAmountUqor: bigint;
+  fundPerIpPerHour: number;
+  fundGlobalPerHour: number;
+
   // --- Postman
   postmanEnabled: boolean;
   /** How often the Postman looks for released letters. */
@@ -96,6 +103,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     windowMaxUqor: BigInt(env.WINDOW_MAX_UQOR?.trim() || (perTxWorstCase * windowMaxTxs).toString()),
     windowLowTxs: BigInt(num(env, "WINDOW_LOW_TXS", 10)),
     windowLowBlocks: BigInt(num(env, "WINDOW_LOW_BLOCKS", 1_200)), // ~30 minutes
+
+    // /fund only ever runs against a testnet endpoint (the REST host must say so), and can be switched off.
+    fundEnabled: (env.FUND_ENABLED?.trim() ?? "true").toLowerCase() !== "false" && /testnet/i.test(env.QORE_REST_URL?.trim() || "https://api-testnet.qore.host"),
+    fundAmountUqor: BigInt(num(env, "FUND_AMOUNT_UQOR", 400_000)), // 0.4 QOR: two 0.1 QOR registrations with room to spare
+    fundPerIpPerHour: num(env, "FUND_PER_IP_PER_HOUR", 3),
+    fundGlobalPerHour: num(env, "FUND_GLOBAL_PER_HOUR", 40),
 
     postmanEnabled: (env.POSTMAN_ENABLED?.trim() ?? "true").toLowerCase() !== "false",
     postmanIntervalMs: num(env, "POSTMAN_INTERVAL_SECONDS", 20) * 1000,

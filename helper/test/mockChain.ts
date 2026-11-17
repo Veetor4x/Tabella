@@ -77,6 +77,17 @@ export class MockChain implements Chain {
     }
   }
 
+  /** balances of other accounts, by qor1 address */
+  balances = new Map<string, bigint>();
+  async balanceOfUqor(address: string) {
+    await this.enter("balanceOf");
+    try {
+      return this.balances.get(address) ?? 0n;
+    } finally {
+      this.leave();
+    }
+  }
+
   async windowStatus() {
     await this.enter("window");
     try {
@@ -226,6 +237,10 @@ export class MockChain implements Chain {
     await this.enter("broadcastNative");
     try {
       this.nativeBroadcasts.push(messages);
+      for (const m of messages) {
+        const v = m.value as unknown as { toAddress?: string; amount?: { amount: string }[] };
+        if (m.typeUrl === "/cosmos.bank.v1beta1.MsgSend" && v.toAddress) this.balances.set(v.toAddress, (this.balances.get(v.toAddress) ?? 0n) + BigInt(v.amount?.[0]?.amount ?? "0"));
+      }
       return `NATIVETX${this.nativeBroadcasts.length}`;
     } finally {
       this.leave();

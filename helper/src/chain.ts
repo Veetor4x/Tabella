@@ -79,6 +79,8 @@ export interface Chain {
   readonly qorAddress: string;
   readonly evmAddress: Hex;
   balanceUqor(): Promise<bigint>;
+  /** Any account's balance in uqor (0 when the account does not exist yet). */
+  balanceOfUqor(address: string): Promise<bigint>;
   windowStatus(): Promise<WindowStatus>;
   /** Open (or replace) the EVM window. Returns the native tx hash. */
   openWindow(p: { blocks: bigint; maxTxs: bigint; maxValue: bigint }): Promise<string>;
@@ -249,6 +251,14 @@ export async function createRealChain(opts: RealChainOptions): Promise<RealChain
 
     async balanceUqor() {
       const res = await fetch(`${rest}/cosmos/bank/v1beta1/balances/${acc.cosmos}/by_denom?denom=uqor`);
+      if (res.status === 404) return 0n;
+      if (!res.ok) throw new Error(`balance query failed: HTTP ${res.status}`);
+      const body = (await res.json()) as { balance?: { amount?: string } };
+      return BigInt(body.balance?.amount ?? "0");
+    },
+
+    async balanceOfUqor(address) {
+      const res = await fetch(`${rest}/cosmos/bank/v1beta1/balances/${address}/by_denom?denom=uqor`);
       if (res.status === 404) return 0n;
       if (!res.ok) throw new Error(`balance query failed: HTTP ${res.status}`);
       const body = (await res.json()) as { balance?: { amount?: string } };

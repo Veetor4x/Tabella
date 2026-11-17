@@ -15,6 +15,7 @@ import { cors } from "hono/cors";
 import type { Context } from "hono";
 import type { Chain } from "./chain.js";
 import type { Config } from "./config.js";
+import { createFunder } from "./fund.js";
 import { clientIp, createRateLimiter, type RateLimiter } from "./ratelimit.js";
 import { describe, submit, type Json } from "./submit.js";
 import { parseRelayRequest } from "./validate.js";
@@ -44,6 +45,9 @@ export function createApp(deps: AppDeps): Hono {
   const everyone = createRateLimiter({ limit: cfg.globalRateLimitPerMin, now });
   const healthPerIp = createRateLimiter({ limit: 30, now });
   const mutex = deps.mutex ?? new Mutex();
+  const fundPerIp = createRateLimiter({ limit: cfg.fundPerIpPerHour, windowMs: 3_600_000, now });
+  const fundEveryone = createRateLimiter({ limit: cfg.fundGlobalPerHour, windowMs: 3_600_000, now });
+  const funder = createFunder({ chain, cfg, mutex, log });
 
   const app = new Hono();
 
@@ -149,6 +153,32 @@ export function createApp(deps: AppDeps): Hono {
 
       const out = await mutex.run(() => relayOne(parsed.fn, parsed.data));
       log(`relay fn=${parsed.fn} ip=${ipOf(c)} -> ${out.status}${out.body.error ? ` ${String(out.body.error)}` : ""}`);
+      return c.json(out.body, out.status);
+    },
+  );
+
+  // -------------------------------------------------------------------- /fund
+
+  app.post(
+    "/fund",
+    async (c, next) => {
+      if (!cfg.fundEnabled) return c.json({ ok: false, error: "fund_disabled" }, 403);
+      const a = fundPerIp.take(ipOf(c));
+      if (!a.ok) return limited(c, a.retryAfterSec, "ip");
+      const b = fundEveryone.take("all");
+      if (!b.ok) return limited(c, b.retryAfterSec, "global");
+      await next();
+    },
+    bodyLimit({ maxSize: 1024, onError: (c) => c.json({ ok: false, error: "body_too_large", maxBytes: 1024 }, 413) }),
+    async (c) => {
+      let raw: { address?: unknown } = {};
+      try {
+        raw = await c.req.json();
+      } catch {
+        return c.json({ ok: false, error: "invalid_json" }, 400);
+      }
+      const out = await funder(raw?.address);
+      log(`fund ip=${ipOf(c)} -> ${out.status}${out.body.error ? ` ${String(out.body.error)}` : ""}`);
       return c.json(out.body, out.status);
     },
   );
