@@ -23,6 +23,36 @@ the loved one's `/join` page uses; the browser then registers the key itself, no
 - answers: `200 { ok, txHash, amountUqor }`, `400 invalid_address`, `409 already_funded`, `429 rate_limited`,
   `503 fund_unavailable`, `403 fund_disabled`.
 
+## Surprise letters: the escalation ladder
+
+A "Keep it a surprise" letter carries, next to Part B, a **contact package** sealed to the Postman's key (emails, phone
+numbers, first names, the opening card's fingerprint). Only the Postman can read it. After the Postman publishes Part B it
+runs this ladder for the letter (real timings; in demo mode, 2 / 4 / 2 minutes):
+
+1. at once: email + SMS to the recipient ("<Owner> left you a letter. It's been kept safe until now." and a link to `/open?letter=<id>`);
+2. no open after 3 days: a phone call reading a short calm message, and a reminder SMS;
+3. no open after 7 days: backup 1 (email + SMS: "<Owner> left a letter for <Name> and asked you to help them receive it."), then backup 2 and 3, two days apart.
+
+It stops as soon as the letter is opened: the browser reports it with `POST /opened { letterId, pubkey, sig }`, a signature from
+the unlocked card that the Postman checks against the card fingerprint in the package. Every step is **claimed in the store
+before it is sent** (so a second pass, a second process or a restart never sends it twice) and given back if the send fails
+(so the next pass retries). Logs say "letter #N: step r:call sent" and never contain an address, a number, a name or a link.
+
+### Variables to add on Render (names only; you add the values)
+
+| Variable | What it is |
+|---|---|
+| `RESEND_API_KEY` | Resend API key (email) |
+| `RESEND_FROM` | the sender, like `Tabella <letters@your-verified-domain>` (Resend's `onboarding@resend.dev` only reaches your own address) |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID (SMS and calls) |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token |
+| `TWILIO_FROM` | the Twilio number that sends SMS (E.164, like `+15550100123`) |
+| `TWILIO_VOICE_FROM` | optional: the number that places calls (defaults to `TWILIO_FROM`) |
+| `DATABASE_URL` | Postgres connection string, so "already sent" survives restarts (Render's free Postgres works). Without it the steps are remembered in memory only: a restart forgets them |
+| `APP_URL` | optional: the web app's address for the links (default `https://tabella-veetor4x.vercel.app`) |
+
+A channel without its variables is off: its steps are skipped (once, logged as "not set up") and the ladder carries on.
+
 The relay is **not trusted**. Every action carries the owner's or guardian's ML-DSA-87 signature,
 which `TabellaRegistry` verifies on-chain (`pqcVerify`). The helper can submit or withhold a call,
 but it cannot forge or change one.
