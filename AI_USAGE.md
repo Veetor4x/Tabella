@@ -127,3 +127,13 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 - **Tested on testnet with the 2-minute timer (see the run log in the final message):** Mia and Leo make cards on fresh browsers, Alex invites and pastes their whole messages, seals; Mia tries early (a mistyped code, a wrong card, then "still safely sealed"), the time runs out, the Postman publishes, Mia opens it on a fresh browser, then Leo on another.
 - **Limits I know about:** the helper is on Render's free plan (it sleeps; `/join` wakes it first and says it may take a minute); `/fund` is in-memory plus an on-chain balance check, so it is rate limited per process; not tested on a real phone or with a real QoreX wallet (no QoreX in the test browser); reading letters scans every letter on the network once, fine at this size.
 - **Still open from the polish pass:** the 17 recorded sound effects and the website's own music track are waiting for ElevenLabs (free tier busy); the film plays silently where a clip is missing and the sound-wave icon stays hidden until the site track exists.
+
+## Update: dated letters, relationships, effects, email-only ladder
+
+- **Dated letters.** TabellaRegistry has a release-at-date mode (`createDatedLetter`, timestamps only, at most 50 years ahead). Check-ins and guardian pauses are rejected for dated letters; cancelling before the date works. 22 Foundry tests cover it. New testnet address `0xbBC6d3eEE6f8472482d5a8860F4e2d65f4867aD0`, used by the app, the helper and the Render env. Tested end to end on testnet with the "in 2 minutes" option: released after 122 s.
+- **Relationships in demo, film and test data.** "Mia, his daughter" and "Sofia, his sister (guardian and backup)", with questions about shared memories. /write has the hint "Ask about something only the two of you share."
+- **Effects.** The pointer light on cards and the slow shine on the main button are on for everyone. They are calm under reduced motion. No light around the demo phone.
+- **Email only.** The escalation ladder sends email only. SMS and call code stays behind provider keys that are not set.
+- **Not mocked, but not proven:** real email delivery. With the Resend test sender (`onboarding@resend.dev`) every send is refused with HTTP 403, because it only delivers to the Resend account's own address. A verified domain is needed.
+- **Storage.** The step store is in memory until `DATABASE_URL` is set. Render Postgres `tabella-ladder` exists (free, expires 2026-12-17).
+- **Still pending:** site music, sound effects and the new Surprise-film voice lines (ElevenLabs was busy).
