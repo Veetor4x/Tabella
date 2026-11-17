@@ -402,7 +402,7 @@ export function Demo() {
       <p className="eyebrow">How it works</p>
       <Headline text="A letter's whole life, in *one minute*." as="h2" inView className="h2" />
       <Reveal>
-        <div className="demo">
+        <div className="demo-tabs-row">
           <div className="demo-tabs" role="tablist" aria-label="Two ways to hand a letter over">
             <button type="button" role="tab" aria-selected={variant === "surprise"} className={`demo-tab ${variant === "surprise" ? "on" : ""}`} onClick={() => choose("surprise")}>
               Keep it a surprise
@@ -411,8 +411,12 @@ export function Demo() {
               Invite them
             </button>
           </div>
+        </div>
+        <div className="demo">
           <div className="phone-wrap">
-            <PhoneView set={variant} step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
+            <div className="fx-beam">
+              <PhoneView set={variant} step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
+            </div>
           </div>
           <p className="demo-caption" aria-live="polite">
             <span className="demo-num">{String(step + 1).padStart(2, "0")}</span>

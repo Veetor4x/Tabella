@@ -11,10 +11,12 @@ import "@fontsource-variable/inter";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
+import { initFx } from "./ui/fx";
 import { initSiteMusic } from "./lib/siteMusic";
 import { initTheme } from "./lib/theme";
 
 initTheme();
+initFx();
 initSiteMusic();
 const container = document.getElementById("root");
 if (!container) throw new Error("Root element #root not found");
