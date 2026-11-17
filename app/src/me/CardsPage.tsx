@@ -3,6 +3,7 @@ import { loadLetters, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
 import { APP_HOST, CARD_URL } from "../lib/config";
+import { BrandMark } from "../ui/BrandMark";
 import { CopyButton } from "../ui/CopyButton";
 import { Qr } from "../ui/Qr";
 import { Shell } from "./Shell";
@@ -22,7 +23,10 @@ export function PrintCard(props: { kind: "owner" | "guardian" | "opening"; title
     <>
       <article className={`print-card ${props.kind}`} aria-label={props.title}>
         <header>
-          <span className="pc-brand">Tabella</span>
+          <span className="pc-brand">
+            <BrandMark size={20} />
+            Tabella
+          </span>
           <span className="pc-no">{props.letterId ? `Letter ${props.letterId}` : "Opening card"}</span>
         </header>
         <div className="pc-body">

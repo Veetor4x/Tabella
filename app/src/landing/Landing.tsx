@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { deviceHasCard } from "../lib/storage";
 import { getIntroChoice, setIntroChoice, type IntroChoice } from "../lib/intro";
 import { Background } from "../ui/Background";
+import { BrandMark } from "../ui/BrandMark";
 import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { Headline } from "../ui/Headline";
@@ -64,6 +65,7 @@ export function Landing() {
           <Background main={false} />
           <header className="land-nav">
             <a className="brand-name" href="/" aria-label="Tabella, home">
+              <BrandMark />
               Tabella
             </a>
             <nav aria-label="Sections">

@@ -60,6 +60,28 @@ async function post(url: string, init: RequestInit, recipient?: string): Promise
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/**
+ * The same words as the plain-text email, in a quiet HTML wrapper: the Tabella wordmark in a serif with the small wax-red seal beside it.
+ * The seal is a hosted picture (the app's public /seal.png), because email programs do not run SVG or fonts. Nothing else is added.
+ */
+export function emailHtml(text: string, appUrl = "https://tabella-veetor4x.vercel.app"): string {
+  const base = appUrl.replace(/\/+$/, "");
+  const link = (t: string) => t.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#8a1c27">$1</a>');
+  const paras = esc(text)
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px">${link(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  return (
+    `<!doctype html><html><body style="margin:0;padding:0;background:#f4f1ea">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea"><tr><td align="center" style="padding:28px 16px">` +
+    `<table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%">` +
+    `<tr><td style="padding:0 0 18px"><img src="${base}/seal.png" width="30" height="30" alt="" style="border:0;vertical-align:middle">` +
+    `<span style="font:27px Georgia,'Times New Roman',serif;color:#15171c;vertical-align:middle;margin-left:9px">Tabella</span></td></tr>` +
+    `<tr><td style="font:16px/1.55 Arial,Helvetica,sans-serif;color:#15171c">${paras}</td></tr>` +
+    `</table></td></tr></table></body></html>`
+  );
+}
+
 export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
   const resendKey = env.RESEND_API_KEY?.trim();
   const resendFrom = env.RESEND_FROM?.trim();
@@ -75,7 +97,7 @@ export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
       await post("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json", "idempotency-key": idempotencyKey },
-        body: JSON.stringify({ from: resendFrom, to: [to], subject, text }),
+        body: JSON.stringify({ from: resendFrom, to: [to], subject, text, html: emailHtml(text, env.APP_URL?.trim() || undefined) }),
       }, to);
     },
     async sms(to, text) {

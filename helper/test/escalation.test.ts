@@ -1,3 +1,4 @@
+import { emailHtml } from "../src/notify/providers";
 import { evmToQor } from "@qorechain/sdk";
 import { bytesToHex, type Hex } from "viem";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -349,3 +350,15 @@ describe("a provider that says no", () => {
     expect(n.sent).toHaveLength(1);
   });
 });
+
+describe("the email wrapper", () => {
+  it("carries the same words, the wordmark and the seal, and escapes anything odd", () => {
+    const h = emailHtml("Alex left a letter for Mia.\n\nYou can help here:\nhttps://tabella-veetor4x.vercel.app/open?letter=9&x=1\n\n<script>x</script>");
+    expect(h).toContain("Tabella</span>");
+    expect(h).toContain("https://tabella-veetor4x.vercel.app/seal.png");
+    expect(h).toContain('<a href="https://tabella-veetor4x.vercel.app/open?letter=9&amp;x=1"');
+    expect(h).not.toContain("<script>");
+    expect(h).toContain("Alex left a letter for Mia.");
+  });
+});
+

@@ -1,4 +1,5 @@
-# Tabella
+<p align="left"><img src="app/public/seal.png" alt="" width="44" height="44" align="absmiddle"> <span style="font-size:34px"><b>Tabella</b></span></p>
+
 Sealed today. Opened when it matters. A quantum-safe sealed letter on QoreChain.
 
 ## Credits
@@ -24,5 +25,14 @@ Sealed today. Opened when it matters. A quantum-safe sealed letter on QoreChain.
 - This is a test-network demo. Please don't write real secrets yet.
 - The protection has not had an independent security review.
 - Email is the only delivery channel today; text and call reminders are not switched on.
-- Real emails need a verified sending domain; Resend's test sender only delivers to the account owner's own address.
+- **Email delivery currently reaches only the project's own test address.** The sender is Resend's test sender (`onboarding@resend.dev`), which delivers only to the Resend account owner's own address, so a loved one at any other address gets nothing. Real users need a verified sending domain in Resend and `RESEND_FROM` set to an address on it. Until then, delivery to anyone else is not working.
+
+## Reminders for whoever runs this
+
+- **The free Render Postgres `tabella-ladder` expires on 2026-12-17.** It holds the escalation ladder's state (which emails have been sent), so the helper does not send twice after a restart. Before that date, create a new database (or move to a paid plan), put its Internal Database URL in the helper's `DATABASE_URL`, and redeploy; the old state is not copied over, so letters that are still waiting would start their ladder again.
+- Without `DATABASE_URL`, the helper keeps that state in memory only, and a restart forgets it (it says so in its startup log).
+
+## Logo
+
+The mark is a small wax-red seal with a T, set beside the serif "Tabella" wordmark (Instrument Serif, SIL OFL 1.1). The same seal is the favicon and app icon (`app/public/seal.svg`, `favicon.svg`, and the PNG sizes, made by `tools/make-seal.py`), and appears in the site header, on printed cards and in emails. Earlier explorations of heavy cut-up type are kept in `docs/logo/` for reference; none was used.
 

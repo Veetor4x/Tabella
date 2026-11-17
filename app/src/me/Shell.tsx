@@ -1,6 +1,7 @@
 import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import type { ReactNode } from "react";
 import { Background } from "../ui/Background";
+import { BrandMark } from "../ui/BrandMark";
 import { Notices } from "../ui/Notices";
 import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
@@ -16,6 +17,7 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
             <header className="brand">
               <div className="brand-text">
                 <a className="brand-name" href="/" aria-label="Tabella, home">
+                  <BrandMark />
                   Tabella
                 </a>
                 {here !== "join" && here !== "open" && (

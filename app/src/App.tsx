@@ -10,6 +10,7 @@ import { WhenStep } from "./steps/WhenStep";
 import { PeopleStep } from "./steps/PeopleStep";
 import { WriteStep } from "./steps/WriteStep";
 import { Background } from "./ui/Background";
+import { BrandMark } from "./ui/BrandMark";
 import { Notices } from "./ui/Notices";
 import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
 import { Numeral } from "./ui/Numeral";
@@ -135,7 +136,7 @@ export function App() {
           <div className="app">
             <header className="brand">
               <div className="brand-text">
-                <a className="brand-name" href="/" aria-label="Tabella, home">Tabella</a>
+                <a className="brand-name" href="/" aria-label="Tabella, home"><BrandMark />Tabella</a>
                 <span className="brand-tag">Sealed today. Opened when it matters.</span>
               </div>
               <div className="head-tools">

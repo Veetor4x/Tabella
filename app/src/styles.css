@@ -892,3 +892,15 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .hint a, .howthis a, a.inline, .faq-a a, .spare-ask a, .stuck a { color: var(--ink); }
 .hint a:visited, .howthis a:visited, a.inline:visited { color: var(--ink); }
 .howthis a, a.inline { text-decoration: none; font-weight: 500; }
+
+/* the mark beside the wordmark */
+.brand-name { display: inline-flex; align-items: center; gap: 9px; }
+.brand-seal { display: block; flex: none; }
+.pc-brand { display: inline-flex; align-items: center; gap: 7px; }
+
+/* on a wide screen the edge clouds keep to the far edges, away from the headings (light sky only; the dark sky has its own layers) */
+@media (min-width: 860px) {
+  .lc-a { left: -3vw; top: 58%; }
+  .lc-b { left: auto; right: -3vw; top: 38%; }
+  .lc-c { left: auto; right: 6vw; top: 82%; }
+}
