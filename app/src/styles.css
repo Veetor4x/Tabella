@@ -828,8 +828,28 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .menu-theme { display: flex; justify-content: space-between; align-items: center; padding: 10px 6px 4px; }
 @media (max-width: 719px) {
   .wide-only { display: none !important; }
-  .menu-btn { display: inline-block; }
+  .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
   .land-nav nav { gap: 8px; }
+  .land-nav nav.has-card .card-btn { display: none; } /* one pill only: "My letters" when this device has a card, else "I have a card" */
+  .land-nav { gap: 16px; }
+  .land-nav .brand-name { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
+  .land-nav nav { flex: none; }
+}
+.menu-btn { width: 36px; height: 32px; padding: 0; }
+.menu-lines { display: grid; gap: 4px; width: 16px; }
+.menu-lines i { display: block; height: 1.5px; border-radius: 2px; background: currentColor; }
+@media (max-width: 480px) {
+  .land-nav { padding-left: 16px; padding-right: 16px; gap: 16px; }
+  .land-nav .brand-name { font-size: 22px; gap: 7px; }
+  .card-btn, .mine-btn { padding: 4px 11px; font-size: 12.5px; line-height: 1.4; }
+  .menu-btn { width: 32px; height: 28px; }
+  .land-menu { right: 12px; }
+}
+@media (max-width: 350px) {
+  .land-nav { padding-left: 12px; padding-right: 12px; gap: 12px; }
+  .land-nav .brand-name { font-size: 20px; gap: 6px; }
+  .card-btn, .mine-btn { padding: 4px 9px; font-size: 12px; }
+  .land-nav nav { gap: 6px; }
 }
 .hero-card { margin: 14px 0 0; font-size: 14px; color: var(--faint); }
 .foot-links { font-size: 14px; }

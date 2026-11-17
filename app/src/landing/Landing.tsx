@@ -68,7 +68,7 @@ export function Landing() {
               <BrandMark />
               Tabella
             </a>
-            <nav aria-label="Sections">
+            <nav aria-label="Sections" className={hasCard ? "has-card" : ""}>
               <button type="button" className="watch-intro wide-only" onClick={() => start(false)}>
                 <IconPlay size={14} />
                 <span>Watch intro</span>
@@ -90,12 +90,17 @@ export function Landing() {
               <span className="wide-only">
                 <SoundWave />
               </span>
-              <button type="button" className="menu-btn" aria-expanded={menu} aria-controls="land-menu" onClick={() => setMenu((o) => !o)}>
-                {menu ? "Close" : "Menu"}
+              <button type="button" className="menu-btn" aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} aria-controls="land-menu" onClick={() => setMenu((o) => !o)}>
+                <span className="menu-lines" aria-hidden="true"><i /><i /><i /></span>
               </button>
             </nav>
             {menu && (
               <div id="land-menu" className="land-menu glass" role="menu">
+                {hasCard ? (
+                  <a href="/card" onClick={() => setMenu(false)}>I have a card</a>
+                ) : (
+                  <a href="/me" onClick={() => setMenu(false)}>My letters</a>
+                )}
                 <a href="#why" onClick={() => setMenu(false)}>Why</a>
                 <a href="#how" onClick={() => setMenu(false)}>How</a>
                 <a href="#trust" onClick={() => setMenu(false)}>Trust</a>
