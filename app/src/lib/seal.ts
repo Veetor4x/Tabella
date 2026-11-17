@@ -27,8 +27,8 @@ import type { SealedLetter } from "./storage";
 
 export { MAX_LETTER_BYTES };
 
-const ZERO_HASH = `0x${"00".repeat(32)}` as Hex;
-const hexToU8 = (h: string) => Uint8Array.from(h.slice(2).match(/../g)!.map((b) => parseInt(b, 16)));
+export const ZERO_HASH = `0x${"00".repeat(32)}` as Hex;
+export const hexToU8 = (h: string) => Uint8Array.from(h.slice(2).match(/../g)!.map((b) => parseInt(b, 16)));
 
 export interface SealInput {
   text: string;
@@ -49,7 +49,7 @@ export async function isReady(qor: string): Promise<boolean> {
   return st.registered && !!st.publicKey;
 }
 
-async function nextLetterId(): Promise<bigint> {
+export async function nextLetterId(): Promise<bigint> {
   const client = createPublicClient({ transport: http(evmRpcUrl()) });
   const count = await client.readContract({
     address: REGISTRY,

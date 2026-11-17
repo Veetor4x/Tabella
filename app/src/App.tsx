@@ -7,7 +7,7 @@ import { DoneScreen } from "./steps/DoneScreen";
 import { GuardianStep } from "./steps/GuardianStep";
 import { SealStep } from "./steps/SealStep";
 import { WhenStep } from "./steps/WhenStep";
-import { WhoStep } from "./steps/WhoStep";
+import { PeopleStep } from "./steps/PeopleStep";
 import { WriteStep } from "./steps/WriteStep";
 import { Background } from "./ui/Background";
 import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
@@ -80,7 +80,11 @@ export function App() {
   const pills: { key: string; label: string }[] = [];
   if (!sealed) {
     if (step >= 1) pills.push({ key: "letter", label: `Letter · ${words} ${words === 1 ? "word" : "words"}` });
-    if (step >= 2) pills.push({ key: "people", label: `${draft.heirs.length} ${draft.heirs.length === 1 ? "person" : "people"}` });
+    if (step >= 2) {
+      const surprise = (draft.mode ?? "surprise") === "surprise";
+      const nb = draft.backups?.length ?? 0;
+      pills.push({ key: "people", label: surprise ? `${draft.recipient?.name.trim() || "Someone"} · surprise${nb ? ` + ${nb} backup${nb === 1 ? "" : "s"}` : ""}` : `${draft.heirs.length} ${draft.heirs.length === 1 ? "person" : "people"}` });
+    }
     if (step >= 3) pills.push({ key: "guardian", label: draft.guardian?.name.trim() ? `${draft.guardian.name.trim()} · guardian` : "No guardian" });
     if (step >= 4) pills.push({ key: "when", label: whenById(draft.when).label });
   }
@@ -90,11 +94,11 @@ export function App() {
   ) : step === 0 ? (
     <WriteStep text={draft.text} owner={owner} onChange={(text) => patch({ text })} onOwner={(o) => patch({ owner: o })} onNext={next} />
   ) : step === 1 ? (
-    <WhoStep owner={owner} heirs={draft.heirs} onChange={(heirs) => patch({ heirs })} onBack={back} onNext={next} />
+    <PeopleStep draft={draft} owner={owner} patch={patch} onBack={back} onNext={next} />
   ) : step === 2 ? (
     <GuardianStep guardian={draft.guardian} onChange={(guardian) => patch({ guardian })} onBack={back} onNext={next} />
   ) : step === 3 ? (
-    <WhenStep when={draft.when} demo={demo} names={joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
+    <WhenStep when={draft.when} demo={demo} names={(draft.mode ?? "surprise") === "surprise" ? draft.recipient?.name.trim() ?? "" : joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
   ) : (
     <SealStep draft={{ ...draft, when: whenById(draft.when).id }} onBack={back} onSealed={onSealed} />
   );

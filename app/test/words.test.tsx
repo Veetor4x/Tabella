@@ -9,6 +9,8 @@ import { SealStep } from "../src/steps/SealStep";
 import { WhenStep } from "../src/steps/WhenStep";
 import { WhoStep } from "../src/steps/WhoStep";
 import { WriteStep } from "../src/steps/WriteStep";
+import { PeopleStep } from "../src/steps/PeopleStep";
+import { emptyDraft } from "../src/lib/storage";
 import { JoinPage } from "../src/join/JoinPage";
 import { OpenPage } from "../src/open/OpenPage";
 import type { SealedLetter } from "../src/lib/storage";
@@ -44,6 +46,8 @@ const draft = { text: "Dear Mia and Leo,\nThe house papers are in the blue folde
 const screens: [string, () => string][] = [
   ["write", () => renderToStaticMarkup(<WriteStep text="" owner="" onChange={noop} onOwner={noop} onNext={noop} />)],
   ["write, filled", () => renderToStaticMarkup(<WriteStep text={draft.text} owner="Alex" onChange={noop} onOwner={noop} onNext={noop} />)],
+  ["who: keep it a surprise (the main way)", () => renderToStaticMarkup(<PeopleStep draft={emptyDraft()} owner="Alex" patch={noop} onBack={noop} onNext={noop} />)],
+  ["who: invite someone (the second way)", () => renderToStaticMarkup(<PeopleStep draft={{ ...emptyDraft(), mode: "invite" }} owner="Alex" patch={noop} onBack={noop} onNext={noop} />)],
   ["who", () => renderToStaticMarkup(<WhoStep owner="Alex" heirs={heirs} onChange={noop} onBack={noop} onNext={noop} />)],
   ["guardian, added", () => renderToStaticMarkup(<GuardianStep guardian={{ name: "Sofia" }} onChange={noop} onBack={noop} onNext={noop} />)],
   ["guardian, skipped", () => renderToStaticMarkup(<GuardianStep guardian={null} onChange={noop} onBack={noop} onNext={noop} />)],

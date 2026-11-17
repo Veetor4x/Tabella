@@ -2,7 +2,8 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { identityFromCard, type Identity } from "../lib/heir";
 import { friendlyError, SealProblem } from "../lib/helper";
-import { openLetter } from "../lib/openLetter";
+import { openLetter, reportOpened } from "../lib/openLetter";
+import { SurpriseOpen } from "./SurpriseOpen";
 import { findLettersForHeir, readHeirLetter, type HeirLetter } from "../lib/registry";
 import { Story, sheetLines } from "../landing/stories";
 import { Button } from "../ui/Button";
@@ -95,7 +96,7 @@ export function Panel({ children, soft = false }: { children: React.ReactNode; s
   return <div className={`scene-stage ${soft ? "soft" : ""}`}>{children}</div>;
 }
 
-function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
+export function LetterCard({ id, first, autoOpen = false }: { id: Identity; first: HeirLetter; autoOpen?: boolean }) {
   const [letter, setLetter] = useState(first);
   const [phase, setPhase] = useState<"idle" | "opening" | "reading">("idle");
   const [text, setText] = useState<string | null>(null);
@@ -118,6 +119,14 @@ function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
     return () => clearInterval(t);
   }, [letter.id, letter.state]);
   useEffect(() => () => clearTimeout(timer.current), []);
+  const auto = useRef(false);
+  useEffect(() => {
+    if (autoOpen && letter.state === "ready" && !auto.current) {
+      auto.current = true;
+      void open();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, letter.state]);
 
   async function open() {
     setError(null);
@@ -125,6 +134,7 @@ function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
     try {
       const t = await openLetter(id, letter);
       setText(t);
+      void reportOpened(id.card, letter.id); // a surprise letter's Postman stops asking (quiet for ordinary letters)
       if (calm) setPhase("reading");
       else {
         setPhase("opening");
@@ -206,6 +216,7 @@ export function HeirStateView({ state, busy = false, pressed = false, error, onO
 }
 
 export function OpenPage() {
+  const letterParam = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("letter") ?? "";
   const [found, setFound] = useState<{ id: Identity; letters: HeirLetter[] } | null>(null);
   const [restoring, setRestoring] = useState(false);
 
@@ -237,7 +248,16 @@ export function OpenPage() {
       <div className="step">
         <Headline text={found ? (found.letters.length > 1 ? "Your *letters*." : "Your *letter*.") : "Open your *letter*."} />
         <AnimatePresence mode="wait" initial={false}>
-          {found ? (
+          {letterParam && !found ? (
+            <div key="surprise" className="letters-list">
+              <SurpriseOpen letterId={letterParam} />
+              <p className="hint">
+                <a className="link" href="/open">
+                  I have an opening card instead
+                </a>
+              </p>
+            </div>
+          ) : found ? (
             <div key="letters" className="letters-list">
               {found.letters.map((l) => (
                 <LetterCard key={l.id.toString()} id={found.id} first={l} />

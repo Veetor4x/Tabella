@@ -173,7 +173,7 @@ function InvitePanel({ owner }: { owner: string }) {
   );
 }
 
-export function WhoStep(props: { owner: string; heirs: Person[]; onChange: (h: Person[]) => void; onBack: () => void; onNext: () => void }) {
+export function WhoStep(props: { top?: React.ReactNode; owner: string; heirs: Person[]; onChange: (h: Person[]) => void; onBack: () => void; onNext: () => void }) {
   const { heirs } = props;
   // Stable ids for the cards on screen (the saved draft keeps its simple shape).
   const nextId = useRef(heirs.length);
@@ -200,6 +200,7 @@ export function WhoStep(props: { owner: string; heirs: Person[]; onChange: (h: P
   const title = `${props.owner.trim() ? `${props.owner.trim()}, who` : "Who"} should *read* this one day?`;
   return (
     <StepFrame step={1} title={title} lead="Choose up to three people. The letter is sealed just for them." onBack={props.onBack} onNext={props.onNext} nextDisabled={!allReady}>
+      {props.top}
       <AnimatePresence initial={false}>
         {heirs.map((p, i) => {
           const id = ids[i]!;

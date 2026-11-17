@@ -3,6 +3,8 @@ import { useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { friendlyError } from "../lib/helper";
 import { sealLetter, type Progress } from "../lib/seal";
+import { sealSurprise, type SurpriseProgress } from "../lib/sealSurprise";
+import type { JoinProgress } from "../lib/heir";
 import { whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
 import type { Draft, SealedLetter } from "../lib/storage";
 import { parseAddress } from "../lib/addr";
@@ -18,6 +20,21 @@ const PROGRESS_TEXT: Record<Progress, string> = {
   wrap: "Wrapping your letter…",
   send: "Pressing the wax…",
 };
+const SURPRISE_TEXT: Record<SurpriseProgress, string> = {
+  postman: "Waking the Postman…",
+  card: "Making their opening card…",
+  lock: "Locking it with their answers…",
+  wrap: "Wrapping your letter…",
+  send: "Pressing the wax…",
+};
+const CARD_TEXT: Record<JoinProgress, string> = {
+  waking: "Making their opening card…",
+  funding: "Making their opening card…",
+  waiting: "Making their opening card…",
+  registering: "Setting up their opening card…",
+  finishing: "Almost ready…",
+  done: "Locking it with their answers…",
+};
 
 export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l: SealedLetter) => void }) {
   const { draft } = props;
@@ -27,7 +44,8 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
   const [error, setError] = useState<string | null>(null);
   const calm = useReducedMotion();
 
-  const names = draft.heirs.map((h) => h.name.trim());
+  const surprise = (draft.mode ?? "surprise") === "surprise";
+  const names = surprise ? [draft.recipient?.name.trim() ?? ""] : draft.heirs.map((h) => h.name.trim());
   const when = whenById(draft.when as WhenId);
   const quote = draft.text.trim().split("\n")[0]!.slice(0, 44);
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -42,24 +60,34 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
     // If the Postman was asleep the first step can take a while: say so, kindly.
     const slowTimer = setTimeout(() => setSlow(true), 8000);
     try {
-      const heirs = draft.heirs.map((h) => {
-        const p = parseAddress(h.address);
-        if (!p.ok) throw new Error("bad address");
-        return { name: h.name.trim(), evm: p.evm, qor: p.qor };
-      });
       const [letter] = await Promise.all([
-        sealLetter(
-          {
-            text: draft.text,
-            heirs,
-            guardianName: draft.guardian ? draft.guardian.name.trim() : null,
-            ownerName: draft.owner,
-            quiet: when.quiet,
-            warning: when.warning,
-            whenLabel: when.label,
-          },
-          (p) => setProgress(PROGRESS_TEXT[p]),
-        ),
+        surprise
+          ? sealSurprise(
+              {
+                text: draft.text,
+                ownerName: draft.owner ?? "",
+                recipient: draft.recipient!,
+                backups: draft.backups ?? [],
+                guardianName: draft.guardian ? draft.guardian.name.trim() : null,
+                quiet: when.quiet,
+                warning: when.warning,
+                whenLabel: when.label,
+                demo: when.id === "demo",
+                onCard: (p) => setProgress(CARD_TEXT[p]),
+              },
+              (p) => p !== "card" && setProgress(SURPRISE_TEXT[p]),
+            )
+          : (async () => {
+              const heirs = draft.heirs.map((h) => {
+                const p = parseAddress(h.address);
+                if (!p.ok) throw new Error("bad address");
+                return { name: h.name.trim(), evm: p.evm, qor: p.qor };
+              });
+              return sealLetter(
+                { text: draft.text, heirs, guardianName: draft.guardian ? draft.guardian.name.trim() : null, ownerName: draft.owner, quiet: when.quiet, warning: when.warning, whenLabel: when.label },
+                (p) => setProgress(PROGRESS_TEXT[p]),
+              );
+            })(),
         wait(calm ? 0 : 2600), // let the slow shimmer cross the map at least once
       ]);
       clearTimeout(slowTimer);

@@ -620,3 +620,21 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .reader { margin-top: 8px; padding: 26px 24px 22px; text-align: left; }
 .reader p { margin: 0 0 12px; font-family: var(--serif); font-size: clamp(20px, 5.4vw, 24px); line-height: 1.38; color: var(--ink); }
 .reader .link { margin-top: 10px; }
+
+/* ---------- "keep it a surprise" ---------- */
+.surprise-form { display: grid; gap: 14px; margin-top: 16px; }
+.surprise-person { padding: 18px 18px 16px; text-align: left; }
+.surprise-person h3 { font-family: var(--serif); font-weight: 400; font-size: 24px; line-height: 1.1; margin: 0 0 6px; }
+.surprise-person label { margin-top: 12px; }
+.hint.small { font-size: 12.5px; margin: 8px 0 0; }
+.honest { padding: 14px 16px; text-align: left; }
+.honest p { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--soft); }
+.honest p:last-child { margin-bottom: 0; }
+.honest strong { color: var(--ink); font-weight: 600; }
+.who-pick { display: grid; gap: 8px; margin: 10px 0 12px; }
+.pick { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 14px; border: 1px solid var(--glass-edge); background: var(--glass); font-size: 15px; cursor: pointer; }
+.pick.on { border-color: var(--line-strong); box-shadow: var(--glass-shadow); }
+.pick input { accent-color: var(--ink); }
+.question { font-family: var(--serif); font-size: clamp(24px, 6.4vw, 30px); line-height: 1.15; margin: 14px 0 12px; color: var(--ink); }
+.restore-actions.stack { display: grid; gap: 10px; }
+.restore-actions.stack .btn { width: 100%; margin-top: 0; }

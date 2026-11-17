@@ -77,6 +77,12 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
       <m.p className="lead center" {...fadeUp(0.7)}>
         Only {names} can open this.
       </m.p>
+      {letter.surprise && (
+        <m.p className="lead center small" {...fadeUp(0.9)}>
+          When the time comes, we'll find {names} by email, message or call
+          {letter.surprise.backups ? `, and ask ${letter.surprise.backups === 1 ? "your backup person" : `your ${letter.surprise.backups} backup people`} to help if they can't be reached` : ""}.
+        </m.p>
+      )}
 
       <PeopleMap
         variant="night"

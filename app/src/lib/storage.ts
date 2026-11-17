@@ -6,7 +6,25 @@ export interface Person {
 }
 
 /** What the person has typed so far. Kept on this device so a refresh does not lose the letter. */
+/** A person in a "keep it a surprise" letter: how to reach them, and a private question and answer only they would know. */
+export interface SurprisePerson {
+  name: string;
+  email: string;
+  phone: string;
+  question: string;
+  /** typed here, used once to lock the card, and NEVER saved on this device */
+  answer: string;
+  /** backups only: "sister", "old friend"... shown to nobody but Alex */
+  relation?: string;
+}
+export const emptyPerson = (): SurprisePerson => ({ name: "", email: "", phone: "", question: "", answer: "", relation: "" });
+
 export interface Draft {
+  /** "surprise" (the main way: we find them) or "invite" (they make their own card first) */
+  mode?: "surprise" | "invite";
+  recipient?: SurprisePerson;
+  /** up to three people who can help the recipient receive it */
+  backups?: SurprisePerson[];
   /** the owner's first name, optional: used to ask the questions ("Alex, who should read this one day?") */
   owner?: string;
   text: string;
@@ -16,7 +34,7 @@ export interface Draft {
   when: WhenId;
 }
 
-export const emptyDraft = (): Draft => ({ text: "", heirs: [{ name: "", address: "" }], guardian: null, when: "6m" });
+export const emptyDraft = (): Draft => ({ mode: "surprise", recipient: emptyPerson(), backups: [], text: "", heirs: [{ name: "", address: "" }], guardian: null, when: "6m" });
 
 /** A letter that has been sealed. The two cards are secrets: they stay on this device and on the printed cards. */
 export interface SealedLetter {
@@ -36,6 +54,8 @@ export interface SealedLetter {
   ownerCard: string;
   /** "Your guardian card", to hand to the guardian */
   guardianCard: string | null;
+  /** a "keep it a surprise" letter: the recipient's card is NOT here (it is locked with their answers, nowhere else) */
+  surprise?: { backups: number };
 }
 
 const DRAFT_KEY = "tabella.draft.v1";
@@ -64,7 +84,9 @@ export function loadDraft(): Draft | undefined {
   if (!d || typeof d.text !== "string" || !Array.isArray(d.heirs) || d.heirs.length === 0) return undefined;
   return d;
 }
-export const saveDraft = (d: Draft) => write(DRAFT_KEY, d);
+/** Answers are secrets: they are never written to this device's storage. */
+const withoutAnswers = (d: Draft): Draft => ({ ...d, recipient: d.recipient ? { ...d.recipient, answer: "" } : d.recipient, backups: d.backups?.map((b) => ({ ...b, answer: "" })) });
+export const saveDraft = (d: Draft) => write(DRAFT_KEY, withoutAnswers(d));
 export function clearDraft() {
   try {
     window.localStorage.removeItem(DRAFT_KEY);
