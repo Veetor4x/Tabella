@@ -17,7 +17,10 @@ export interface Sky {
   /** 0 = day, 1 = night: decides the light or dark text colours */
   night: number;
 }
-export type Mode = "auto" | "day" | "night";
+/** The look: the light page (clouds follow the hour) or the dark page. Which one is shown comes only from the toggle or the device (see lib/theme.ts). */
+export type Mode = "day" | "night";
+/** What the person picks: follow the device, or force light or dark. */
+export type Choice = "system" | "light" | "dark";
 export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
 
 export const PALETTE: Record<PartOfDay, Sky> = {
@@ -72,12 +75,11 @@ export function partOfDay(hour: number): PartOfDay {
   return h >= 5 && h < 11 ? "morning" : h >= 11 && h < 17.5 ? "afternoon" : h >= 17.5 && h < 21.5 ? "evening" : "night";
 }
 
-/** What the sky is for a chosen mode: Auto follows the clock, Day never goes dark, Night is always night. */
+/** The sky for a look. The dark look is always night. The light look is never dark: its clouds shift gently with the hour (peach, blush, dusky rose), and at night hours it keeps a soft afternoon sky. */
 export function skyFor(mode: Mode, hour: number): Sky {
   if (mode === "night") return PALETTE.night;
   const s = skyAtHour(hour);
-  if (mode === "day" && s.night > 0.25) return skyAtHour(14); // a day look at night: a pearl afternoon
-  return s;
+  return s.night > 0.25 ? skyAtHour(14) : s;
 }
 
 export const rgb = (c: Rgb) => `${Math.round(c[0])} ${Math.round(c[1])} ${Math.round(c[2])}`;
@@ -89,6 +91,10 @@ const lum = (c: Rgb) => {
 export const isDark = (s: Sky) => lum(s.bot) < 0.18;
 export const hex = (c: Rgb) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
 
-export function parseMode(v: unknown): Mode | null {
-  return v === "auto" || v === "day" || v === "night" ? v : v === "light" ? "day" : v === "dark" ? "night" : null;
+/** A saved choice. Older versions saved "auto", "day", "night" (and "light", "dark"): they still read. */
+export function parseChoice(v: unknown): Choice | null {
+  return v === "system" || v === "light" || v === "dark" ? v : v === "auto" ? "system" : v === "day" ? "light" : v === "night" ? "dark" : null;
 }
+
+/** Light or dark comes only from the choice, or from the device when the choice is System. */
+export const resolveDark = (choice: Choice, deviceDark: boolean): boolean => choice === "dark" || (choice === "system" && deviceDark);

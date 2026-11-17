@@ -72,9 +72,9 @@ describe("only the effects that were asked for are left", () => {
   it("links underline in wax-red by a transform", () => {
     expect(css).toMatch(/\.link::after[^{]*\{[^}]*scaleX\(0\)/);
   });
-  it("the theme toggle offers Auto, Day and Night", () => {
+  it("the theme toggle offers System, Light and Dark", () => {
     const h = html(<ThemeToggle />);
-    for (const w of ["Auto", "Day", "Night"]) expect(h).toContain(`aria-label="${w}"`);
+    for (const w of ["System", "Light", "Dark"]) expect(h).toContain(`aria-label="${w}"`);
   });
   it("the sky is three drifting layers, far slower than near, and the front page leaves out the near one", () => {
     const b = html(<Background />);

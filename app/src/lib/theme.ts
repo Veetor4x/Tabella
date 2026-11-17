@@ -1,18 +1,19 @@
 /**
- * Auto, Day or Night for the whole site. Auto (the default) follows the visitor's own clock; the choice is remembered.
- * The page colours come from lib/sky.ts. They change by a slow blend, never a jump (and at once for people who ask for less motion).
+ * System, Light or Dark for the whole site. System (the default) follows the device's own light/dark setting and updates live when the device
+ * switches; Light and Dark are fixed. The choice is remembered. Light vs dark comes from nothing else (not the clock). Within the light page the
+ * clouds still shift gently with the hour. The page colours come from lib/sky.ts and change by a slow blend (at once for reduced motion).
  */
-import { hex, isDark, parseMode, rgb, skyFor, type Mode, type Sky } from "./sky";
+import { hex, isDark, parseChoice, resolveDark, rgb, skyFor, type Choice, type Sky } from "./sky";
 
 export type Theme = "light" | "dark";
-export type { Mode };
-const KEY = "tabella.theme.v1"; // older versions stored "light" or "dark" here; both still read
+export type { Choice };
+const KEY = "tabella.theme.v1"; // "system", "light" or "dark" (older versions saved "auto", "day", "night" here; they still read)
 const listeners = new Set<() => void>();
-let mode: Mode = "auto";
+let choice: Choice = "system";
 let shown: Sky | null = null;
 let raf = 0;
 
-/** The hour on the visitor's clock (a number: 13.5 is half past one). A test can set window.__tabellaHour to look at another time. */
+/** The hour on the visitor's clock (a number: 13.5 is half past one). Only the light page's clouds use it. A test can set window.__tabellaHour. */
 export function clockHour(): number {
   const w = typeof window === "undefined" ? undefined : (window as unknown as { __tabellaHour?: number });
   if (w && typeof w.__tabellaHour === "number") return w.__tabellaHour;
@@ -20,14 +21,18 @@ export function clockHour(): number {
   return d.getHours() + d.getMinutes() / 60;
 }
 
-export function storedMode(): Mode {
+const deviceQuery = () => (typeof window === "undefined" ? undefined : window.matchMedia?.("(prefers-color-scheme: dark)"));
+/** Is the device set to dark right now? */
+export const deviceDark = (): boolean => !!deviceQuery()?.matches;
+
+export function storedChoice(): Choice {
   try {
-    return parseMode(window.localStorage.getItem(KEY)) ?? "auto";
+    return parseChoice(window.localStorage.getItem(KEY)) ?? "system";
   } catch {
-    return "auto";
+    return "system";
   }
 }
-export const currentMode = (): Mode => mode;
+export const currentChoice = (): Choice => choice;
 export const currentTheme = (): Theme => (typeof document === "undefined" ? "light" : document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 
 const calm = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -52,10 +57,10 @@ function paint(s: Sky) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", hex(s.top));
 }
 
-/** Blend from what is shown to the sky for the current mode and time. */
+/** Blend from what is shown to the sky for the current choice (and device setting, and hour). */
 function glide(): void {
   if (typeof document === "undefined") return;
-  const target = skyFor(mode, clockHour());
+  const target = skyFor(resolveDark(choice, deviceDark()) ? "night" : "day", clockHour());
   cancelAnimationFrame(raf);
   if (!shown || calm()) return paint(target);
   const from = shown;
@@ -79,10 +84,10 @@ function glide(): void {
 }
 
 /** The person's choice: applied now and remembered. */
-export function setMode(m: Mode): void {
-  mode = m;
+export function setChoice(c: Choice): void {
+  choice = c;
   try {
-    window.localStorage.setItem(KEY, m);
+    window.localStorage.setItem(KEY, c);
   } catch {
     /* fine: it just will not be remembered */
   }
@@ -90,18 +95,23 @@ export function setMode(m: Mode): void {
   listeners.forEach((f) => f());
 }
 
-/** Called once at start: apply the saved mode, then keep the sky in step with the clock (not while the tab is hidden). */
+/** Called once at start: apply the saved choice, follow the device live while it is System, and let the light clouds drift through the hours. */
 export function initTheme(): void {
-  mode = storedMode();
+  choice = storedChoice();
   shown = null;
   glide();
-  const tick = () => {
-    if (!document.hidden && mode !== "night") glide();
+  const q = deviceQuery();
+  const onDevice = () => {
+    if (choice === "system") glide(); // the device switched: so does the page, at once
   };
-  setInterval(tick, 60_000);
+  if (q?.addEventListener) q.addEventListener("change", onDevice);
+  else (q as unknown as { addListener?: (f: () => void) => void } | undefined)?.addListener?.(onDevice);
+  setInterval(() => {
+    if (!document.hidden && !resolveDark(choice, deviceDark())) glide(); // only the light clouds change with the hour
+  }, 60_000);
   document.addEventListener("visibilitychange", () => {
     document.documentElement.toggleAttribute("data-hidden", document.hidden);
-    if (!document.hidden) tick();
+    if (!document.hidden) glide();
   });
 }
 

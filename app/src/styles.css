@@ -750,7 +750,7 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .faq-a p { margin: 0; color: var(--soft); font-size: 15.5px; max-width: 60ch; }
 
 
-@media (max-width: 520px) { .theme-toggle { --tt-w: 40px; } .tt-opt { font-size: 12px; } .tt-opt .tt-lbl { display: none; } }
+@media (max-width: 520px) { .theme-toggle { --tt-w: 46px; } .tt-opt { font-size: 12px; } .tt-opt .tt-lbl { display: none; } }
 
 /* ================= the effects that stay ================= */
 

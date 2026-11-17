@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PALETTE, isDark, partOfDay, skyAtHour, skyFor, parseMode, hex } from "../src/lib/sky";
+import { PALETTE, isDark, partOfDay, skyAtHour, skyFor, parseChoice, resolveDark, hex } from "../src/lib/sky";
 
 describe("the sky follows the clock", () => {
   it("names the part of the day", () => {
@@ -32,17 +32,25 @@ describe("the sky follows the clock", () => {
     expect(skyAtHour(14).stars).toBe(0);
     expect(skyAtHour(23.5).stars).toBe(1);
   });
-  it("Auto follows the clock, Day never goes dark, Night is always night", () => {
-    expect(skyFor("auto", 23)).toEqual(skyAtHour(23));
+  it("Light never goes dark and keeps its clouds on the hour, Dark is always night", () => {
     expect(isDark(skyFor("day", 23))).toBe(false);
     expect(skyFor("day", 9)).toEqual(skyAtHour(9));
     expect(isDark(skyFor("night", 13))).toBe(true);
   });
-  it("reads saved choices, including the older light and dark", () => {
-    expect(parseMode("auto")).toBe("auto");
-    expect(parseMode("light")).toBe("day");
-    expect(parseMode("dark")).toBe("night");
-    expect(parseMode("blue")).toBeNull();
+  it("light or dark comes only from the choice, or from the device when it is System", () => {
+    expect(resolveDark("system", true)).toBe(true);
+    expect(resolveDark("system", false)).toBe(false);
+    expect(resolveDark("light", true)).toBe(false);
+    expect(resolveDark("dark", false)).toBe(true);
+  });
+  it("reads saved choices, including the older ones", () => {
+    expect(parseChoice("system")).toBe("system");
+    expect(parseChoice("auto")).toBe("system");
+    expect(parseChoice("day")).toBe("light");
+    expect(parseChoice("light")).toBe("light");
+    expect(parseChoice("night")).toBe("dark");
+    expect(parseChoice("dark")).toBe("dark");
+    expect(parseChoice("blue")).toBeNull();
   });
   it("keeps the text readable on every sky, crossing the dim middle of dusk and dawn quickly", () => {
     const lum = (c: number[]) => {
