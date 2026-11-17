@@ -24,7 +24,8 @@ const LETTER = "Dear Mia,\n\nThe blue folder in my desk has everything. Look aft
 const TEST_EMAIL = (process.env.TEST_EMAIL || "").trim();
 const plus = (e, tag) => e.replace("@", `+${tag}@`);
 const MIA = { name: "Mia", email: TEST_EMAIL || "mia.demo@example.com", phone: "", question: "What did we call the little boat?", answer: "Blue Heron" };
-const SOFIA = { name: "Sofia", rel: "her oldest friend", email: TEST_EMAIL ? plus(TEST_EMAIL, "sofia") : "sofia.demo@example.com", phone: "", question: "Where did we first meet?", answer: "The Lighthouse Cafe" };
+// The backup's address: with Resend's test sender only the account's own address can receive, so TEST_BACKUP_EMAIL may be the same inbox.
+const SOFIA = { name: "Sofia", rel: "her oldest friend", email: (process.env.TEST_BACKUP_EMAIL || "").trim() || (TEST_EMAIL ? plus(TEST_EMAIL, "sofia") : "sofia.demo@example.com"), phone: "", question: "Where did we first meet?", answer: "The Lighthouse Cafe" };
 const url = (p) => new URL(p, BASE).href;
 let failures = 0;
 const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) failures++; };
@@ -142,8 +143,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(2000);
   }
   await m.getByRole("heading", { name: "One question" }).waitFor({ timeout: 10000 });
+  const releasedAfter = Date.now();
   console.log(`   released after ${((Date.now() - sealedAt) / 1000).toFixed(0)} s (on its way seen: ${sawOnItsWay})`);
   await m.waitForTimeout(800);
+  if (process.env.WAIT_FOR_LADDER) {
+    // let the whole email ladder run: the first email at release, the reminder after 2 minutes, the backup after 4
+    console.log("   waiting ~4.7 minutes so the reminder and the backup's email are sent too (check the inbox)...");
+    await sleep(285_000);
+    await m.reload({ waitUntil: "networkidle" });
+    await m.getByRole("heading", { name: "One question" }).waitFor({ timeout: 60000 });
+  }
   ok((await m.locator(".question").innerText()) === MIA.question, "after release, Mia is asked her own question");
   ok(!(await m.locator("main").innerText()).includes(SOFIA.question), "Mia does not see Sofia's question (there is no choice to make until backups matter)");
   await clean(m, "question");
