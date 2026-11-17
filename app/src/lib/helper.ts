@@ -84,6 +84,17 @@ export function friendlyError(err: unknown): string {
       case "helper_unreachable":
       case "helper_unavailable":
         return "We couldn't reach the Postman. It may still be waking up. Give it a minute and try again.";
+      case "fee_not_arrived":
+      case "key_not_seen":
+      case "fund_failed":
+      case "fund_unavailable":
+        return "Setting up your card is taking longer than usual. Nothing is lost. Please try again in a minute.";
+      case "fund_disabled":
+        return "Making opening cards isn't switched on right now. Please try again later.";
+      case "no_qorex":
+        return "QoreX isn't installed in this browser. You can make your card here instead.";
+      case "qorex_failed":
+        return "QoreX didn't finish. You can try again, or make your card here instead.";
       case "rate_limited":
         return "That's a lot at once. Please wait a minute and try again.";
       case "would_revert":

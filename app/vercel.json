@@ -51,6 +51,22 @@
     {
       "source": "/cards/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/join",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/open",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/join/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/open/",
+      "destination": "/index.html"
     }
   ]
 }

@@ -580,3 +580,42 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 :root[data-theme="dark"] .field input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: #6f7685; }
 :root[data-theme="dark"] .hero-stage .paper { background: var(--glass); }
 :root[data-theme="dark"] .badge.not, :root[data-theme="dark"] .state-pill.warning { color: var(--alert); }
+
+/* ---------- the loved one's side: /join and /open ---------- */
+.invite { margin-top: 14px; }
+.invite .btn { width: 100%; margin-top: 0; }
+.invite-card { margin-top: 10px; padding: 16px 16px 14px; text-align: left; }
+.invite-card p { margin: 0 0 12px; font-size: 14.5px; color: var(--soft); line-height: 1.5; }
+.invite-card p.small { margin: 10px 0 0; font-size: 12.5px; }
+.share-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.share-row .btn, .share-btn { width: auto; margin-top: 0; padding: 10px 16px; min-height: 44px; font-size: 14.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.center-step { text-align: center; }
+.waiting-dots { display: flex; gap: 8px; justify-content: center; margin: 22px 0 8px; }
+.waiting-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--soft); opacity: 0.25; animation: wd 1.6s ease-in-out infinite; }
+.waiting-dots i:nth-child(2) { animation-delay: 0.25s; }
+.waiting-dots i:nth-child(3) { animation-delay: 0.5s; }
+@keyframes wd { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) { .waiting-dots i { animation: none; opacity: 0.5; } }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+.card-actions .btn { width: auto; margin-top: 0; padding: 11px 20px; }
+.keep { margin: 4px 0 12px; font-size: 14.5px; line-height: 1.5; color: var(--soft); }
+.keep strong { color: var(--ink); font-weight: 600; }
+.send-card { margin-top: 16px; padding: 18px 18px 18px; display: grid; gap: 12px; justify-items: start; text-align: left; }
+.send-card p { margin: 0; color: var(--soft); font-size: 14.5px; line-height: 1.5; }
+.send-card .addr { display: block; font-size: 11px; word-break: break-all; color: var(--soft); }
+.send-card .btn.primary { width: 100%; margin-top: 2px; }
+.alt-address { margin-top: 10px; }
+.print-card.opening footer { color: #8a1c27; }
+.scene-stage { position: relative; width: min(100%, 360px); aspect-ratio: 360 / 420; margin: 6px auto 4px; border-radius: 26px; background: #0c0e13; border: 1px solid var(--glass-edge); overflow: hidden; box-shadow: var(--glass-shadow); }
+.scene-stage .story { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scene-stage.soft .story { animation: sceneBreath 3.6s ease-in-out infinite; }
+@keyframes sceneBreath { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .scene-stage.soft .story { animation: none; } }
+.letter-state, .letter-open { text-align: center; margin-top: 8px; }
+.state-line { font-family: var(--serif); font-weight: 400; font-size: clamp(26px, 7vw, 34px); line-height: 1.12; margin: 18px 0 6px; }
+.lead.small { font-size: 15px; margin: 4px 0; }
+.skip-open { display: inline-block; margin-top: 8px; }
+.letters-list { display: grid; gap: 34px; }
+.reader { margin-top: 8px; padding: 26px 24px 22px; text-align: left; }
+.reader p { margin: 0 0 12px; font-family: var(--serif); font-size: clamp(20px, 5.4vw, 24px); line-height: 1.38; color: var(--ink); }
+.reader .link { margin-top: 10px; }

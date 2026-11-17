@@ -15,12 +15,12 @@ function download(filename: string, text: string) {
 }
 
 /** One printable card: the QR code, the code in words, and the one instruction that matters. */
-export function PrintCard(props: { kind: "owner" | "guardian"; title: string; line: string; code: string; letterId: string }) {
+export function PrintCard(props: { kind: "owner" | "guardian" | "opening"; title: string; line: string; code: string; letterId?: string }) {
   return (
     <article className={`print-card ${props.kind}`} aria-label={props.title}>
       <header>
         <span className="pc-brand">Tabella</span>
-        <span className="pc-no">Letter {props.letterId}</span>
+        <span className="pc-no">{props.letterId ? `Letter ${props.letterId}` : "Opening card"}</span>
       </header>
       <div className="pc-body">
         <Qr value={props.code} size={132} label={`QR code for the ${props.title}`} />

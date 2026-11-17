@@ -9,6 +9,8 @@ import { SealStep } from "../src/steps/SealStep";
 import { WhenStep } from "../src/steps/WhenStep";
 import { WhoStep } from "../src/steps/WhoStep";
 import { WriteStep } from "../src/steps/WriteStep";
+import { JoinPage } from "../src/join/JoinPage";
+import { OpenPage } from "../src/open/OpenPage";
 import type { SealedLetter } from "../src/lib/storage";
 
 // Words people must never meet (brief section 9). "key" is allowed only inside the brief's own
@@ -49,6 +51,8 @@ const screens: [string, () => string][] = [
   ["when, with the hidden demo option", () => renderToStaticMarkup(<WhenStep when="demo" names="Mia and Leo" demo onChange={noop} onBack={noop} onNext={noop} />)],
   ["seal", () => renderToStaticMarkup(<SealStep draft={draft} onBack={noop} onSealed={noop} />)],
   ["done", () => renderToStaticMarkup(<DoneScreen letter={sealed} onAnother={noop} />)],
+  ["join: the invitation", () => renderToStaticMarkup(<JoinPage />)],
+  ["open: the card screen", () => renderToStaticMarkup(<OpenPage />)],
   ["whole app, first screen", () => renderToStaticMarkup(<App />)],
   // the front page: its "For the curious" box is the only place technical terms may appear, so it is cut out first
   ["front page (without the For the curious box)", () => stripCurious(renderToStaticMarkup(<Landing />))],

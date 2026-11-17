@@ -26,6 +26,8 @@ export interface LetterView {
   pausesUsed: number;
   hasGuardian: boolean;
   heirs: Hex[];
+  /** the Postman has published the second half (the letter can be opened now) */
+  released: boolean;
   ownerKeyHash: Hex;
   guardianKeyHash: Hex;
   /** The network's clock when we looked (seconds), and our own clock then (ms): together they keep counting. */
@@ -53,6 +55,7 @@ export async function readLetter(id: bigint): Promise<LetterView> {
     pausesUsed: l.pausesUsed,
     hasGuardian: l.guardianKeyHash !== ZERO,
     heirs: [...l.heirs],
+    released: l.released,
     ownerKeyHash: l.ownerKeyHash,
     guardianKeyHash: l.guardianKeyHash,
     chainNow: Number(block.timestamp),
@@ -79,4 +82,55 @@ export async function findLetters(fingerprint: Hex): Promise<{ owner: Match[]; g
     }
   }
   return out;
+}
+
+// ------------------------------------------------------------------ the loved one's side
+
+/** What a loved one can see about a letter: only whether it is sealed, on its way, or ready. Nothing else is shown. */
+export type HeirState = "sealed" | "on-its-way" | "ready" | "withdrawn";
+
+export interface HeirLetter {
+  id: bigint;
+  state: HeirState;
+  letterCiphertext: Hex;
+  partAEnvelope: Hex;
+  partBForHeirs: Hex;
+}
+
+/** Sealed (including the warning time) shows nothing more; released but not yet delivered is "on its way"; delivered is "ready". */
+export function heirStateOf(status: number, released: boolean, partBLength: number): HeirState {
+  if (status === 3) return "withdrawn";
+  if (released && partBLength > 2) return "ready";
+  if (status === 2) return "on-its-way";
+  return "sealed";
+}
+
+/** Every letter sealed to this address. One read per letter: fine at this size. */
+export async function findLettersForHeir(evm: string): Promise<HeirLetter[]> {
+  const c = client();
+  const count = Number(await c.readContract({ address: REGISTRY, abi, functionName: "letterCount" }));
+  const want = evm.toLowerCase();
+  const out: HeirLetter[] = [];
+  const ids = Array.from({ length: count }, (_, i) => BigInt(i + 1));
+  for (let i = 0; i < ids.length; i += 8) {
+    const batch = await Promise.all(
+      ids.slice(i, i + 8).map((id) =>
+        Promise.all([c.readContract({ address: REGISTRY, abi, functionName: "getLetter", args: [id] }), c.readContract({ address: REGISTRY, abi, functionName: "status", args: [id] })])
+          .then(([l, st]) => ({ id, l, st: Number(st) }))
+          .catch(() => null),
+      ),
+    );
+    for (const b of batch) {
+      if (!b || !b.l.heirs.some((h) => h.toLowerCase() === want)) continue;
+      out.push({ id: b.id, state: heirStateOf(b.st, b.l.released, b.l.partBForHeirs.length), letterCiphertext: b.l.letterCiphertext, partAEnvelope: b.l.partAEnvelope, partBForHeirs: b.l.partBForHeirs });
+    }
+  }
+  return out;
+}
+
+/** One letter's state again (for the gentle waiting screens). */
+export async function readHeirLetter(id: bigint): Promise<HeirLetter> {
+  const c = client();
+  const [l, st] = await Promise.all([c.readContract({ address: REGISTRY, abi, functionName: "getLetter", args: [id] }), c.readContract({ address: REGISTRY, abi, functionName: "status", args: [id] })]);
+  return { id, state: heirStateOf(Number(st), l.released, l.partBForHeirs.length), letterCiphertext: l.letterCiphertext, partAEnvelope: l.partAEnvelope, partBForHeirs: l.partBForHeirs };
 }

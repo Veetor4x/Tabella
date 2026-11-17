@@ -1,11 +1,13 @@
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { parseAddress } from "../lib/addr";
+import { extractAddress, parseAddress } from "../lib/addr";
 import { isReady } from "../lib/seal";
 import type { Person } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
+import { inviteLink } from "../lib/share";
 import { IconCheck, IconPlus } from "../ui/icons";
+import { SharePanel } from "../ui/SharePanel";
 import { cardAppear, fadeTransition, ghostLayer, sharpLayer } from "../ui/motion";
 import { StepFrame } from "../ui/StepFrame";
 
@@ -119,7 +121,7 @@ function PersonRow(props: {
           autoCorrect="off"
           spellCheck={false}
           inputMode="text"
-          onChange={(e) => props.onChange({ ...person, address: e.target.value })}
+          onChange={(e) => props.onChange({ ...person, address: extractAddress(e.target.value) })}
           aria-describedby={`addr-msg-${index}`}
         />
       </Field>
@@ -138,6 +140,35 @@ function PersonRow(props: {
           Remove {person.name.trim() || `person ${index + 1}`}
         </button>
       )}
+    </div>
+  );
+}
+
+/** "Invite someone": a link to /join where they make their opening card. The link carries a first name at most. */
+function InvitePanel({ owner }: { owner: string }) {
+  const [open, setOpen] = useState(false);
+  const name = owner.trim();
+  const content = {
+    subject: `${name || "A friend"} wants to leave you something to read`,
+    text: `${name ? `${name} wants` : "I'd like"} to leave you something to read one day. To receive it safely, please make your opening card here. It takes a minute:`,
+    url: inviteLink(name),
+  };
+  return (
+    <div className="invite">
+      <Button variant="glass" onClick={() => setOpen((o) => !o)}>
+        Invite someone
+      </Button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <m.div key="invite" className="invite-card glass" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fadeTransition}>
+            <p>
+              Send this link. They make their opening card on their own phone, then send you their address. Paste it here and it turns to <strong>Ready</strong>.
+            </p>
+            <SharePanel content={content} copyWhat="link" label="Share the invite" />
+            <p className="hint small">The link has no secrets in it.</p>
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -194,6 +225,7 @@ export function WhoStep(props: { owner: string; heirs: Person[]; onChange: (h: P
           </span>
         </Button>
       )}
+      <InvitePanel owner={props.owner} />
       <p className="hint">
         <strong>Ready</strong> means they have set up their opening card, so a letter can be sealed for them. Paste the address they gave you.
       </p>

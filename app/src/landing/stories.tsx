@@ -198,20 +198,64 @@ function Clock() {
   );
 }
 
+/** The words on the sheet in the demo's final scene. */
+export const DEMO_SHEET = [
+  "Dear Mia and Leo,",
+  "",
+  "I've put aside 2 Bitcoin for you",
+  "both, my gift for your futures.",
+  "The hardware wallet is in the small",
+  "safe in my study, and its recovery",
+  "card is sealed with Mr. Hart, our",
+  "lawyer. Show him this letter and",
+  "he'll help you. Split it fairly",
+  "and look after each other.",
+  "",
+  "All my love, Alex.",
+];
+
+/** Break a real letter into short lines that fit on the sheet (the first part: the full text is shown after). */
+export function sheetLines(text: string, width = 34, max = 12): string[] {
+  const out: string[] = [];
+  for (const para of text.split(/\n/)) {
+    if (!para.trim()) {
+      out.push("");
+      continue;
+    }
+    let line = "";
+    for (const w of para.split(/\s+/)) {
+      if ((line + " " + w).trim().length > width && line) {
+        out.push(line);
+        line = w;
+      } else line = (line + " " + w).trim();
+    }
+    if (line) out.push(line);
+  }
+  while (out.length && out[0] === "") out.shift();
+  const cut = out.length > max;
+  const lines = out.slice(0, max);
+  if (cut) lines[max - 1] = lines[max - 1]!.replace(/[\s,.;:]*$/, "") + "…";
+  return lines;
+}
+
 /** The last scene: the seal cracks, the flap lifts, the letter slides out, and the camera comes in until it can be read. */
-function Open() {
+export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[]; dur?: number; delay?: number }) {
   return (
-    <A a="zoom-read" d={4.0} dur={2.6} origin="180px 168px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
+    <A a="zoom-read" d={delay} dur={dur} origin="180px 168px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
       {/* the open flap, behind the letter */}
       <A a="flap-open" d={1.3} dur={0.6} fill="backwards">
         <path className="sk" d="M90 190 L180 128 L270 190" />
       </A>
       {/* the letter, sliding out */}
       <A a="letter-out" d={1.7} dur={1.5} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
-        <rect className="letter-sheet" x="110" y="102" width="140" height="130" rx="2" />
-        <text className="hand" x="123" y="130" fontSize="13">Dear Mia and Leo,</text>
-        <text className="hand" x="123" y="152" fontSize="10.5">the house papers are in the</text>
-        <text className="hand" x="123" y="168" fontSize="10.5">blue folder in my desk…</text>
+        <rect className="letter-sheet" x="104" y="100" width="152" height="134" rx="2" />
+        {lines.map((l, i) =>
+          l ? (
+            <text key={i} className="hand" x="114" y={114 + i * 9.6} fontSize={i === 0 ? 7.4 : 6.6}>
+              {l}
+            </text>
+          ) : null,
+        )}
       </A>
       {/* the front of the envelope */}
       <rect className="cover" x="89" y="189" width="182" height="122" />
@@ -230,12 +274,13 @@ function Open() {
     </A>
   );
 }
+const Open = () => <EnvelopeOpen lines={DEMO_SHEET} />;
 
 const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs, shield: Shield, calendar: Calendar, seal: SealScene, horizon: Horizon, clock: Clock, open: Open };
 
 /** One scene, on its own transparent canvas (the intro puts it on the ink). */
-export function Story({ id, still = false }: { id: StoryId; still?: boolean }) {
-  const Scene = SCENES[id];
+export function Story({ id, still = false, lines }: { id: StoryId; still?: boolean; lines?: string[] }) {
+  const Scene = id === "open" && lines ? () => <EnvelopeOpen lines={lines} /> : SCENES[id];
   return (
     <svg className={`story ${still ? "still" : ""}`} viewBox="0 0 360 420" role="img" aria-label={STORY_ALT[id]} preserveAspectRatio="xMidYMid meet">
       <Scene />

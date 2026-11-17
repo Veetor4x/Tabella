@@ -62,10 +62,10 @@ describe("the film: opener, then a scene, a zoom and a screen for each step, and
   it("the final scene gives the zoom time: the envelope opens, then the camera comes in over 2 to 3 seconds and holds", () => {
     expect(FINAL_STORY_MS).toBeGreaterThanOrEqual(8000);
     const src = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
-    const zoom = /a="zoom-read" d=\{([0-9.]+)\} dur=\{([0-9.]+)\}/.exec(src)!;
-    expect(+zoom[2]!).toBeGreaterThanOrEqual(2);
-    expect(+zoom[2]!).toBeLessThanOrEqual(3);
-    expect(FINAL_STORY_MS / 1000 - (+zoom[1]! + +zoom[2]!)).toBeGreaterThanOrEqual(1.5); // a moment to hold on the message
+    const zoom = /dur = ([0-9.]+), delay = ([0-9.]+)/.exec(src)!;
+    expect(+zoom[1]!).toBeGreaterThanOrEqual(2);
+    expect(+zoom[1]!).toBeLessThanOrEqual(3);
+    expect(FINAL_STORY_MS / 1000 - (+zoom[2]! + +zoom[1]!)).toBeGreaterThanOrEqual(1.5); // a moment to hold on the message
     expect(src).toContain("cubic-bezier"); // eased
   });
   it("the screen plays no longer than the demo screen's own schedule", () => {

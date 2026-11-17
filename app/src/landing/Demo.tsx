@@ -199,7 +199,7 @@ const DAY = 86400;
 const SAMPLE_NOW = 1_800_000_000;
 const sample = (lastCheckIn: number): LetterView => ({
   id: 7n, state: "Sealed", lastCheckIn, quiet: 180 * DAY, warning: 14 * DAY, nonce: 1, pausesUsed: 0, hasGuardian: true,
-  heirs: ["0x1", "0x2"], ownerKeyHash: "0x01", guardianKeyHash: "0x02", chainNow: SAMPLE_NOW, fetchedAt: 0,
+  released: false, heirs: ["0x1", "0x2"], ownerKeyHash: "0x01", guardianKeyHash: "0x02", chainNow: SAMPLE_NOW, fetchedAt: 0,
 });
 function StillHere({ t }: { t: number }) {
   const tapped = at(t, 2400);

@@ -31,3 +31,11 @@ export function parseAddress(input: string): ParsedAddress {
   }
   return { ok: false };
 }
+
+/** If someone pastes a whole message ("Hi Alex, ... qor1...") keep just the address in it. Plain addresses pass through untouched. */
+export function extractAddress(input: string): string {
+  const s = input.trim();
+  if (parseAddress(s).ok) return s;
+  const m = s.match(/\bqor1[0-9a-z]{30,60}\b/i) ?? s.match(/\b0x[0-9a-fA-F]{40}\b/);
+  return m && parseAddress(m[0]).ok ? m[0] : input;
+}

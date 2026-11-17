@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { Landing } from "./landing/Landing";
 import { CardsPage } from "./me/CardsPage";
+import { JoinPage } from "./join/JoinPage";
+import { OpenPage } from "./open/OpenPage";
 import { GuardianPage } from "./me/GuardianPage";
 import { MePage } from "./me/MePage";
 import "@fontsource-variable/inter";
@@ -25,6 +27,6 @@ if (window.location.hash === "#spike") {
 } else {
   // "/" is the front page; "/write" is the owner's flow
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
-  const page = path === "/write" ? <App /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : <Landing />;
+  const page = path === "/write" ? <App /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : path === "/join" ? <JoinPage /> : path === "/open" ? <OpenPage /> : <Landing />;
   root.render(<React.StrictMode>{page}</React.StrictMode>);
 }

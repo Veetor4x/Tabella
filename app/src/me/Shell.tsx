@@ -5,7 +5,7 @@ import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 /** The frame around My letters, the guardian page and the cards: the same pearl, ink and glass as the rest. */
-export function Shell({ children, here, className = "" }: { children: ReactNode; here: "me" | "guardian" | "cards"; className?: string }) {
+export function Shell({ children, here, className = "" }: { children: ReactNode; here: "me" | "guardian" | "cards" | "join" | "open"; className?: string }) {
   return (
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
@@ -17,6 +17,7 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
                 <a className="brand-name" href="/" aria-label="Tabella, home">
                   Tabella
                 </a>
+                {here !== "join" && here !== "open" && (
                 <nav className="me-nav" aria-label="Pages">
                   <a href="/me" aria-current={here === "me" ? "page" : undefined}>
                     My letters
@@ -26,6 +27,7 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
                   </a>
                   <a href="/write">Write</a>
                 </nav>
+                )}
               </div>
               <div className="head-tools">
                 <ThemeToggle />
