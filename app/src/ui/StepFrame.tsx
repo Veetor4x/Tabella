@@ -13,10 +13,12 @@ interface Props {
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  /** replaces the main button (the seal screen's press-and-hold) */
+  action?: ReactNode;
 }
 
 /** One question per screen: a headline that rises word by word, the answer, and Back / Continue. (The number and pills live in App.) */
-export function StepFrame({ step, title, lead, children, onBack, onNext, nextLabel = "Continue", nextDisabled }: Props) {
+export function StepFrame({ step, title, lead, children, onBack, onNext, nextLabel = "Continue", nextDisabled, action }: Props) {
   const heading = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
 
@@ -47,9 +49,11 @@ export function StepFrame({ step, title, lead, children, onBack, onNext, nextLab
             Back
           </Button>
         )}
-        <Button arrow="forward" onClick={onNext} disabled={nextDisabled}>
-          {nextLabel}
-        </Button>
+        {action ?? (
+          <Button arrow="forward" onClick={onNext} disabled={nextDisabled}>
+            {nextLabel}
+          </Button>
+        )}
       </div>
     </div>
   );

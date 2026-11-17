@@ -7,6 +7,7 @@ import { countdown } from "../lib/time";
 import { loadLetters, saveLetter, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { PenLine } from "../ui/PenLine";
 import { EASE, cardAppear } from "../ui/motion";
 import { Ring } from "../ui/Ring";
 import { useLetter, useNow, useRoute } from "./hooks";
@@ -47,7 +48,7 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
     return () => clearTimeout(t);
   }, [phase]);
 
-  if (!view) return <p className="lead">Looking for your letter…</p>;
+  if (!view) return <p className="lead"><PenLine label="Looking" /> Looking for your letter…</p>;
   const names = namesOf(saved.heirs.map((h) => h.name), saved.heirs.map((h) => h.evm));
 
   async function tap() {

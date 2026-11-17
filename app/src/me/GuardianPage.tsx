@@ -7,6 +7,7 @@ import { countdown, ringText } from "../lib/time";
 import { loadGuardian, type GuardianEntry } from "../lib/storage";
 import { Headline } from "../ui/Headline";
 import { EASE, cardAppear } from "../ui/motion";
+import { PenLine } from "../ui/PenLine";
 import { Ring } from "../ui/Ring";
 import { useLetter, useNow } from "./hooks";
 import { StatePill, namesOf } from "./parts";
@@ -48,7 +49,7 @@ export function GuardianView(props: { view: LetterView; now: number; name?: stri
       {open && (
         <>
           <button type="button" className="btn primary big-tap" onClick={props.onTap} disabled={props.busy || left === 0}>
-            {props.busy ? "Confirming with your card…" : "They're okay"}
+            {props.busy ? <><PenLine label="Confirming" /> Confirming with your card…</> : "They're okay"}
           </button>
           <p className="status-line center" role="status" aria-live="polite">
             {props.thanks ? `Thank you${props.name ? `, ${props.name}` : ""}. They have more time.` : left === 0 ? "Both pauses are used. After this, only they can check in." : "Tap if you know they're just ill or away. It gives them more time."}

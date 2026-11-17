@@ -4,6 +4,7 @@ import { becomeReady, identityFromCard, isOpeningKeyRegistered, newCard, registe
 import { friendlyError } from "../lib/helper";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { PenLine } from "../ui/PenLine";
 import { IconCheck } from "../ui/icons";
 import { EASE, cardAppear } from "../ui/motion";
 import { SharePanel } from "../ui/SharePanel";
@@ -172,10 +173,8 @@ export function JoinPage() {
             <p className="lead" role="status" aria-live="polite">
               {STEP_TEXT[progress]}
             </p>
-            <div className="waiting-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
+            <div className="waiting-pen">
+              <PenLine label="Working" />
             </div>
             <p className="hint">This can take up to a minute. Please keep this page open.</p>
           </m.div>

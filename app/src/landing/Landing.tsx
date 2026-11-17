@@ -13,6 +13,8 @@ import { IntroPlayer, IntroPrompt } from "./Intro";
 import { startIntroSound } from "./sfx";
 import { preloadVoice, unlockVoice } from "./voice";
 import { HeroLetter } from "./HeroLetter";
+import { Faq } from "./Faq";
+import { Perch } from "./Perch";
 import { Reveal } from "./Reveal";
 import { Trust } from "./Trust";
 import { Why } from "./Why";
@@ -93,6 +95,7 @@ export function Landing() {
               </div>
               <m.div className="hero-art" {...fadeUp(0.6)}>
                 <HeroLetter />
+                <Perch />
               </m.div>
             </section>
 
@@ -110,6 +113,7 @@ export function Landing() {
             </section>
 
             <Trust />
+            <Faq />
           </main>
 
           <footer className="land-footer">

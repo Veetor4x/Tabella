@@ -5,6 +5,7 @@ import { longDay } from "../lib/periods";
 import { countdown, ringText, span } from "../lib/time";
 import { Headline } from "../ui/Headline";
 import { EASE } from "../ui/motion";
+import { PenLine } from "../ui/PenLine";
 import { Ring } from "../ui/Ring";
 
 export const STATE_NOTE: Record<LetterState, string> = {
@@ -66,6 +67,7 @@ export function CheckInView(props: {
         {lead}
       </m.p>
       <div className="ring-wrap">
+        {phase === "done" && <span className="refill-halo" aria-hidden="true" />}
         <Ring fraction={view.state === "Cancelled" || view.state === "Opened" ? 0 : c.fraction} tone={urgent ? "alert" : open ? "ink" : "faint"} size={236} label={`${text.big} ${text.small}`}>
           <span className="ring-big">{text.big}</span>
           <span className="ring-small">{text.small}</span>
@@ -74,7 +76,7 @@ export function CheckInView(props: {
       {open && (
         <div className="checkin-action">
           <m.button type="button" className={`btn primary big-tap ${urgent ? "alert" : ""}`} onClick={props.onTap} disabled={phase === "working"} whileTap={{ scale: 0.97 }}>
-            {phase === "working" ? "Confirming with your card…" : phase === "done" ? "I'm still here" : "I'm still here"}
+            {phase === "working" ? <><PenLine label="Confirming" /> Confirming with your card…</> : "I'm still here"}
           </m.button>
           {props.error && (
             <p className="notice" role="alert">

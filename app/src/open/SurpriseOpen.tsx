@@ -9,6 +9,7 @@ import { hexToU8 } from "../lib/seal";
 import { readHeirLetter, type HeirLetter } from "../lib/registry";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
+import { PenLine } from "../ui/PenLine";
 import { cardAppear } from "../ui/motion";
 import { SharePanel } from "../ui/SharePanel";
 import { HeirStateView, LetterCard } from "./OpenPage";
@@ -48,7 +49,7 @@ export function SurpriseOpen({ letterId }: { letterId: string }) {
   }, [letterId, letter?.state]);
 
   if (!/^[1-9]\d{0,17}$/.test(letterId) || missing) return <p className="lead">We couldn't find that letter. Please check the link you were sent.</p>;
-  if (!letter) return <p className="lead" role="status">Looking for your letter…</p>;
+  if (!letter) return <p className="lead" role="status"><PenLine label="Looking" /> Looking for your letter…</p>;
   if (letter.state !== "ready") return <HeirStateView state={letter.state} onOpen={() => {}} />;
   const parsed = unpackContainer(hexToU8(letter.letterCiphertext));
   if (!parsed) return <p className="lead">This letter opens with an opening card. <a className="link" href="/open">Use your card here</a>.</p>;

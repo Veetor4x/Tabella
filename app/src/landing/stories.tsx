@@ -140,9 +140,12 @@ function SealScene() {
       {/* the seal is pressed */}
       <g transform="translate(0 20)">
         <A a="stamp" d={2.2} dur={0.55} origin="0px 0px" fill="backwards">
-          <circle className="wx" r="17" />
-          <circle className="sk faint" r="11" />
-          <text className="stampT" x="0" y="5" textAnchor="middle">T</text>
+          <g className="breathe">
+            <circle className="halo" r="26" />
+            <circle className="wx" r="17" />
+            <circle className="sk faint" r="11" />
+            <text className="stampT" x="0" y="5" textAnchor="middle">T</text>
+          </g>
         </A>
       </g>
     </g>
@@ -236,7 +239,8 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0, t0 = 0 }: { lines:
   return (
     <A a="zoom-read" d={delay + t0} dur={dur} origin="180px 96px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
       {/* the open flap, behind the letter */}
-      <A a="flap-open" d={1.3 + t0} dur={0.6} fill="backwards">
+      <A a="flap-open" d={1.3 + t0} dur={0.62} origin="180px 190px" ease="cubic-bezier(0.2, 0.7, 0.3, 1)" fill="backwards">
+        <path className="flap-in" d="M90 190 L180 128 L270 190 Z" />
         <path className="sk" d="M90 190 L180 128 L270 190" />
       </A>
       {/* the letter, sliding out (nothing of it shows below the envelope while it starts inside) */}
@@ -244,7 +248,7 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0, t0 = 0 }: { lines:
         <rect x="0" y="0" width="360" height="311" />
       </clipPath>
       <g clipPath="url(#tbl-envelope-clip)">
-      <A a="letter-out" d={1.7 + t0} dur={1.5} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
+      <A a="letter-out" d={1.85 + t0} dur={1.45} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
         <rect className="letter-sheet" x="104" y="46" width="152" height="134" rx="2" />
         {lines.map((l, i) =>
           l ? (
@@ -259,7 +263,8 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0, t0 = 0 }: { lines:
       <rect className="cover" x="89" y="189" width="182" height="122" />
       <path className="sk" d="M90 190 H270 V310 H90 Z M90 310 L162 254 M270 310 L198 254" />
       {/* the closed flap, which lifts away */}
-      <A a="flap-lift" d={0.9 + t0} dur={0.8} origin="180px 190px" ease="ease-in-out" fill="backwards">
+      <A a="flap-lift" d={0.9 + t0} dur={0.46} origin="180px 190px" ease="cubic-bezier(0.5, 0, 0.8, 0.6)" fill="backwards" className="flapgone">
+        <path className="flap-out" d="M90 190 L180 262 L270 190 Z" />
         <path className="sk" d="M90 190 L180 262 L270 190" />
       </A>
       {/* the seal, which cracks in two */}

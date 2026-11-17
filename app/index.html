@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f3ef" />
     <meta name="description" content="Tabella: a sealed letter for the people you love. Written today, opened only for them, only if you go quiet." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script>try{var t=localStorage.getItem("tabella.theme.v1");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}</script>
+    <script>try{var m=localStorage.getItem("tabella.theme.v1"),h=window.__tabellaHour,n=new Date(),x=typeof h==="number"?h:n.getHours()+n.getMinutes()/60,d=x>=5&&x<21;var t=m==="night"||m==="dark"?"dark":m==="day"||m==="light"?"light":d?"light":"dark";document.documentElement.dataset.theme=t;if(t==="dark")document.documentElement.style.background="#0c0e13"}catch(e){}</script>
     <title>Tabella: sealed today, opened when it matters</title>
   </head>
   <body>
