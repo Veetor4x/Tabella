@@ -62,7 +62,7 @@ const PHONE_AT = STORY_MS + ZOOM_MS; // when the screen starts, inside a beat
 export const BEATS: Beat[] = [
   { line: 0, story: null, step: null, label: "", storyMs: 0, phoneMs: 0, cues: [at(3000, "stamp", 0.8)] },
   // 1. a soft page turn; then the letter is typed on the phone, with a recorded keyboard that follows the text
-  { line: 1, story: "desk", step: 0, label: "Write", storyMs: STORY_MS, phoneMs: 6200, cues: [at(0, "t-page"), at(2300, "rustle", 0.7), at(PHONE_AT + 900, "type")] },
+  { line: 1, story: "desk", step: 0, label: "Write", storyMs: STORY_MS, phoneMs: 11500, cues: [at(0, "t-page"), at(2300, "rustle", 0.7), at(PHONE_AT + 900, "type")] },
   // 2. a quiet breath of air; two chairs set down one after the other
   { line: 2, story: "chairs", step: 1, label: "People", storyMs: STORY_MS, phoneMs: 8000, cues: [at(0, "t-air"), at(550, "tap", 0.6), at(1550, "tap", 0.6), at(PHONE_AT + 3300, "tap"), at(PHONE_AT + 7600, "tap")] },
   // 3. a light paper slide

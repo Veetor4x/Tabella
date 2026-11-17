@@ -9,9 +9,11 @@ import "@fontsource-variable/inter";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
+import { initSiteMusic } from "./lib/siteMusic";
 import { initTheme } from "./lib/theme";
 
 initTheme();
+initSiteMusic();
 const container = document.getElementById("root");
 if (!container) throw new Error("Root element #root not found");
 const root = createRoot(container);

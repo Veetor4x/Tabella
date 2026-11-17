@@ -2,6 +2,7 @@ import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "fram
 import { useCallback, useEffect, useState } from "react";
 import { getIntroChoice, setIntroChoice, type IntroChoice } from "../lib/intro";
 import { Background } from "../ui/Background";
+import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { Headline } from "../ui/Headline";
 import { IconArrow, IconPlay } from "../ui/icons";
@@ -60,6 +61,7 @@ export function Landing() {
               <a href="#how">How</a>
               <a href="#trust">Trust</a>
               <ThemeToggle />
+              <SoundWave />
             </nav>
           </header>
 

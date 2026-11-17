@@ -7,7 +7,8 @@ import { Story, STORY_ALT, type StoryId } from "../src/landing/stories";
 import { readFileSync } from "node:fs";
 import { BEATS, ESTIMATED_SECONDS, FINAL_STORY_MS, OPENER_MS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences, totalMs } from "../src/landing/introScript";
 import { LEVEL, MUSIC_DUCKED, MUSIC_LEVEL } from "../src/landing/sfx";
-import { lettersAt, seededRhythm } from "../src/landing/rhythm";
+import { fitRhythm, lettersAt, seededRhythm } from "../src/landing/rhythm";
+import { LETTER, WRITE_TYPING_MS } from "../src/landing/Demo";
 import { STEPS } from "../src/landing/Demo";
 
 describe("the voiceover script", () => {
@@ -134,29 +135,32 @@ describe("sound: recorded-style effects only", () => {
 });
 
 describe("the typing follows a natural, irregular rhythm", () => {
-  const text = "Dear Mia and Leo,\n\nthe house papers are in the blue folder in my desk…";
-  it("is not a metronome, and shows every letter by the end", () => {
-    const at = seededRhythm(text);
-    expect(at).toHaveLength(text.length);
+  it("is not a metronome, shows every letter, and finishes inside the screen's time", () => {
+    const at = fitRhythm(seededRhythm(LETTER), WRITE_TYPING_MS);
+    expect(at).toHaveLength(LETTER.length);
     const gaps = at.slice(1).map((v, i) => v - at[i]!);
-    expect(new Set(gaps).size).toBeGreaterThan(15); // many different gaps
+    expect(new Set(gaps).size).toBeGreaterThan(15);
     expect(Math.max(...gaps)).toBeGreaterThan(Math.min(...gaps) * 3);
     expect(lettersAt(at, -1)).toBe(0);
-    expect(lettersAt(at, at.at(-1)!)).toBe(text.length);
-    expect(at.at(-1)!).toBeLessThan(5300);
+    expect(lettersAt(at, at.at(-1)!)).toBe(LETTER.length);
+    expect(900 + at.at(-1)!).toBeLessThan(BEATS[1]!.phoneMs); // typed, with a moment to read it, before the screen ends
+    expect(BEATS[1]!.phoneMs).toBeLessThanOrEqual(STEPS[0]!.ms + 400);
   });
 });
 
-describe("the demo letter never shows anything secret", () => {
-  it("is about the house papers in the blue folder, with no door codes or passwords", () => {
-    const demo = readFileSync(new URL("../src/landing/Demo.tsx", import.meta.url), "utf8");
-    const stories = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
-    for (const src of [demo, stories]) {
-      expect(src).not.toMatch(/door code|password|passcode|\bPIN\b|recovery phrase|spare door/i);
-    }
-    expect(demo).toContain("the house papers are in the blue folder in my desk");
-    expect(stories).toContain("the house papers are in the");
-    expect(stories).toContain("blue folder in my desk");
+describe("the demo letter says where things are, and never shows anything secret", () => {
+  const demo = readFileSync(new URL("../src/landing/Demo.tsx", import.meta.url), "utf8");
+  const stories = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
+  it("is the agreed text, in the demo and in the final envelope scene", () => {
+    expect(LETTER).toBe(
+      "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.",
+    );
+    const flat = stories.replace(/<\/text>\s*<text[^>]*>/g, " ");
+    for (const part of ["I've put aside 2 Bitcoin for you", "both, my gift for your futures.", "The hardware wallet is in the small", "card is sealed with Mr. Hart, our", "he'll help you. Split it fairly", "and look after each other.", "All my love, Alex."]) expect(flat).toContain(part);
+  });
+  it("shows no recovery words, codes, passwords or dollar amounts", () => {
+    expect(LETTER).not.toMatch(/door code|password|passcode|\bPIN\b|seed phrase|\$\s?\d|USD|dollars?|\b\d{4,}\b/i);
+    expect(stories).not.toMatch(/door code|password|passcode|\bPIN\b/i);
   });
 });
 

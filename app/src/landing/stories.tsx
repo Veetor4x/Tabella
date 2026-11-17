@@ -126,7 +126,17 @@ function SealScene() {
     <g transform="translate(180 230)">
       {/* the letter sliding down into the envelope (it ends hidden behind the front) */}
       <A a="letter-in" d={0.3} dur={1.1} ease="ease-in-out" fill="backwards">
-        <rect className="letter-sheet" x="-58" y="-40" width="116" height="80" rx="2" />
+        <rect className="letter-sheet" x="104" y="100" width="152" height="134" rx="2" />
+        <text className="hand" x="114" y="114.0" fontSize="7.4">Dear Mia and Leo,</text>
+        <text className="hand" x="114" y="133.2" fontSize="6.6">I've put aside 2 Bitcoin for you</text>
+        <text className="hand" x="114" y="142.8" fontSize="6.6">both, my gift for your futures.</text>
+        <text className="hand" x="114" y="152.4" fontSize="6.6">The hardware wallet is in the small</text>
+        <text className="hand" x="114" y="162.0" fontSize="6.6">safe in my study, and its recovery</text>
+        <text className="hand" x="114" y="171.6" fontSize="6.6">card is sealed with Mr. Hart, our</text>
+        <text className="hand" x="114" y="181.2" fontSize="6.6">lawyer. Show him this letter and</text>
+        <text className="hand" x="114" y="190.8" fontSize="6.6">he'll help you. Split it fairly</text>
+        <text className="hand" x="114" y="200.4" fontSize="6.6">and look after each other.</text>
+        <text className="hand" x="114" y="219.6" fontSize="6.6">All my love, Alex.</text>
       </A>
       <rect className="cover" x="-91" y="-49" width="182" height="109" />
       <path className="sk" d="M-90 -50 H90 V60 H-90 Z M-90 60 L-18 6 M90 60 L18 6" />

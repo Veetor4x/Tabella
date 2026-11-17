@@ -9,6 +9,7 @@ import { PhoneView } from "./Demo";
 import { BEATS, ESTIMATED_SECONDS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences } from "./introScript";
 import { duckMusic, pauseMusic, playSfx, setIntroMuted, startIntroSound, stopIntroSound, stopSfx } from "./sfx";
 import { Story } from "./stories";
+import { holdSiteMusic } from "../lib/siteMusic";
 import { allVoice, hasVoice, stopVoice, voiceAudio } from "./voice";
 
 /** The calm question a first-time visitor sees over the page. */
@@ -75,14 +76,25 @@ function Caption({ line, sinceVoice, seconds, still }: { line: number; sinceVoic
   );
 }
 
-function useFit() {
-  const [k, setK] = useState(1);
+/** The phone's scale, measured from the room the stage really has, so it is always whole and centred above the caption. */
+function useFit(stage: React.RefObject<HTMLElement | null>) {
+  const [k, setK] = useState(0.8);
   useEffect(() => {
-    const f = () => setK(Math.max(0.6, Math.min(1.4, (window.innerHeight - 250) / 600, (window.innerWidth - 24) / 292)));
+    const el = stage.current;
+    if (!el) return;
+    const f = () => {
+      const r = el.getBoundingClientRect();
+      setK(Math.max(0.3, Math.min(1.4, (r.height - 16) / 600, (r.width - 24) / 292)));
+    };
     f();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(f) : null;
+    ro?.observe(el);
     window.addEventListener("resize", f);
-    return () => window.removeEventListener("resize", f);
-  }, []);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", f);
+    };
+  }, [stage]);
   return k;
 }
 
@@ -104,7 +116,8 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   const [secs, setSecs] = useState<Record<number, number>>({});
   const voiceStarted = useRef(-1);
   const prevT = useRef(-1);
-  const k = useFit();
+  const stageRef = useRef<HTMLDivElement>(null);
+  const k = useFit(stageRef);
   const running = !paused && !hidden && !ended && !calm;
   const b = BEATS[beat]!;
   const lineSecs = b.line === null ? undefined : secs[b.line];
@@ -122,6 +135,12 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
       offs.push(() => a.removeEventListener("loadedmetadata", f));
     });
     return () => offs.forEach((o) => o());
+  }, []);
+
+  // the site's own music rests while the film plays (the film has its own track)
+  useEffect(() => {
+    holdSiteMusic(true);
+    return () => holdSiteMusic(false);
   }, []);
 
   // keep the page still behind, close on Escape, and let the sound end with the film
@@ -297,7 +316,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
         </div>
       </header>
 
-      <div className={`intro-stage ${paused ? "paused" : ""}`}>
+      <div ref={stageRef} className={`intro-stage ${paused ? "paused" : ""}`}>
         {ended ? (
           <m.div className="intro-end" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE }}>
             <WaxSeal className="end-seal" />

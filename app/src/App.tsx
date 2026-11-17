@@ -13,7 +13,7 @@ import { Background } from "./ui/Background";
 import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
 import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
-import { SoundToggle } from "./ui/SoundToggle";
+import { SoundWave } from "./ui/SoundWave";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { STEP_COUNT, countWords, joinNames } from "./ui/steps";
 
@@ -113,7 +113,7 @@ export function App() {
               </div>
               <div className="head-tools">
                 <ThemeToggle />
-                <SoundToggle />
+                <SoundWave />
               </div>
             </header>
             <main>

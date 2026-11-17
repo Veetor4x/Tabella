@@ -9,7 +9,7 @@ import { WaxSeal } from "../ui/WaxSeal";
 import type { LetterView } from "../lib/registry";
 import { CheckInView } from "../me/parts";
 import { Reveal } from "./Reveal";
-import { lettersAt, rhythmFor } from "./rhythm";
+import { fitRhythm, lettersAt, rhythmFor } from "./rhythm";
 
 /**
  * The how-it-works walkthrough: the real screens, played inside a phone frame, with sample people.
@@ -18,7 +18,7 @@ import { lettersAt, rhythmFor } from "./rhythm";
  * are previews of screens that are still being built.
  */
 export const STEPS = [
-  { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 7000 },
+  { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
   { label: "People", caption: "Alex chooses who can read it. Each person turns Ready.", ms: 8000 },
   { label: "Guardian", caption: "A guardian can say “they're okay” if Alex goes quiet.", ms: 5500 },
   { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open.", ms: 6000 },
@@ -28,7 +28,9 @@ export const STEPS = [
   { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 9500 },
 ] as const;
 
-const LETTER = "Dear Mia and Leo,\n\nthe house papers are in the blue folder in my desk…\n\nBe kind to each other.\n\nLove, Alex";
+/** The demo letter. No recovery words, no codes, no amounts: it only says where things are and who can help. */
+export const LETTER =
+  "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.";
 const ADDRESS = "0xE6EB…6Ca3";
 
 const at = (t: number, ms: number) => t >= ms;
@@ -80,7 +82,8 @@ const letterRoot = (
 );
 
 /* ---------- the eight screens ---------- */
-const WRITE_RHYTHM = rhythmFor(LETTER);
+export const WRITE_TYPING_MS = 9600;
+const WRITE_RHYTHM = fitRhythm(rhythmFor(LETTER), WRITE_TYPING_MS);
 function Write({ t }: { t: number }) {
   // the letter appears at an irregular, human pace (and follows the recorded key taps when there are some)
   const text = LETTER.slice(0, lettersAt(WRITE_RHYTHM, t - 900));

@@ -56,7 +56,7 @@ const screens: [string, () => string][] = [
 
 describe("no technical words on screen", () => {
   it.each(screens)("%s", (_name, render) => {
-    const html = render().replace(/spare house key/gi, "spare house ___");
+    const html = render().replace(/spare house key/gi, "spare house ___").replace(/I('|&#x27;)ve put aside 2 Bitcoin[^<]*/g, ""); // the demo letter is sample text the visitor is shown being written
     // remove the sealed card codes: they are opaque on purpose
     const text = html.replace(/tbl1_[A-Z]+/g, "").replace(/<[^>]+>/g, " ");
     // what people read or hear: text and labels. Class names and link targets are invisible, so they are left out.

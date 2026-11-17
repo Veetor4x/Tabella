@@ -1,7 +1,7 @@
 import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import type { ReactNode } from "react";
 import { Background } from "../ui/Background";
-import { SoundToggle } from "../ui/SoundToggle";
+import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 /** The frame around My letters, the guardian page and the cards: the same pearl, ink and glass as the rest. */
@@ -29,7 +29,7 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
               </div>
               <div className="head-tools">
                 <ThemeToggle />
-                <SoundToggle />
+                <SoundWave />
               </div>
             </header>
             <main>{children}</main>

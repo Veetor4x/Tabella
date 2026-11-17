@@ -41,3 +41,10 @@ export function lettersAt(schedule: number[], t: number): number {
   while (n < schedule.length && schedule[n]! <= t) n++;
   return n;
 }
+
+/** Stretch or squeeze a schedule so the last letter lands at `ms` (the pace stays irregular, only the total changes). */
+export function fitRhythm(schedule: number[], ms: number): number[] {
+  const last = schedule[schedule.length - 1] ?? 0;
+  if (!last) return schedule;
+  return schedule.map((v) => Math.round((v * ms) / last));
+}
