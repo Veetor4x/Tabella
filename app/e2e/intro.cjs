@@ -211,7 +211,7 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
     const captions = [], hear = [], pics = [];
     // after the opener each beat is two stills: the picture, then the screen
     for (let i = 0; i < 17; i++) { // eight beats of two stills, then the last scene (no phone) is one still
-      await p.getByRole("button", { name: "Next", exact: true }).click(); await p.waitForTimeout(450);
+      await p.getByRole("button", { name: "Next", exact: true }).click(); await p.waitForTimeout(i === 16 ? 1500 : 450); // the old caption fades out first
       const storyShown = (await p.locator(".cam-story svg.story.still").count()) === 1 && +(await p.locator(".cam-story").evaluate((e) => getComputedStyle(e).opacity)) > 0.9;
       pics.push(storyShown ? "picture" : "screen");
       if (i % 2 === 1 || i === 16) { captions.push((await p.locator(".intro-caption").first().innerText()).trim()); hear.push(await p.getByRole("button", { name: "Hear this line" }).count()); }
