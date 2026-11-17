@@ -165,3 +165,6 @@ For the Best AI-Native Build award. Tool: Claude Code. Format: what the AI gener
 
 ## Theme toggle: System / Light / Dark
 The old time-of-day "Auto" is gone. System (default) follows the device's own light/dark setting and switches live when the device does; Light and Dark are fixed; the choice is remembered (older saved values still read). The clock now only tints the light page's clouds. Checked in a browser with emulated colour schemes (live switch, forced Light, remembered after reload); unit tests cover the choice logic.
+
+## Sound effects complete, mobile header
+All 17 sound effects now exist (ElevenLabs eleven_text_to_sound_v2, one at a time). The site music and six voice lines (s02, s03, s04, s06, s08, s09) are still missing: the site-music button stays hidden until the music file exists, and the film's missing voice lines are skipped. The phone header now shows one pill (I have a card, or My letters when this device has a card) plus a three-line menu icon; checked by screenshots at 320, 360, 390 and 430 px in light and dark.

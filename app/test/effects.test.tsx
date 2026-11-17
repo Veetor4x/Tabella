@@ -127,7 +127,7 @@ describe("one door for all cards", () => {
     expect(h).toContain("Already have a card?");
     expect(h).toContain("Use it here.");
     for (const f of ["Use your card", "My letters", "Guardian"]) expect(h).toContain(f);
-    expect(h).toContain("Menu");
+    expect(h).toContain("Open menu"); // a three-line icon with an accessible name, no "Menu" text
   });
   it("/me says how each letter will be delivered", () => {
     expect(deliveryLine(letter({ surprise: { backups: 1, emailed: true } }))).toBe("Delivery ready: we'll email Mia when it opens");
