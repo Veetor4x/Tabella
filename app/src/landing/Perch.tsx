@@ -2,11 +2,11 @@ import { m } from "framer-motion";
 import { useEffect, useState } from "react";
 import { OPENED_EVENT, takeOpened } from "../lib/openedSignal";
 import { EASE } from "../ui/motion";
-import { WaxSeal } from "../ui/WaxSeal";
 
 /**
- * A small sealed envelope bobbing on the nearest cloud in the hero. When a letter is opened anywhere on the site, it lifts off
- * the cloud and floats away; a while later another one settles back. Movement and fading only.
+ * The hero: one soft cloud with a small white sealed envelope, a little tilted, resting on it and gently bobbing.
+ * When a letter is opened anywhere on the site, the envelope lifts off the cloud and floats away; a while later another settles
+ * back. Movement and fading only.
  */
 export function Perch() {
   const [gone, setGone] = useState(false);
@@ -33,7 +33,7 @@ export function Perch() {
   }, [gone]);
 
   return (
-    <div className="perch" role="img" aria-label="A sealed letter resting on a soft cloud">
+    <div className="perch" role="img" aria-label="A small sealed letter resting on a soft cloud">
       <div className="perch-cloud">
         <i className="pc-shade" />
         <i className="pc-lit" />
@@ -47,8 +47,10 @@ export function Perch() {
       >
         <div className="perch-env">
           <div className="pe-body" />
-          <div className="pe-flap" />
-          <WaxSeal className="pe-seal" />
+          <svg className="pe-lines" viewBox="0 0 90 60" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M1 1 L45 33 L89 1" />
+          </svg>
+          <i className="pe-seal" />
         </div>
       </m.div>
     </div>

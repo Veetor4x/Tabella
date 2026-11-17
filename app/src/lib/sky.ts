@@ -20,10 +20,10 @@ export type Mode = "auto" | "day" | "night";
 export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
 
 export const PALETTE: Record<PartOfDay, Sky> = {
-  morning: { top: [247, 230, 214], bot: [252, 241, 231], lit: [255, 247, 240], shade: [243, 199, 177], cloud: 0.9, stars: 0, night: 0 },
-  afternoon: { top: [237, 240, 244], bot: [246, 242, 239], lit: [255, 255, 255], shade: [241, 202, 207], cloud: 0.9, stars: 0, night: 0 },
-  evening: { top: [229, 199, 208], bot: [240, 217, 214], lit: [250, 226, 221], shade: [188, 132, 151], cloud: 0.95, stars: 0, night: 0 },
-  night: { top: [7, 9, 14], bot: [16, 19, 28], lit: [104, 114, 136], shade: [36, 42, 58], cloud: 0.55, stars: 1, night: 1 },
+  morning: { top: [246, 235, 224], bot: [247, 239, 229], lit: [247, 220, 202], shade: [239, 192, 172], cloud: 1, stars: 0, night: 0 },
+  afternoon: { top: [237, 234, 229], bot: [238, 235, 230], lit: [238, 210, 208], shade: [224, 186, 190], cloud: 1, stars: 0, night: 0 },
+  evening: { top: [231, 205, 212], bot: [239, 218, 216], lit: [238, 207, 209], shade: [210, 162, 178], cloud: 1, stars: 0, night: 0 },
+  night: { top: [8, 10, 15], bot: [16, 19, 28], lit: [72, 80, 102], shade: [36, 42, 60], cloud: 0.8, stars: 1, night: 1 },
 };
 
 /** Where in the day each look is at its fullest (hours on the clock, 0 to 24). */

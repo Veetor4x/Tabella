@@ -12,7 +12,6 @@ import type { FilmId } from "./film";
 import { IntroPlayer, IntroPrompt } from "./Intro";
 import { startIntroSound } from "./sfx";
 import { preloadVoice, unlockVoice } from "./voice";
-import { HeroLetter } from "./HeroLetter";
 import { Faq } from "./Faq";
 import { Perch } from "./Perch";
 import { Reveal } from "./Reveal";
@@ -58,7 +57,7 @@ export function Landing() {
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
         <div className="root land">
-          <Background />
+          <Background main={false} />
           <header className="land-nav">
             <a className="brand-name" href="/" aria-label="Tabella, home">
               Tabella
@@ -94,7 +93,6 @@ export function Landing() {
                 </m.div>
               </div>
               <m.div className="hero-art" {...fadeUp(0.6)}>
-                <HeroLetter />
                 <Perch />
               </m.div>
             </section>

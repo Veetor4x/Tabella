@@ -56,7 +56,8 @@ describe("the new effects", () => {
   it("the background is three layers of pre-rendered clouds, and the perch is a labelled picture", () => {
     const b = html(<Background />);
     for (const d of ["far", "mid", "near"]) expect(b).toContain(`cl-${d}`);
+    expect(html(<Background main={false} />)).not.toContain("cl-near");
     expect(b).toContain('aria-hidden="true"');
-    expect(html(<Perch />)).toContain("A sealed letter resting on a soft cloud");
+    expect(html(<Perch />)).toContain("A small sealed letter resting on a soft cloud");
   });
 });
