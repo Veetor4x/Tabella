@@ -12,16 +12,20 @@ const BASE = process.argv[2] || "http://localhost:5173/";
 const OUT = process.argv[3] || path.join(__dirname, "..", "..", "docs", "screenshots", "ui-8");
 fs.mkdirSync(OUT, { recursive: true });
 const SCRIPT = [
-  "Some things should be said one day. Tabella helps you say them.", "Write a letter for the people you love.", "Choose who can open it.", "Pick someone you trust to watch over it.",
-  "Choose when it should open. If you go quiet for a while.", "Seal it. It's locked on your phone, safe even from future super-computers.", "Every so often, just tap: I'm still here.",
-  "And if one day you can't, your letter reaches them. Sealed today. Opened when it matters.",
+  "Some things should be said one day. Tabella helps you say them.", "Write a letter for someone you love.",
+  "Keep it a surprise. Add how to reach them, and a question only they can answer.", "Add someone you trust, in case they can't be reached.",
+  "Choose when it should open. If you go quiet for a while.", "Seal it. Safe even from future super-computers.", "Every so often, just tap: I'm still here.",
+  "And if one day you can't, Tabella finds them, by email, message or call.", "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
 ];
+const INVITE_FIRST = "Write a letter for the people you love.";
+const VOICE_DIR = path.join(__dirname, "..", "src", "assets", "voice");
+const haveVoice = (n) => fs.existsSync(path.join(VOICE_DIR, `s${String(n).padStart(2, "0")}.mp3`));
 const FORBIDDEN = /\b(ML-?KEM|ML-?DSA|KEM|DSA|ciphertext|encrypt\w*|decrypt\w*|signature|sign(ed|ing)?|wallet|mnemonic|seed|hash\w*|nonce|gas|blockchain|on-?chain|smart contract|private key|public key|keys?|token|crypto\w*)\b/i;
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 let failures = 0;
 const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) failures++; };
 const shot = async (page, name) => { await page.waitForTimeout(500); await page.screenshot({ path: path.join(OUT, `${name}.png`) }); };
-const audioState = (page) => page.evaluate(() => [...document.querySelectorAll("audio")].map((a) => ({ line: +a.dataset.voice, paused: a.paused, t: a.currentTime, muted: a.muted, dur: a.duration })));
+const audioState = (page) => page.evaluate(() => [...document.querySelectorAll("audio")].map((a) => ({ line: a.dataset.voice, paused: a.paused, t: a.currentTime, muted: a.muted, dur: a.duration })));
 const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro.v1"));
 
 (async () => {
@@ -61,7 +65,7 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
   const cA = await phone({ ...(RECORD ? { recordVideo: { dir: RECORD, size: { width: 390, height: 664 } } } : {}) });
   const pageMade = Date.now();
   const a = await cA.newPage(); track(a);
-  await a.addInitScript(() => { window.__tabellaAudioLog = []; window.__plays = []; document.addEventListener("play", (e) => e.target.dataset && e.target.dataset.voice && window.__plays.push({ line: +e.target.dataset.voice, at: Date.now() }), true); });
+  await a.addInitScript(() => { window.__tabellaAudioLog = []; window.__plays = []; document.addEventListener("play", (e) => e.target.dataset && e.target.dataset.voice && window.__plays.push({ line: e.target.dataset.voice, at: Date.now() }), true); });
   await a.goto(BASE, { waitUntil: "networkidle" });
   await a.getByRole("dialog").waitFor({ timeout: 8000 });
   await a.waitForTimeout(RECORD ? 2500 : 1000);
@@ -107,7 +111,7 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
   const missing = said.filter((l) => !seenCaptions.some((c) => c === l || c.includes(l)));
   ok(missing.length === 0, `captions: every spoken sentence was shown${missing.length ? ` (missing: ${missing.join(" | ")})` : ""} (${seenCaptions.length} captions)`);
   const labels = [...steps].filter(Boolean).map((l) => l.toLowerCase());
-  ok(["Write", "People", "Guardian", "Timing", "Seal", "I'm still here", "Time passes"].every((l) => labels.includes(l.toLowerCase())), `the demo's own screens play in order (${labels.join(" > ")})`);
+  ok(["Write", "Reach them", "Backup", "Timing", "Seal", "I'm still here", "Time passes", "Found"].every((l) => labels.includes(l.toLowerCase())), `the demo's own screens play in order (${labels.join(" > ")})`);
   ok(sawStories.size >= 8, `a story scene played before each screen (${[...sawStories].join(", ")})`);
   const voiced = [...playedLines].sort();
   console.log(`   voice lines heard playing: ${voiced.join(", ") || "none"}`);
@@ -116,14 +120,18 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
   const audio = await a.evaluate(() => window.__tabellaAudioLog);
   const sfxNames = new Set(audio.filter((e) => e.kind === "sfx").map((e) => e.name));
   console.log(`   sound effects played: ${audio.filter((e) => e.kind === "sfx").length} (${[...sfxNames].join(", ")})`);
-  ok(["type", "rustle", "fold", "whoosh", "pop", "stamp", "tick", "chime"].every((n) => sfxNames.has(n)), "sound effects: typing, rustle, fold, whoosh, pop, wax stamp, clock ticks and the chime all played");
-  ok(audio.filter((e) => e.kind === "sfx" && e.name === "type").length > 20 && audio.filter((e) => e.kind === "sfx" && e.name === "tick").length > 10, "sound effects: typing while the letter is written, ticks while time passes");
+  ok(["type", "rustle", "fold", "stamp", "clock", "flip", "tap", "crack", "open"].every((n) => sfxNames.has(n)), "sound effects: typing, paper, fold, wax stamp, a wall clock, calendar flips, taps, the seal cracking and the envelope opening are all cued");
+  ok(!["whoosh", "pop", "tick", "chime", "glint", "tone"].some((n) => sfxNames.has(n)), "sound effects: no whoosh, no pop, no chime, no glint, no tone");
+  const transitions = audio.filter((e) => e.kind === "sfx" && /^t-/.test(e.name)).map((e) => e.name);
+  ok(new Set(transitions).size === transitions.length && transitions.length >= 9, `each scene has its own quiet transition, none repeated (${transitions.join(", ")})`);
+  ok(audio.filter((e) => e.kind === "sfx" && e.name === "clock").length === 1, "time passing: one natural clock recording that fades, not a series of ticks");
   ok(audio.filter((e) => e.kind === "duck").length >= voiced.length && voiced.length > 0, `music ducks under the voice (${audio.filter((e) => e.kind === "duck").length} dips for ${voiced.length} lines)`);
   const hasMusicFile = fs.existsSync(path.join(__dirname, "..", "src", "assets", "music")) && fs.readdirSync(path.join(__dirname, "..", "src", "assets", "music")).some((f) => f.endsWith(".mp3"));
   ok(!hasMusicFile || audio.some((e) => e.kind === "music"), `music bed ${hasMusicFile ? "started under the film" : "(no music file yet)"}`);
   await shot(a, "07-end-card");
   ok(await overlay.getByRole("link", { name: /Start here/ }).getAttribute("href") === "/write", "end: a big 'Start here' goes to /write");
   ok(await a.getByRole("button", { name: "Back to the page" }).isVisible(), "end: 'Back to the page'");
+  ok(await a.getByRole("button", { name: "See the other way: invite them" }).isVisible(), "end: 'See the other way: invite them'");
   const all = (await audioState(a));
   ok(all.every((s) => s.paused), "end: the voice has stopped");
   const bodyText = await a.evaluate(() => document.body.innerText);
@@ -152,9 +160,9 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
     ok(await dlg.getByRole("button", { name: "Previous scene" }).isVisible(), "arrows: a glass ‹ appears on the left");
     await dlg.getByRole("button", { name: "Next scene" }).click();
     await dlg.getByRole("button", { name: "Next scene" }).click();
-    ok((await label()).toLowerCase() === "guardian", "arrows: › twice more reaches Guardian");
+    ok((await label()).toLowerCase() === "backup", "arrows: › twice more reaches Backup");
     await dlg.getByRole("button", { name: "Previous scene" }).click();
-    ok((await label()).toLowerCase() === "people", "arrows: ‹ goes back one scene");
+    ok((await label()).toLowerCase() === "reach them", "arrows: ‹ goes back one scene");
     const arrow = await dlg.getByRole("button", { name: "Next scene" }).evaluate((e) => ({ bg: getComputedStyle(e).backgroundColor, bf: getComputedStyle(e).backdropFilter || getComputedStyle(e).webkitBackdropFilter }));
     ok(/rgba\(255, 255, 255, 0\.0\d*\)/.test(arrow.bg), `arrows: transparent glass (${arrow.bg}, blur ${arrow.bf})`);
     await p.getByRole("button", { name: "Mute" }).click();
@@ -202,21 +210,44 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
     ok(before === 0 && (await p.locator(".opener").count()) === 1, "still version: nothing plays or advances by itself");
     const captions = [], hear = [], pics = [];
     // after the opener each beat is two stills: the picture, then the screen
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 18; i++) {
       await p.getByRole("button", { name: "Next", exact: true }).click(); await p.waitForTimeout(450);
       const storyShown = (await p.locator(".cam-story svg.story.still").count()) === 1 && +(await p.locator(".cam-story").evaluate((e) => getComputedStyle(e).opacity)) > 0.9;
       pics.push(storyShown ? "picture" : "screen");
       if (i % 2 === 1) { captions.push((await p.locator(".intro-caption").first().innerText()).trim()); hear.push(await p.getByRole("button", { name: "Hear this line" }).count()); }
-      if (i === 0 || i === 5 || i === 9) await shot(p, `09-still-${i + 1}`);
+      if (i === 0 || i === 5 || i === 9 || i === 15) await shot(p, `09-still-${i + 1}`);
     }
     ok(pics.every((x, i) => x === (i % 2 === 0 ? "picture" : "screen")), `still version: each scene is a still picture, then its still screen (${pics.slice(0, 4).join(", ")}, ...)`);
-    const spoken = SCRIPT.slice(1).filter((_, i) => i !== 6); // the time-passes beat has no voice
-    ok(captions.filter(Boolean).length === 7 && spoken.every((l) => captions.includes(l)), `still version: each screen shows its full caption (${captions.filter(Boolean).length} stepped by hand)`);
-    ok(hear[0] === 1 && hear[1] === 1 && hear[6] === 0, `still version: 'Hear this line' appears only where a recording exists (${hear.join("")})`);
+    const spoken = SCRIPT.slice(1); // eight lines; the time-passes beat has none
+    ok(captions.filter(Boolean).length === 8 && spoken.every((l) => captions.includes(l)), `still version: each screen shows its full caption (${captions.filter(Boolean).length} stepped by hand)`);
+    const wantHear = [2, 3, 4, 5, 6, 7, null, 8, 9].map((n) => (n === null ? 0 : haveVoice(n) ? 1 : 0));
+    ok(hear.join("") === wantHear.join(""), `still version: 'Hear this line' appears only where a recording exists (${hear.join("")}, expected ${wantHear.join("")})`);
     await p.getByRole("button", { name: "Next", exact: true }).click();
     await p.locator(".intro-end").waitFor();
     ok(await o.getByRole("link", { name: /Start here/ }).isVisible(), "still version: the end has 'Start here' too");
     await shot(p, "10-still-end");
+    await c.close();
+  }
+
+  // ------------------------------------------------ 5. "See the other way: invite them" plays the first film
+  {
+    const c = await phone(); const p = await c.newPage(); track(p);
+    await p.addInitScript(() => localStorage.setItem("tabella.intro.v1", "skip"));
+    await p.goto(BASE, { waitUntil: "networkidle" });
+    await p.getByRole("button", { name: "Watch intro" }).click();
+    const dlg = p.getByRole("dialog", { name: "Introduction to Tabella" });
+    await dlg.waitFor();
+    for (let i = 0; i < 9; i++) await dlg.getByRole("button", { name: "Next scene" }).click();
+    await p.locator(".intro-end").waitFor();
+    await p.getByRole("button", { name: "See the other way: invite them" }).click();
+    await p.getByRole("heading", { name: "Some things should be said one day." }).waitFor({ timeout: 8000 });
+    await dlg.getByRole("button", { name: "Next scene" }).click();
+    await p.waitForFunction((t) => document.querySelector(".intro-caption p")?.innerText.trim() === t, INVITE_FIRST, { timeout: 8000 });
+    ok(true, `"See the other way" plays the invite film from its opener (its first caption: "${INVITE_FIRST}")`);
+    for (let i = 0; i < 8; i++) await dlg.getByRole("button", { name: "Next scene" }).click();
+    await p.locator(".intro-end").waitFor();
+    ok(await p.getByRole("button", { name: "See the other way: invite them" }).count() === 0, "the invite film's end card has no 'other way' button");
+    await shot(p, "11-invite-film-end");
     await c.close();
   }
 

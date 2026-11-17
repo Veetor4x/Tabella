@@ -8,6 +8,7 @@ import { Headline } from "../ui/Headline";
 import { IconArrow, IconPlay } from "../ui/icons";
 import { fadeUp } from "../ui/motion";
 import { Demo } from "./Demo";
+import type { FilmId } from "./film";
 import { IntroPlayer, IntroPrompt } from "./Intro";
 import { startIntroSound } from "./sfx";
 import { preloadVoice, unlockVoice } from "./voice";
@@ -23,19 +24,27 @@ export function Landing() {
   // First visit only: ask once whether to show the intro, and remember the answer.
   const [choice, setChoice] = useState<IntroChoice | null | "loading">("loading");
   const [playing, setPlaying] = useState(false);
+  const [film, setFilm] = useState<FilmId>("surprise"); // the first-visit intro and "Watch intro" play the Surprise film
   useEffect(() => {
     const c = getIntroChoice();
     setChoice(c);
-    if (c === null) preloadVoice();
+    if (c === null) preloadVoice(9, "s");
   }, []);
-  const start = (remember: boolean) => {
-    unlockVoice(); // from the tap itself: this is what lets the voice play
+  const start = (remember: boolean, f: FilmId = "surprise") => {
+    unlockVoice(f === "surprise" ? 9 : 8, f === "surprise" ? "s" : ""); // from the tap itself: this is what lets the voice play
     startIntroSound(); // and the effects and the music bed
     if (remember) {
       setIntroChoice("yes");
       setChoice("yes");
     }
+    setFilm(f);
     setPlaying(true);
+  };
+  /** From the Surprise film's end card: play the other film, from the start. */
+  const other = () => {
+    unlockVoice(8, "");
+    setFilm("invite");
+    setTimeout(() => startIntroSound(), 1000); // the first film's sound stops as it leaves; this brings the music back for the next
   };
   const skip = () => {
     setIntroChoice("skip");
@@ -119,7 +128,7 @@ export function Landing() {
             <p className="fine">A demo on a test network. Please don't write real secrets yet.</p>
           </footer>
           {choice === null && !playing && <IntroPrompt onYes={() => start(true)} onSkip={skip} />}
-          <AnimatePresence>{playing && <IntroPlayer key="intro" onClose={close} />}</AnimatePresence>
+          <AnimatePresence>{playing && <IntroPlayer key={film} film={film} onClose={close} onOther={other} />}</AnimatePresence>
         </div>
       </MotionConfig>
     </LazyMotion>

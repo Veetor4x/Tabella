@@ -28,14 +28,15 @@ export type Sfx =
   | "t-fabric"
   | "t-sea"
   | "t-room"
-  | "t-tissue";
+  | "t-tissue"
+  | "t-wood" // a soft knuckle tap on a wooden desk (the Surprise film);
 
 export const SFX_NAMES: Sfx[] = ["type", "clock", "rustle", "fold", "flip", "tap", "stamp", "crack", "open", "t-page", "t-air", "t-slide", "t-felt", "t-fabric", "t-sea", "t-room", "t-tissue"];
 
 /** How loud each one is (0 to 1): all of them quiet, the transitions very low. */
 export const LEVEL: Record<Sfx, number> = {
   type: 0.34, clock: 0.3, rustle: 0.3, fold: 0.3, flip: 0.3, tap: 0.32, stamp: 0.42, crack: 0.4, open: 0.42,
-  "t-page": 0.16, "t-air": 0.14, "t-slide": 0.15, "t-felt": 0.16, "t-fabric": 0.14, "t-sea": 0.13, "t-room": 0.12, "t-tissue": 0.14,
+  "t-page": 0.16, "t-air": 0.14, "t-slide": 0.15, "t-felt": 0.16, "t-fabric": 0.14, "t-sea": 0.13, "t-room": 0.12, "t-tissue": 0.14, "t-wood": 0.14,
 };
 export const MUSIC_LEVEL = 0.22; // the bed on its own
 export const MUSIC_DUCKED = 0.08; // while the voice speaks

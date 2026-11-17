@@ -44,8 +44,11 @@ last = {}
 for p in t["plays"]:
     last[p["line"]] = p
 intervals = []
-for line, p in sorted(last.items()):
-    f = root / "voice" / f"{line:02d}.mp3"
+for line, p in sorted(last.items(), key=lambda kv: str(kv[0])):
+    key = str(line)
+    f = root / "voice" / (f"{key}.mp3" if not key.isdigit() else f"{int(key):02d}.mp3")
+    if key.startswith("s") and key[1:].isdigit():
+        f = root / "voice" / f"s{int(key[1:]):02d}.mp3"
     if not f.exists():
         continue
     clip = decode(f)

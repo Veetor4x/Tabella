@@ -5,33 +5,34 @@
 import { primeAudio } from "../lib/sound";
 
 const files = import.meta.glob<string>("../assets/voice/*.mp3", { eager: true, query: "?url", import: "default" });
-const srcOf = (line: number) => files[`../assets/voice/${String(line + 1).padStart(2, "0")}.mp3`];
-const els = new Map<number, HTMLAudioElement>();
+const srcOf = (line: number, prefix = "") => files[`../assets/voice/${prefix}${String(line + 1).padStart(2, "0")}.mp3`];
+const els = new Map<string, HTMLAudioElement>();
 
 /** The audio element for a line (created on first use), or null when that line has no recording. */
-export function voiceAudio(line: number): HTMLAudioElement | null {
-  const src = srcOf(line);
+export function voiceAudio(line: number, prefix = ""): HTMLAudioElement | null {
+  const src = srcOf(line, prefix);
   if (!src || typeof document === "undefined") return null;
-  let a = els.get(line);
+  const key = `${prefix}${line}`;
+  let a = els.get(key);
   if (!a) {
     a = document.createElement("audio");
     a.preload = "auto";
     a.src = src;
-    a.dataset.voice = String(line + 1);
+    a.dataset.voice = `${prefix}${line + 1}`;
     a.style.display = "none";
     document.body.appendChild(a);
-    els.set(line, a);
+    els.set(key, a);
   }
   return a;
 }
 
-export const hasVoice = (line: number) => !!srcOf(line);
+export const hasVoice = (line: number, prefix = "") => !!srcOf(line, prefix);
 
 /** Browsers only let sound start after a tap. Call this from the tap: it wakes the audio engine and every line. */
-export function unlockVoice(lines = 8): void {
+export function unlockVoice(lines = 8, prefix = ""): void {
   primeAudio();
   for (let i = 0; i < lines; i++) {
-    const a = voiceAudio(i);
+    const a = voiceAudio(i, prefix);
     if (!a || !a.paused) continue;
     a.muted = true;
     void a.play().then(
@@ -56,6 +57,6 @@ export function stopVoice(): void {
 export const allVoice = () => [...els.values()];
 
 /** Start loading the recordings early, so the first line is ready the moment someone says yes. */
-export function preloadVoice(lines = 8): void {
-  for (let i = 0; i < lines; i++) voiceAudio(i);
+export function preloadVoice(lines = 8, prefix = ""): void {
+  for (let i = 0; i < lines; i++) voiceAudio(i, prefix);
 }

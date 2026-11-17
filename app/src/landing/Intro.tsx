@@ -6,7 +6,9 @@ import { EASE } from "../ui/motion";
 import { Background } from "../ui/Background";
 import { WaxSeal } from "../ui/WaxSeal";
 import { PhoneView } from "./Demo";
-import { BEATS, ESTIMATED_SECONDS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences } from "./introScript";
+import { ZOOM_MS, ZOOM_OUT_MS, sentenceStarts, sentences, type FilmId } from "./film";
+import { INVITE_FILM } from "./introScript";
+import { SURPRISE_FILM } from "./introScriptSurprise";
 import { duckMusic, pauseMusic, playSfx, setIntroMuted, startIntroSound, stopIntroSound, stopSfx } from "./sfx";
 import { Story } from "./stories";
 import { holdSiteMusic } from "../lib/siteMusic";
@@ -54,8 +56,8 @@ function Opener({ t, calm }: { t: number; calm: boolean }) {
 }
 
 /** The caption follows the voice, a sentence at a time. */
-function Caption({ line, sinceVoice, seconds, still }: { line: number; sinceVoice: number; seconds: number; still: boolean }) {
-  const text = VOICE_LINES[line]!;
+function Caption({ lines, line, sinceVoice, seconds, still }: { lines: readonly string[]; line: number; sinceVoice: number; seconds: number; still: boolean }) {
+  const text = lines[line]!;
   const parts = sentences(text);
   const starts = sentenceStarts(text, seconds);
   let idx = -1;
@@ -104,7 +106,9 @@ function useFit(stage: React.RefObject<HTMLElement | null>) {
  * calm music bed that ducks under the voice. One clock (beat, ms into the beat) drives everything.
  * Under reduced motion it is a still version: each beat as its finished picture and screen, with captions, stepped by hand.
  */
-export function IntroPlayer({ onClose }: { onClose: () => void }) {
+export function IntroPlayer({ onClose, film = "surprise", onOther }: { onClose: () => void; film?: FilmId; onOther?: () => void }) {
+  const F = film === "surprise" ? SURPRISE_FILM : INVITE_FILM;
+  const { BEATS, VOICE_LINES, ESTIMATED_SECONDS, VOICE_AT, beatMs, cuesBetween, phaseAt } = F;
   const calm = !!useReducedMotion();
   const [beat, setBeat] = useState(0);
   const [t, setT] = useState(0);
@@ -127,7 +131,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const offs: (() => void)[] = [];
     VOICE_LINES.forEach((_, line) => {
-      const a = voiceAudio(line);
+      const a = voiceAudio(line, F.voicePrefix);
       if (!a) return;
       const f = () => isFinite(a.duration) && setSecs((s) => ({ ...s, [line]: a.duration }));
       if (a.readyState >= 1) f();
@@ -212,7 +216,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   }, [beat, b.line, calm]);
   useEffect(() => {
     if (calm || b.line === null) return;
-    const a = voiceAudio(b.line);
+    const a = voiceAudio(b.line, F.voicePrefix);
     if (!a) return;
     if (!running) {
       a.pause();
@@ -243,7 +247,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
   // by-hand controls (also the arrows)
   const hear = () => {
     if (b.line === null) return;
-    const a = voiceAudio(b.line);
+    const a = voiceAudio(b.line, F.voicePrefix);
     if (!a) return;
     stopVoice();
     a.muted = false;
@@ -326,6 +330,11 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
               <span>Start here</span>
               <IconArrow size={20} />
             </a>
+            {film === "surprise" && onOther && (
+              <button type="button" className="btn glass" onClick={onOther}>
+                <span>See the other way: invite them</span>
+              </button>
+            )}
             <button type="button" className="btn glass" onClick={onClose}>
               <span>Back to the page</span>
             </button>
@@ -342,7 +351,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
             <m.div className="cam-phone" initial={false} animate={{ opacity: inPhone ? (phase === "zoom-out" ? 0 : 1) : 0, scale: phase === "zoom-out" ? 0.78 : inPhone ? 1 : 0.5 }} transition={{ duration: phase === "zoom-out" ? ZOOM_OUT_MS / 1000 : ZOOM_MS / 1000, ease: EASE }}>
               <div className="intro-phone" style={{ height: 600 * k, width: 292 * k }}>
                 <div className="intro-phone-in" style={{ transform: `scale(${k})` }}>
-                  {step !== null && <PhoneView step={step} t={screenT} shownT={screenT} still={!running} veilOn={veilOn} />}
+                  {step !== null && <PhoneView set={F.id} step={step} t={screenT} shownT={screenT} still={!running} veilOn={veilOn} />}
                 </div>
               </div>
             </m.div>
@@ -357,7 +366,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
               {VOICE_LINES[0]}
             </p>
           ) : b.line !== null ? (
-            <Caption line={b.line} sinceVoice={t - VOICE_AT[beat]!} seconds={voiceSecs ?? ESTIMATED_SECONDS[b.line]!} still={calm} />
+            <Caption lines={VOICE_LINES} line={b.line} sinceVoice={t - VOICE_AT[beat]!} seconds={voiceSecs ?? ESTIMATED_SECONDS[b.line]!} still={calm} />
           ) : (
             <div className="intro-caption" aria-hidden="true" />
           )}
@@ -385,7 +394,7 @@ export function IntroPlayer({ onClose }: { onClose: () => void }) {
             <IconBack size={18} />
             <span>Back</span>
           </button>
-          {!ended && b.line !== null && hasVoice(b.line) && (
+          {!ended && b.line !== null && hasVoice(b.line, F.voicePrefix) && (
             <button type="button" className="btn glass" onClick={hear}>
               <IconPlay size={18} />
               <span>Hear this line</span>

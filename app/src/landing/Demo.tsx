@@ -5,6 +5,7 @@ import { Headline } from "../ui/Headline";
 import { IconClock, IconLetter, IconShield, IconUser } from "../ui/icons";
 import { EASE } from "../ui/motion";
 import { PeopleMap } from "../ui/PeopleMap";
+import { PersonFields } from "../steps/SurpriseForm";
 import { WaxSeal } from "../ui/WaxSeal";
 import type { LetterView } from "../lib/registry";
 import { CheckInView } from "../me/parts";
@@ -30,6 +31,19 @@ export const STEPS = [
   { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 13500 },
 ] as const;
 
+/** The "Keep it a surprise" walkthrough: the owner's flow with how-to-reach-them, the ladder, and the question. */
+export const STEPS_SURPRISE = [
+  { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
+  { label: "Reach them", caption: "Alex adds how to reach Mia, and a question only Mia can answer.", ms: 9000 },
+  { label: "Backup", caption: "Alex adds someone Mia trusts, in case Mia can't be reached.", ms: 7000 },
+  { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open.", ms: 6000 },
+  { label: "Seal", caption: "Sealed on the phone. Only Mia can open it.", ms: 11000 },
+  { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
+  { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
+  { label: "Found", caption: "Tabella finds Mia by email and message, then a call, then asks the backup to help.", ms: 9000 },
+  { label: "They open it", caption: "Mia answers the question only Mia knows, and the letter opens.", ms: 14500 },
+] as const;
+
 /** The demo letter. No recovery words, no codes, no amounts: it only says where things are and who can help. */
 export const LETTER =
   "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.";
@@ -38,13 +52,13 @@ const ADDRESS = "0xE6EB…6Ca3";
 const at = (t: number, ms: number) => t >= ms;
 const typed = (s: string, t: number, from: number, perChar = 55) => s.slice(0, Math.max(0, Math.floor((t - from) / perChar)));
 
-function useDemoClock(running: boolean) {
+function useDemoClock(running: boolean, steps: readonly { ms: number }[]) {
   const [clock, setClock] = useState({ step: 0, t: 0 });
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => setClock((c) => (c.t + 100 >= STEPS[c.step]!.ms ? { step: (c.step + 1) % STEPS.length, t: 0 } : { step: c.step, t: c.t + 100 })), 100);
+    const id = setInterval(() => setClock((c) => (c.t + 100 >= (steps[c.step]?.ms ?? 1e9) ? { step: (c.step + 1) % steps.length, t: 0 } : { step: c.step, t: c.t + 100 })), 100);
     return () => clearInterval(id);
-  }, [running]);
+  }, [running, steps]);
   return [clock, setClock] as const;
 }
 
@@ -245,13 +259,92 @@ function Open({ t }: { t: number }) {
 }
 export const SCREENS = [Write, People, Guardian, Timing, SealScreen, StillHere, TimePasses, Open];
 
+/* ---------- the "keep it a surprise" screens ---------- */
+const DEMO_Q = "What did we call the little boat?";
+const noop = () => {};
+function Reach({ t }: { t: number }) {
+  return (
+    <div className="step" style={{ paddingTop: 14 }}>
+      {/* the top of the screen scrolls away as the question and answer are typed */}
+      <m.div initial={false} animate={{ opacity: at(t, 5200) ? 0 : 1 }} transition={{ duration: 0.8 }}>
+        <Headline text="Alex, who should *read* this one day?" />
+        <div className="choices" aria-hidden="true">
+          <ChoiceCard name="demo-mode" checked onChange={noop} icon={<IconLetter />} title="Keep it a surprise" sub="We find them when the time comes." />
+          <ChoiceCard name="demo-mode" checked={false} onChange={noop} icon={<IconUser />} title="Invite someone" sub="They make their own card first." />
+        </div>
+      </m.div>
+      <m.div initial={false} animate={{ y: at(t, 5200) ? -300 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
+        <PersonFields id="demo-r" kind="recipient" heading="Who is it for?" showProblem={false} onChange={noop} p={{ name: typed("Mia", t, 700, 160), email: typed("mia@example.com", t, 1300, 55), phone: typed("+44 7700 900123", t, 2300, 70), question: typed(DEMO_Q, t, 3300, 40), answer: typed("Blue Heron", t, 5400, 110), relation: "" }} />
+      </m.div>
+    </div>
+  );
+}
+function Backup({ t }: { t: number }) {
+  return (
+    <div className="step" style={{ paddingTop: 14 }}>
+      <m.div initial={false} animate={{ opacity: at(t, 4600) ? 0 : 1 }} transition={{ duration: 0.8 }}>
+        <Headline text="Someone *you trust*." />
+        <Lead>If Mia can't be reached, they can help.</Lead>
+      </m.div>
+      <m.div initial={false} animate={{ y: at(t, 4600) ? -190 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
+        <PersonFields id="demo-b" kind="backup" heading="Backup person 1" showProblem={false} onChange={noop} p={{ name: typed("Sofia", t, 500, 150), relation: typed("her oldest friend", t, 1100, 60), email: typed("sofia@example.com", t, 2100, 55), phone: typed("+44 7700 900456", t, 3000, 60), question: typed("Where did we first meet?", t, 4000, 40), answer: "", }} />
+      </m.div>
+    </div>
+  );
+}
+function Found({ t }: { t: number }) {
+  const row = (at_: number, label: string, text: string, key: string) => (
+    <m.li key={key} className="found-row glass" initial={false} animate={{ opacity: at(t, at_) ? 1 : 0, y: at(t, at_) ? 0 : 12 }} transition={{ duration: 0.6, ease: EASE }}>
+      <strong>{label}</strong>
+      <span>{text}</span>
+    </m.li>
+  );
+  return (
+    <div className="done-screen" style={{ paddingTop: 26 }}>
+      <Headline text="Tabella finds *Mia*." />
+      <ol className="found">
+        {row(900, "Email and message", "“Alex left you a letter. It's been kept safe until now.”", "a")}
+        {row(3000, "No answer? A call", "A short, calm message, and a gentle reminder.", "b")}
+        {row(5200, "Still no answer? The backup", "“Alex left a letter for Mia and asked you to help them receive it.”", "c")}
+      </ol>
+    </div>
+  );
+}
+function OpenQ({ t }: { t: number }) {
+  const scene = at(t, 5200);
+  const typedAnswer = typed("blue heron", t, 1200, 120);
+  return (
+    <div className="step" style={{ paddingTop: 14 }}>
+      <Headline text="Your *letter*." />
+      {scene ? (
+        <div className="letter-open">
+          <Panel>
+            <Story id="open" lines={DEMO_SHEET} />
+          </Panel>
+        </div>
+      ) : (
+        <section className="restore glass" aria-hidden="true">
+          <h2>One question</h2>
+          <p className="question">{DEMO_Q}</p>
+          <Field value={typedAnswer} />
+          <div className="restore-actions">
+            <span className={`btn primary ${at(t, 3800) ? "pressed" : ""}`}>Open it</span>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+export const SCREENS_SURPRISE = [Write, Reach, Backup, Timing, SealScreen, StillHere, TimePasses, Found, OpenQ];
+
+
 /* ---------- the phone and the controls ---------- */
 /** The phone frame with the current screen in it. `t` drives the screen; `shownT` is what it shows (a finished moment when still). */
-export function PhoneView({ step, t, shownT, still, veilOn }: { step: number; t: number; shownT: number; still: boolean; veilOn: boolean }) {
+export function PhoneView({ step, t, shownT, still, veilOn, set = "invite" }: { step: number; t: number; shownT: number; still: boolean; veilOn: boolean; set?: "invite" | "surprise" }) {
   const phone = useRef<HTMLDivElement>(null);
   useEffect(() => phone.current?.setAttribute("inert", ""), []);
   const night = step >= 5 || (step === 4 && at(shownT, 8000));
-  const Screen = SCREENS[step]!;
+  const Screen = (set === "surprise" ? SCREENS_SURPRISE : SCREENS)[step]!;
   void t;
   return (
     <div className={`phone ${still ? "still" : ""}`}>
@@ -259,7 +352,7 @@ export function PhoneView({ step, t, shownT, still, veilOn }: { step: number; t:
       <div ref={phone} className={`phone-screen ${night ? "night" : "day"}`} aria-hidden="true">
         <div className="phone-bg" />
         <AnimatePresence mode="wait" initial={false}>
-          <m.div key={step} className="phone-page" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.45, ease: EASE }}>
+          <m.div key={`${set}-${step}`} className="phone-page" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.45, ease: EASE }}>
             <Screen t={shownT} />
           </m.div>
         </AnimatePresence>
@@ -277,7 +370,9 @@ export function Demo() {
   const [playedByChoice, setPlayed] = useState(false); // reduced motion: only plays if the visitor presses play
   const [hidden, setHidden] = useState(false);
   const running = !!inView && !paused && !hidden && (!calm || playedByChoice);
-  const [{ step, t }, setClock] = useDemoClock(running);
+  const [variant, setVariant] = useState<"surprise" | "invite">("surprise"); // the two ways to hand a letter over
+  const steps = variant === "surprise" ? STEPS_SURPRISE : STEPS;
+  const [{ step, t }, setClock] = useDemoClock(running, steps);
 
   useEffect(() => {
     const f = () => setHidden(document.hidden);
@@ -285,11 +380,15 @@ export function Demo() {
     return () => document.removeEventListener("visibilitychange", f);
   }, []);
   // reduced motion: each screen is shown at its finished moment until the visitor presses play
-  const shownT = calm && !playedByChoice ? STEPS[step]!.ms - 100 : t;
+  const shownT = calm && !playedByChoice ? steps[step]!.ms - 100 : t;
   const veil = step === 4 && t >= 7000 && t < 8400 && !(calm && !playedByChoice);
 
   const jump = (i: number) => {
     setClock({ step: i, t: 0 });
+  };
+  const choose = (v: "surprise" | "invite") => {
+    setVariant(v);
+    setClock({ step: 0, t: 0 });
   };
   const toggle = () => {
     if (calm && !playedByChoice) {
@@ -304,12 +403,20 @@ export function Demo() {
       <Headline text="A letter's whole life, in *one minute*." as="h2" inView className="h2" />
       <Reveal>
         <div className="demo">
+          <div className="demo-tabs" role="tablist" aria-label="Two ways to hand a letter over">
+            <button type="button" role="tab" aria-selected={variant === "surprise"} className={`demo-tab ${variant === "surprise" ? "on" : ""}`} onClick={() => choose("surprise")}>
+              Keep it a surprise
+            </button>
+            <button type="button" role="tab" aria-selected={variant === "invite"} className={`demo-tab ${variant === "invite" ? "on" : ""}`} onClick={() => choose("invite")}>
+              Invite them
+            </button>
+          </div>
           <div className="phone-wrap">
-            <PhoneView step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
+            <PhoneView set={variant} step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
           </div>
           <p className="demo-caption" aria-live="polite">
             <span className="demo-num">{String(step + 1).padStart(2, "0")}</span>
-            {STEPS[step]!.caption}
+            {steps[step]!.caption}
           </p>
           <div className="demo-ctrl">
             <div className="demo-controls">
@@ -319,7 +426,7 @@ export function Demo() {
               <span className="demo-note">{calm ? "Step through it, or press play." : "Plays by itself. Tap a step to jump."}</span>
             </div>
             <ol className="demo-steps">
-              {STEPS.map((s, i) => (
+              {steps.map((s, i) => (
                 <li key={s.label}>
                   <button type="button" className={`demo-step ${i === step ? "on" : ""}`} onClick={() => jump(i)} aria-current={i === step ? "step" : undefined}>
                     <span className="demo-step-n">{String(i + 1).padStart(2, "0")}</span>

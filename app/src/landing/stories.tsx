@@ -8,7 +8,7 @@ import type { CSSProperties, ReactNode } from "react";
  * Rule for the drawings: an animated element never carries its own transform attribute (the CSS animation would
  * replace it): put the position on a parent <g> and the animation on a child <g>.
  */
-export type StoryId = "desk" | "chairs" | "shield" | "calendar" | "seal" | "horizon" | "clock" | "open";
+export type StoryId = "desk" | "chairs" | "shield" | "calendar" | "seal" | "horizon" | "clock" | "open" | "reach" | "backup" | "find" | "openq";
 
 type Anim = { a?: string; d?: number; dur?: number; origin?: string; ease?: string; fill?: "both" | "backwards" };
 const an = ({ a, d = 0, dur, origin, ease, fill }: Anim): CSSProperties =>
@@ -230,11 +230,11 @@ export function sheetLines(text: string, width = 34, max = 12): string[] {
 }
 
 /** The last scene: the seal cracks, the flap lifts, the letter slides out, and the camera comes in until it can be read. */
-export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[]; dur?: number; delay?: number }) {
+export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0, t0 = 0 }: { lines: string[]; dur?: number; delay?: number; t0?: number }) {
   return (
-    <A a="zoom-read" d={delay} dur={dur} origin="180px 96px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
+    <A a="zoom-read" d={delay + t0} dur={dur} origin="180px 96px" ease="cubic-bezier(0.45, 0, 0.2, 1)" fill="backwards" className="read">
       {/* the open flap, behind the letter */}
-      <A a="flap-open" d={1.3} dur={0.6} fill="backwards">
+      <A a="flap-open" d={1.3 + t0} dur={0.6} fill="backwards">
         <path className="sk" d="M90 190 L180 128 L270 190" />
       </A>
       {/* the letter, sliding out (nothing of it shows below the envelope while it starts inside) */}
@@ -242,7 +242,7 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[
         <rect x="0" y="0" width="360" height="311" />
       </clipPath>
       <g clipPath="url(#tbl-envelope-clip)">
-      <A a="letter-out" d={1.7} dur={1.5} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
+      <A a="letter-out" d={1.7 + t0} dur={1.5} ease="cubic-bezier(0.25, 0.6, 0.3, 1)" fill="backwards">
         <rect className="letter-sheet" x="104" y="46" width="152" height="134" rx="2" />
         {lines.map((l, i) =>
           l ? (
@@ -257,12 +257,12 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[
       <rect className="cover" x="89" y="189" width="182" height="122" />
       <path className="sk" d="M90 190 H270 V310 H90 Z M90 310 L162 254 M270 310 L198 254" />
       {/* the closed flap, which lifts away */}
-      <A a="flap-lift" d={0.9} dur={0.8} origin="180px 190px" ease="ease-in-out" fill="backwards">
+      <A a="flap-lift" d={0.9 + t0} dur={0.8} origin="180px 190px" ease="ease-in-out" fill="backwards">
         <path className="sk" d="M90 190 L180 262 L270 190" />
       </A>
       {/* the seal, which cracks in two */}
       <g transform="translate(180 262)">
-        <A a="seal-halves" d={0.35} dur={0.6} origin="0px 0px" ease="ease-out" fill="backwards">
+        <A a="seal-halves" d={0.35 + t0} dur={0.6} origin="0px 0px" ease="ease-out" fill="backwards">
           <g className="halfL"><path className="wx" d="M0 -17 A17 17 0 0 0 0 17 L-3 9 L2 2 L-2 -6 Z" /></g>
           <g className="halfR"><path className="wx" d="M0 -17 A17 17 0 0 1 0 17 L-3 9 L2 2 L-2 -6 Z" /></g>
         </A>
@@ -272,7 +272,85 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[
 }
 const Open = () => <EnvelopeOpen lines={DEMO_SHEET} />;
 
-const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs, shield: Shield, calendar: Calendar, seal: () => <SealScene />, horizon: Horizon, clock: Clock, open: Open };
+/** A small envelope, a message bubble and a phone: the ways to reach someone. Used by the Surprise film. */
+const Phone = ({ x, y, w = 76, h = 140 }: { x: number; y: number; w?: number; h?: number }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <rect className="sk" x="0" y="0" width={w} height={h} rx="12" />
+    <path className="sk soft" d={`M${w / 2 - 10} 10 H${w / 2 + 10}`} />
+    <path className="sk faint" d={`M${w / 2 - 12} ${h - 10} H${w / 2 + 12}`} />
+  </g>
+);
+const Mail = ({ x, y }: { x: number; y: number }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <rect className="sk" x="0" y="0" width="62" height="42" rx="2" />
+    <path className="sk soft" d="M0 0 L31 24 L62 0" />
+  </g>
+);
+const Bubble = ({ x, y }: { x: number; y: number }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <path className="sk" d="M8 0 H54 A8 8 0 0 1 62 8 V30 A8 8 0 0 1 54 38 H26 L14 48 V38 H8 A8 8 0 0 1 0 30 V8 A8 8 0 0 1 8 0 Z" />
+    <path className="sk faint" d="M12 14 H50 M12 24 H36" />
+  </g>
+);
+
+/** Keep it a surprise: how to reach them, and a question only they can answer. */
+function Reach() {
+  return (
+    <>
+      <Phone x={142} y={110} />
+      <g transform="translate(46 128)"><A a="rise" d={0.4}><Mail x={0} y={0} /></A></g>
+      <g transform="translate(252 112)"><A a="rise" d={0.9}><Bubble x={0} y={0} /></A></g>
+      <g transform="translate(120 290)">
+        <A a="pop" d={1.5} origin="60px 28px">
+          <rect className="sk" x="0" y="0" width="120" height="58" rx="6" />
+          <text className="big" x="60" y="44" textAnchor="middle" style={{ fontSize: 44 }}>?</text>
+        </A>
+      </g>
+    </>
+  );
+}
+
+/** A second person, in case the first cannot be reached. */
+function Backup() {
+  return (
+    <>
+      <g transform="translate(70 120)"><Phone x={0} y={0} /></g>
+      <g transform="translate(212 150)"><A a="rise" d={0.7}><Phone x={0} y={0} /></A></g>
+      <A a="pop" d={1.6} origin="180px 190px"><path className="wxl" d="M152 196 H208 M198 186 L208 196 L198 206" /></A>
+    </>
+  );
+}
+
+/** Tabella finds them: an email, a message, then a call. */
+function Find() {
+  return (
+    <>
+      <g transform="translate(28 150)"><A a="pop" d={0.3} origin="31px 21px"><Mail x={0} y={0} /></A></g>
+      <g transform="translate(148 140)"><A a="pop" d={1.1} origin="31px 24px"><Bubble x={0} y={0} /></A></g>
+      <g transform="translate(262 120)">
+        <A a="pop" d={1.9} origin="38px 70px"><Phone x={0} y={0} w={62} h={112} /></A>
+        <A a="rise" d={2.4}><path className="wxl" d="M-12 40 A22 22 0 0 0 -12 74 M-24 32 A34 34 0 0 0 -24 82" /></A>
+      </g>
+    </>
+  );
+}
+
+/** The question card, then the envelope opens: the Surprise film's last scene. */
+function OpenQ() {
+  return (
+    <>
+      <g transform="translate(120 160)">
+        <g className="an qcard" style={{ animationName: "qcard", animationDelay: "0s", animationDuration: "2.4s", animationFillMode: "backwards" }}>
+          <rect className="sk" x="0" y="0" width="120" height="76" rx="6" />
+          <text className="big" x="60" y="56" textAnchor="middle" style={{ fontSize: 56 }}>?</text>
+        </g>
+      </g>
+      <EnvelopeOpen lines={DEMO_SHEET} t0={2.2} />
+    </>
+  );
+}
+
+const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs, shield: Shield, calendar: Calendar, seal: () => <SealScene />, horizon: Horizon, clock: Clock, open: Open, reach: Reach, backup: Backup, find: Find, openq: OpenQ };
 
 /** One scene, on its own transparent canvas (the intro puts it on the ink). */
 export function Story({ id, still = false, lines }: { id: StoryId; still?: boolean; lines?: string[] }) {
@@ -293,4 +371,8 @@ export const STORY_ALT: Record<StoryId, string> = {
   horizon: "A low sun on a horizon, I'm still here",
   clock: "A clock whose hands turn and settle, with a sun and a moon going round it",
   open: "An envelope opens: the seal cracks, the flap lifts and the letter slides out to be read",
+  reach: "A phone, an envelope and a message bubble, and a card with a question mark: how to reach someone, and a question only they can answer",
+  backup: "Two phones, and an arrow from the first to the second: a second person, in case the first cannot be reached",
+  find: "An email, a message and a ringing phone appear one after the other",
+  openq: "A question card, then an envelope opens: the seal cracks, the flap lifts and the letter slides out to be read",
 };

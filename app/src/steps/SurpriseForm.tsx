@@ -7,7 +7,7 @@ import { Field } from "../ui/Field";
 import { IconPlus } from "../ui/icons";
 import { cardAppear } from "../ui/motion";
 
-function PersonFields(props: { id: string; kind: "recipient" | "backup"; p: SurprisePerson; onChange: (p: SurprisePerson) => void; heading: string; onRemove?: () => void; showProblem: boolean }) {
+export function PersonFields(props: { id: string; kind: "recipient" | "backup"; p: SurprisePerson; onChange: (p: SurprisePerson) => void; heading: string; onRemove?: () => void; showProblem: boolean }) {
   const { id, p, kind } = props;
   const set = (patch: Partial<SurprisePerson>) => props.onChange({ ...p, ...patch });
   const problem = props.showProblem ? personProblem(p, kind) : null;

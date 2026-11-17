@@ -7,6 +7,8 @@ import { Story, STORY_ALT, type StoryId } from "../src/landing/stories";
 import { readFileSync } from "node:fs";
 import { BEATS, ESTIMATED_SECONDS, FINAL_STORY_MS, OPENER_MS, STORY_MS, VOICE_AT, VOICE_LINES, ZOOM_MS, ZOOM_OUT_MS, beatMs, cuesBetween, phaseAt, sentenceStarts, sentences, totalMs } from "../src/landing/introScript";
 import { LEVEL, MUSIC_DUCKED, MUSIC_LEVEL } from "../src/landing/sfx";
+import { SURPRISE_FILM } from "../src/landing/introScriptSurprise";
+import { STEPS_SURPRISE } from "../src/landing/Demo";
 import { fitRhythm, lettersAt, seededRhythm } from "../src/landing/rhythm";
 import { LETTER, WRITE_TYPING_MS } from "../src/landing/Demo";
 import { STEPS } from "../src/landing/Demo";
@@ -34,8 +36,8 @@ describe("the voiceover script", () => {
   });
   it("all eight recordings exist, named 01.mp3 to 08.mp3, and the browser's own voice is never used", () => {
     const files = readdirSync(new URL("../src/assets/voice/", import.meta.url)).filter((f) => f.endsWith(".mp3"));
-    expect(files.sort()).toEqual(["01.mp3", "02.mp3", "03.mp3", "04.mp3", "05.mp3", "06.mp3", "07.mp3", "08.mp3"]); // all eight lines are recorded
-    for (const f of files) expect(f).toMatch(/^0[1-8]\.mp3$/);
+    expect(files.filter((f) => /^0\d\.mp3$/.test(f)).sort()).toEqual(["01.mp3", "02.mp3", "03.mp3", "04.mp3", "05.mp3", "06.mp3", "07.mp3", "08.mp3"]); // all eight lines of the first film are recorded
+    for (const f of files) expect(f).toMatch(/^s?0[1-9]\.mp3$/); // the Surprise film's lines are s01.mp3 to s09.mp3
     for (const f of ["../src/landing/Intro.tsx", "../src/landing/voice.ts", "../src/landing/sfx.ts"]) expect(readFileSync(new URL(f, import.meta.url), "utf8")).not.toMatch(/speechSynthesis|SpeechSynthesisUtterance/);
   });
 });
@@ -250,5 +252,65 @@ describe("the loved one's waiting screens reveal nothing", () => {
     }
     const ready = renderToStaticMarkup(<HeirStateView state="ready" onOpen={() => {}} />);
     expect(ready).toContain("Open your letter");
+  });
+});
+
+describe("the Surprise film", () => {
+  const S = SURPRISE_FILM;
+  it("has the nine lines, exactly as written, and the same voice style", () => {
+    expect(S.VOICE_LINES).toEqual([
+      "Some things should be said one day. Tabella helps you say them.",
+      "Write a letter for someone you love.",
+      "Keep it a surprise. Add how to reach them, and a question only they can answer.",
+      "Add someone you trust, in case they can't be reached.",
+      "Choose when it should open. If you go quiet for a while.",
+      "Seal it. Safe even from future super-computers.",
+      "Every so often, just tap: I'm still here.",
+      "And if one day you can't, Tabella finds them, by email, message or call.",
+      "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
+    ]);
+    expect(S.voicePrefix).toBe("s");
+    expect(S.ESTIMATED_SECONDS).toHaveLength(9);
+  });
+  it("lines that are the same words as the first film's reuse its recordings", () => {
+    const dir = new URL("../src/assets/voice/", import.meta.url);
+    for (const [s, o] of [["s01", "01"], ["s05", "05"], ["s07", "07"]] as const) {
+      expect(readFileSync(new URL(`${s}.mp3`, dir)).equals(readFileSync(new URL(`${o}.mp3`, dir)))).toBe(true);
+    }
+    expect(S.VOICE_LINES[0]).toBe(VOICE_LINES[0]);
+    expect(S.VOICE_LINES[4]).toBe(VOICE_LINES[4]);
+    expect(S.VOICE_LINES[6]).toBe(VOICE_LINES[6]);
+  });
+  it("is the opener, nine scenes in order, and ends with the question and the envelope opening (no phone)", () => {
+    expect(S.BEATS.map((b) => b.story)).toEqual([null, "desk", "reach", "backup", "calendar", "seal", "horizon", "clock", "find", "openq"]);
+    expect(S.BEATS.filter((b) => b.line !== null).map((b) => b.line)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(S.BEATS[7]!.line).toBeNull(); // time passes: the clock, no voice
+    expect(S.BEATS.at(-1)).toMatchObject({ story: "openq", noPhone: true, step: null });
+    S.BEATS.forEach((b) => b.step !== null && expect(STEPS_SURPRISE[b.step]).toBeTruthy());
+    S.BEATS.forEach((b, i) => i > 0 && b.step !== null && expect(b.phoneMs).toBeLessThanOrEqual(STEPS_SURPRISE[b.step!]!.ms + 400));
+  });
+  it("every beat fits its scene, the zoom, its screen and its line; the whole film is a calm length", () => {
+    S.BEATS.forEach((b, i) => {
+      if (i === 0) return;
+      expect(S.beatMs(i)).toBeGreaterThanOrEqual(b.noPhone ? b.storyMs : b.storyMs + ZOOM_MS + b.phoneMs + ZOOM_OUT_MS);
+      if (b.line !== null) expect(S.VOICE_AT[i]! + S.ESTIMATED_SECONDS[b.line]! * 1000).toBeLessThan(S.beatMs(i));
+    });
+    expect(S.totalMs()).toBeGreaterThan(80_000);
+    expect(S.totalMs()).toBeLessThan(150_000);
+  });
+  it("each scene has its own quiet transition at its start, all different", () => {
+    const ts = S.BEATS.slice(1).map((b) => b.cues.find((c) => c.at === 0 && c.sfx.startsWith("t-"))?.sfx);
+    expect(ts.every(Boolean)).toBe(true);
+    expect(new Set(ts).size).toBe(ts.length);
+    for (const t of ts) expect(LEVEL[t!]).toBeLessThanOrEqual(0.16);
+    S.BEATS.forEach((b, i) => b.cues.forEach((c) => (expect(c.at).toBeGreaterThanOrEqual(0), expect(c.at).toBeLessThan(S.beatMs(i)))));
+  });
+  it("the scenes draw, with no emoji, and the new ones are in the picture list", () => {
+    for (const id of ["reach", "backup", "find", "openq"] as StoryId[]) {
+      const html = renderToStaticMarkup(<Story id={id} />);
+      expect(html).toContain("<svg");
+      expect(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(html)).toBe(false);
+      expect(html.replace(/&#x27;/g, "'")).toContain(STORY_ALT[id]);
+    }
   });
 });
