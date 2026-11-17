@@ -315,20 +315,20 @@ describe("a provider that says no", () => {
     let mode: "403" | "503" | "ok" = "403";
     const flaky: Notifier = { ...n, channels: n.channels, sms: n.sms, call: n.call, email: async (to, sub, text, key) => { if (mode === "403") throw new ProviderError(403, "validation_error"); if (mode === "503") throw new ProviderError(503, ""); return n.email(to, sub, text, key); } };
     const { esc } = make(flaky);
-    expect((await esc.run("3", pkg())).failed).toEqual(["r:email"]);
-    for (let i = 0; i < 5; i++) { now += 60_000; expect((await esc.run("3", pkg())).failed).toEqual([]); } // five minutes of quiet, not 15 more tries
+    expect((await esc.run("3", pkg("real"))).failed).toEqual(["r:email"]);
+    for (let i = 0; i < 5; i++) { now += 60_000; expect((await esc.run("3", pkg("real"))).failed).toEqual([]); } // five minutes of quiet, not 15 more tries
     now += 5 * 60_000 + 1;
-    expect((await esc.run("3", pkg())).failed).toEqual(["r:email"]); // after ten minutes it tries once more
+    expect((await esc.run("3", pkg("real"))).failed).toEqual(["r:email"]); // after ten minutes it tries once more
     expect(logs.at(-1)).toMatch(/failed \(provider answered HTTP 403 \(validation_error\)\); will retry in 600 s/);
     mode = "503";
     now += 10 * 60_000 + 1;
-    await esc.run("3", pkg()); // fails with 503: 30 s
+    await esc.run("3", pkg("real")); // fails with 503: 30 s
     expect(logs.at(-1)).toMatch(/will retry in 30 s/);
-    now += 30_001; await esc.run("3", pkg());
+    now += 30_001; await esc.run("3", pkg("real"));
     expect(logs.at(-1)).toMatch(/will retry in 60 s/);
     mode = "ok";
     now += 60_001;
-    expect((await esc.run("3", pkg())).sent).toEqual(["r:email"]);
+    expect((await esc.run("3", pkg("real"))).sent).toEqual(["r:email"]);
     expect(n.sent).toHaveLength(1);
   });
 });
