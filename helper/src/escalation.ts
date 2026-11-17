@@ -1,0 +1,129 @@
+/**
+ * The escalation ladder for a "surprise" letter, run by the Postman once the letter is released.
+ *
+ *   0    email + SMS to the recipient:  "<Owner> left you a letter. It's been kept safe until now."  + a link
+ *   +d1  a phone call reading a short calm message, and a reminder SMS            (3 days; demo: 2 minutes)
+ *   +d2  backup 1: "<Owner> left a letter for <Name> and asked you to help them receive it."   (7 days; demo: 4 minutes)
+ *        then backup 2, backup 3, one every `gap` after the one before              (2 days; demo: 2 minutes)
+ *   it stops as soon as the letter is opened ("opened" is reported with a signature from the unlocked card).
+ *
+ * Safe by construction: every step is CLAIMED in the store before anything is sent (so a second pass, a second
+ * process or a restart never sends it twice); a failed send gives the claim back so the next pass retries it.
+ * Never logged: addresses, phone numbers, names, links. Logs say "letter #N: step X sent".
+ */
+import type { PostmanPackage } from "../../shared/surprise.ts";
+import type { LadderStore, Notifier } from "./notify/types.js";
+
+const MIN = 60_000;
+const DAY = 24 * 60 * MIN;
+export const TIMINGS = {
+  real: { call: 3 * DAY, backup: 7 * DAY, gap: 2 * DAY },
+  demo: { call: 2 * MIN, backup: 4 * MIN, gap: 2 * MIN },
+} as const;
+
+const EMAIL = /^[^\s@<>"',;]{1,64}@[^\s@<>"',;]{1,190}\.[^\s@<>"',;]{2,24}$/;
+const PHONE = /^\+[1-9]\d{6,14}$/;
+export const validEmail = (s: unknown): s is string => typeof s === "string" && s.length <= 254 && EMAIL.test(s);
+export const validPhone = (s: unknown): s is string => typeof s === "string" && PHONE.test(s.replace(/[\s()-]/g, ""));
+const phoneOf = (s: string) => s.replace(/[\s()-]/g, "");
+const clean = (s: string) => s.replace(/[\r\n<>]/g, " ").trim().slice(0, 60);
+
+interface Step {
+  key: string;
+  /** ms after the ladder started */
+  at: number;
+  channel: "email" | "sms" | "call";
+  send: (n: Notifier) => Promise<void>;
+}
+
+export function buildSteps(letterId: string, pkg: PostmanPackage, appUrl: string): Step[] {
+  const t = TIMINGS[pkg.mode === "demo" ? "demo" : "real"];
+  const link = `${appUrl.replace(/\/+$/, "")}/open?letter=${encodeURIComponent(letterId)}`;
+  const owner = clean(pkg.owner) || "Someone who cares about you";
+  const r = pkg.recipient;
+  const rName = clean(r.name);
+  const steps: Step[] = [];
+  const add = (key: string, at: number, channel: Step["channel"], send: Step["send"]) => steps.push({ key, at, channel, send });
+
+  if (validEmail(r.email)) add("r:email", 0, "email", (n) => n.email(r.email, `${owner} left you a letter`, `${owner} left you a letter. It's been kept safe until now.\n\nOpen it here:\n${link}\n\nYou'll be asked one question that only you can answer.\n\nTabella: sealed today, opened when it matters.`, `tabella-${letterId}-r-email`));
+  if (validPhone(r.phone)) add("r:sms", 0, "sms", (n) => n.sms(phoneOf(r.phone), `${owner} left you a letter. It's been kept safe until now. ${link}`));
+  if (validPhone(r.phone)) add("r:call", t.call, "call", (n) => n.call(phoneOf(r.phone), `Hello${rName ? ` ${rName}` : ""}. This is a message from Tabella. ${owner} left you a letter, and it has been kept safe until now. Please check your messages, or look for Tabella online, to open it. Take your time.`));
+  if (validPhone(r.phone)) add("r:sms2", t.call, "sms", (n) => n.sms(phoneOf(r.phone), `A gentle reminder: ${owner} left you a letter. ${link}`));
+
+  pkg.backups.slice(0, 3).forEach((b, i) => {
+    const at = t.backup + i * t.gap;
+    const line = `${owner} left a letter for ${rName || "someone you know"} and asked you to help them receive it.`;
+    if (validEmail(b.email)) add(`b${i + 1}:email`, at, "email", (n) => n.email(b.email, `${owner} asked for your help`, `${line}\n\nYou can help here:\n${link}\n\nYou'll be asked one question that only you can answer.\n\nTabella: sealed today, opened when it matters.`, `tabella-${letterId}-b${i + 1}-email`));
+    if (validPhone(b.phone)) add(`b${i + 1}:sms`, at, "sms", (n) => n.sms(phoneOf(b.phone), `${line} ${link}`));
+  });
+  return steps;
+}
+
+export interface EscalationDeps {
+  notifier: Notifier;
+  store: LadderStore;
+  appUrl: string;
+  now?: () => number;
+  log?: (line: string) => void;
+}
+
+export interface PassReport {
+  sent: string[];
+  skipped: string[];
+  failed: string[];
+  /** nothing left to send (all done) or the letter was opened */
+  finished: boolean;
+  opened: boolean;
+}
+
+export function createEscalation(deps: EscalationDeps) {
+  const { notifier, store, appUrl } = deps;
+  const now = deps.now ?? Date.now;
+  const log = deps.log ?? ((l: string) => console.log(`[ladder] ${l}`));
+
+  /** One pass for one released letter. Cheap and repeatable: it only does what is due and not yet done. */
+  async function run(letterId: string, pkg: PostmanPackage): Promise<PassReport> {
+    const report: PassReport = { sent: [], skipped: [], failed: [], finished: false, opened: false };
+    const done = await store.steps(letterId);
+    if (done.has("opened")) return { ...report, finished: true, opened: true };
+
+    if (!done.has("start") && (await store.claim(letterId, "start", now()))) log(`letter #${letterId}: the ladder starts`);
+    const startedAt = (await store.steps(letterId)).get("start") ?? now();
+    const elapsed = now() - startedAt;
+
+    const steps = buildSteps(letterId, pkg, appUrl);
+    for (const s of steps) {
+      if (s.at > elapsed) continue;
+      // the letter may have been opened while we were busy: look again before every step
+      if ((await store.steps(letterId)).has("opened")) return { ...report, finished: true, opened: true };
+      if (!(await store.claim(letterId, s.key, now()))) continue; // already done (maybe by an earlier pass)
+      if (!notifier.channels[s.channel]) {
+        report.skipped.push(s.key);
+        log(`letter #${letterId}: step ${s.key} skipped (${s.channel} is not set up)`);
+        continue;
+      }
+      try {
+        await s.send(notifier);
+        report.sent.push(s.key);
+        log(`letter #${letterId}: step ${s.key} sent`);
+      } catch (err) {
+        await store.release(letterId, s.key); // try again on a later pass
+        report.failed.push(s.key);
+        log(`letter #${letterId}: step ${s.key} failed (${err instanceof Error ? err.message : "error"}); will retry`);
+      }
+    }
+    const after = await store.steps(letterId);
+    report.finished = steps.every((s) => after.has(s.key));
+    return report;
+  }
+
+  /** The browser says the letter was opened (already checked against the card's signature). Stops the ladder. */
+  async function markOpened(letterId: string): Promise<boolean> {
+    const first = await store.claim(letterId, "opened", now());
+    if (first) log(`letter #${letterId}: opened, the ladder stops`);
+    return first;
+  }
+
+  return { run, markOpened };
+}
+export type Escalation = ReturnType<typeof createEscalation>;

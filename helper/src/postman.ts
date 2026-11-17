@@ -28,7 +28,9 @@
  */
 import { evmToQor } from "@qorechain/sdk";
 import { bytesToHex, decodeFunctionResult, encodeFunctionData, hexToBytes, type Hex } from "viem";
-import { openPart, sealPartB, type SealKeyPair } from "../../shared/tabella-crypto.ts";
+import { keyHash, sealPartB, type SealKeyPair } from "../../shared/tabella-crypto.ts";
+import { openPostmanPackage, verifyOpened, type PostmanPackage } from "../../shared/surprise.ts";
+import type { Escalation } from "./escalation.js";
 import { STATUS, postmanAbi } from "./abi.js";
 import type { Chain } from "./chain.js";
 import type { Config } from "./config.js";
@@ -45,6 +47,8 @@ export interface PostmanDeps {
   log?: (line: string) => void;
   /** Clock in ms, injectable for tests. */
   now?: () => number;
+  /** The escalation ladder for surprise letters. Without it the Postman only publishes Part B. */
+  escalation?: Escalation;
 }
 
 export interface TickReport {
@@ -105,7 +109,7 @@ export function createPostman(deps: PostmanDeps) {
     // 1. Open Part B (sealed to the Postman at creation time).
     let B: Uint8Array;
     try {
-      B = openPart(hexToBytes(letter.partBForPostman), keys);
+      ({ B } = openPostmanPackage(hexToBytes(letter.partBForPostman), keys));
     } catch (err) {
       // Not sealed to our key (or corrupt): that will never change, so say so once and stop looking at it.
       cannotOpen.add(id);
@@ -142,15 +146,16 @@ export function createPostman(deps: PostmanDeps) {
     const out = await mutex.run(() => submit(chain, cfg, { fn: "publishPartB", to: cfg.registry, data }, log));
 
     if (out.status === 200) {
-      finished.add(id);
+      if (!deps.escalation) finished.add(id); // with a ladder, the letter is finished only when its ladder is
       retry.delete(id);
       stats.published++;
       report.published.push(id);
       log(`published Part B for letter #${id} tx=${String(out.body.txHash)} gas=${String(out.body.gasUsed)}`);
+      await ladder(id, { ...letter, released: true }, report); // a surprise letter starts its ladder at once
       return;
     }
     if (out.body.error === "would_revert" && out.body.reason === "AlreadyPublished") {
-      finished.add(id);
+      if (!deps.escalation) finished.add(id);
       log(`letter #${id}: Part B was already published`);
       return;
     }
@@ -158,6 +163,56 @@ export function createPostman(deps: PostmanDeps) {
     report.waiting.push(id);
     stats.lastError = String(out.body.error);
     log(`letter #${id}: not published (${String(out.body.error)}${out.body.reason ? `: ${String(out.body.reason)}` : ""}); will retry`);
+  }
+
+  /** The contact package of a surprise letter (cached; undefined for an ordinary letter, which is finished once published). */
+  const packages = new Map<bigint, PostmanPackage | null>();
+  async function packageOf(id: bigint, letter: LetterView): Promise<PostmanPackage | null> {
+    if (packages.has(id)) return packages.get(id)!;
+    let pkg: PostmanPackage | null = null;
+    try {
+      pkg = openPostmanPackage(hexToBytes(letter.partBForPostman), keys).pkg ?? null;
+    } catch {
+      pkg = null;
+    }
+    packages.set(id, pkg);
+    return pkg;
+  }
+
+  /** Run the escalation ladder for a released letter, if it has one. */
+  async function ladder(id: bigint, letter: LetterView, report: TickReport): Promise<void> {
+    const pkg = deps.escalation ? await packageOf(id, letter) : null;
+    if (!pkg || !deps.escalation) {
+      finished.add(id);
+      return;
+    }
+    const r = await deps.escalation.run(id.toString(), pkg);
+    if (r.finished) {
+      finished.add(id);
+      packages.delete(id);
+    }
+  }
+
+  /**
+   * "Opened" from a browser: valid only if it is signed by the card this letter was made for (its fingerprint is in
+   * the Postman's package). Returns "ok", "unknown" (not a surprise letter or not released yet) or "bad" (wrong signature).
+   */
+  async function reportOpened(id: bigint, publicKey: Uint8Array, sig: Uint8Array): Promise<"ok" | "unknown" | "bad"> {
+    if (!deps.escalation) return "unknown";
+    let letter: LetterView;
+    try {
+      letter = (await read("getLetter", [id])) as LetterView;
+    } catch {
+      return "unknown"; // no such letter
+    }
+    if (!letter.released) return "unknown";
+    const pkg = await packageOf(id, letter);
+    if (!pkg) return "unknown";
+    if (keyHash(publicKey).toLowerCase() !== pkg.cardKeyHash.toLowerCase()) return "bad";
+    if (!verifyOpened(publicKey, sig, cfg.registry, id)) return "bad";
+    await deps.escalation.markOpened(id.toString());
+    finished.add(id);
+    return "ok";
   }
 
   async function visit(id: bigint, report: TickReport): Promise<void> {
@@ -170,7 +225,8 @@ export function createPostman(deps: PostmanDeps) {
 
     const letter = (await read("getLetter", [id])) as LetterView;
     if (letter.released) {
-      finished.add(id); // published (maybe by an earlier attempt of ours that looked like it failed)
+      // Part B is out (by us, or by an earlier attempt that looked like it failed). A surprise letter now needs its ladder.
+      await ladder(id, letter, report);
       return;
     }
     if (!firstSeenReleased.has(id)) {
@@ -260,7 +316,7 @@ export function createPostman(deps: PostmanDeps) {
     };
   }
 
-  return { tick, start, stop, info };
+  return { tick, start, stop, info, reportOpened };
 }
 
 export type Postman = ReturnType<typeof createPostman>;

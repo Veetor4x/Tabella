@@ -11,6 +11,9 @@ import { serve } from "@hono/node-server";
 import { registryAbi } from "./abi.js";
 import { createRealChain } from "./chain.js";
 import { loadConfig } from "./config.js";
+import { createEscalation } from "./escalation.js";
+import { createNotifier } from "./notify/providers.js";
+import { createMemoryStore, createPgStore } from "./notify/store.js";
 import { createPostman } from "./postman.js";
 import { derivePostmanKeys, ensurePostmanKemKey } from "./postmanKeys.js";
 import { createApp } from "./relay.js";
@@ -41,12 +44,18 @@ async function main() {
     const keys = derivePostmanKeys(mnemonic);
     const kemTx = await ensurePostmanKemKey(chain, keys);
     console.log(`Postman:   opening key ${kemTx ? `registered on-chain, tx ${kemTx}` : "already registered on-chain"}`);
-    postman = createPostman({ chain, cfg, keys, mutex });
+    // The ladder for surprise letters: Resend / Twilio (keys from the environment), and a database so nothing is ever sent twice.
+    const notifier = createNotifier();
+    const dbUrl = process.env.DATABASE_URL?.trim();
+    const store = dbUrl ? await createPgStore(dbUrl) : createMemoryStore();
+    console.log(`Messages:  email ${notifier.channels.email ? "on" : "off"}, SMS ${notifier.channels.sms ? "on" : "off"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
+    const escalation = createEscalation({ notifier, store, appUrl: cfg.appUrl });
+    postman = createPostman({ chain, cfg, keys, mutex, escalation });
   } else {
     console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
   }
 
-  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info });
+  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info, reportOpened: postman?.reportOpened });
   serve({ fetch: app.fetch, port: cfg.port }, (info) => console.log(`listening: http://localhost:${info.port}  (POST /relay, GET /health)`));
   if (postman) {
     // Catch-up first: after a sleep (free Render plan) this publishes anything that became overdue, right away.

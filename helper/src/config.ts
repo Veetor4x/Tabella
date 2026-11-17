@@ -47,6 +47,11 @@ export interface Config {
   fundPerIpPerHour: number;
   fundGlobalPerHour: number;
 
+  // --- messages to the people a surprise letter is for
+  /** The web app's address, used in the links we send. */
+  appUrl: string;
+  openedPerMinPerIp: number;
+
   // --- Postman
   postmanEnabled: boolean;
   /** How often the Postman looks for released letters. */
@@ -109,6 +114,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     fundAmountUqor: BigInt(num(env, "FUND_AMOUNT_UQOR", 400_000)), // 0.4 QOR: two 0.1 QOR registrations with room to spare
     fundPerIpPerHour: num(env, "FUND_PER_IP_PER_HOUR", 3),
     fundGlobalPerHour: num(env, "FUND_GLOBAL_PER_HOUR", 40),
+
+    appUrl: (env.APP_URL?.trim() || "https://tabella-veetor4x.vercel.app").replace(/\/+$/, ""),
+    openedPerMinPerIp: num(env, "OPENED_PER_MIN", 6),
 
     postmanEnabled: (env.POSTMAN_ENABLED?.trim() ?? "true").toLowerCase() !== "false",
     postmanIntervalMs: num(env, "POSTMAN_INTERVAL_SECONDS", 20) * 1000,

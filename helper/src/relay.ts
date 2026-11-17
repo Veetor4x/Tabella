@@ -32,6 +32,8 @@ export interface AppDeps {
   mutex?: Mutex;
   /** Public Postman info for /health (public key, last run). Omitted when the Postman is off. */
   postmanInfo?: () => Json;
+  /** "This letter was opened", signed by its card. From the Postman; omitted when there is no escalation ladder. */
+  reportOpened?: (letterId: bigint, publicKey: Uint8Array, sig: Uint8Array) => Promise<"ok" | "unknown" | "bad">;
 }
 
 const HEALTH_CACHE_MS = 5_000;
@@ -47,6 +49,7 @@ export function createApp(deps: AppDeps): Hono {
   const mutex = deps.mutex ?? new Mutex();
   const fundPerIp = createRateLimiter({ limit: cfg.fundPerIpPerHour, windowMs: 3_600_000, now });
   const fundEveryone = createRateLimiter({ limit: cfg.fundGlobalPerHour, windowMs: 3_600_000, now });
+  const openedPerIp = createRateLimiter({ limit: cfg.openedPerMinPerIp, now });
   const funder = createFunder({ chain, cfg, mutex, log });
 
   const app = new Hono();
@@ -180,6 +183,40 @@ export function createApp(deps: AppDeps): Hono {
       const out = await funder(raw?.address);
       log(`fund ip=${ipOf(c)} -> ${out.status}${out.body.error ? ` ${String(out.body.error)}` : ""}`);
       return c.json(out.body, out.status);
+    },
+  );
+
+  // ------------------------------------------------------------------ /opened
+
+  app.post(
+    "/opened",
+    async (c, next) => {
+      if (!deps.reportOpened) return c.json({ ok: false, error: "not_available" }, 404);
+      const a = openedPerIp.take(ipOf(c));
+      if (!a.ok) return limited(c, a.retryAfterSec, "ip");
+      await next();
+    },
+    bodyLimit({ maxSize: 32 * 1024, onError: (c) => c.json({ ok: false, error: "body_too_large" }, 413) }),
+    async (c) => {
+      let raw: { letterId?: unknown; pubkey?: unknown; sig?: unknown } = {};
+      try {
+        raw = await c.req.json();
+      } catch {
+        return c.json({ ok: false, error: "invalid_json" }, 400);
+      }
+      const hex = (v: unknown, bytes: number) => (typeof v === "string" && new RegExp(`^0x[0-9a-fA-F]{${bytes * 2}}$`).test(v) ? Uint8Array.from(Buffer.from(v.slice(2), "hex")) : undefined);
+      const id = typeof raw.letterId === "string" || typeof raw.letterId === "number" ? String(raw.letterId) : "";
+      const pubkey = hex(raw.pubkey, 2592);
+      const sig = hex(raw.sig, 4627);
+      if (!/^[1-9]\d{0,18}$/.test(id) || !pubkey || !sig) return c.json({ ok: false, error: "invalid_request" }, 400);
+      try {
+        const out = await deps.reportOpened!(BigInt(id), pubkey, sig);
+        log(`opened letter=${id} -> ${out}`);
+        return c.json(out === "ok" ? { ok: true } : { ok: false, error: out === "bad" ? "bad_signature" : "unknown_letter" }, out === "ok" ? 200 : out === "bad" ? 403 : 404);
+      } catch (err) {
+        log(`opened: failed (${describe(err)})`);
+        return c.json({ ok: false, error: "unavailable" }, 502);
+      }
     },
   );
 
