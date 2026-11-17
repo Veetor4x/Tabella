@@ -272,36 +272,26 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0, t0 = 0 }: { lines:
 }
 const Open = () => <EnvelopeOpen lines={DEMO_SHEET} />;
 
-/** A small envelope, a message bubble and a phone: the ways to reach someone. Used by the Surprise film. */
-const Phone = ({ x, y, w = 76, h = 140 }: { x: number; y: number; w?: number; h?: number }) => (
-  <g transform={`translate(${x} ${y})`}>
-    <rect className="sk" x="0" y="0" width={w} height={h} rx="12" />
-    <path className="sk soft" d={`M${w / 2 - 10} 10 H${w / 2 + 10}`} />
-    <path className="sk faint" d={`M${w / 2 - 12} ${h - 10} H${w / 2 + 12}`} />
-  </g>
-);
+/** A small envelope: the way we reach someone, for now. Used by the Surprise film. */
 const Mail = ({ x, y }: { x: number; y: number }) => (
   <g transform={`translate(${x} ${y})`}>
     <rect className="sk" x="0" y="0" width="62" height="42" rx="2" />
     <path className="sk soft" d="M0 0 L31 24 L62 0" />
   </g>
 );
-const Bubble = ({ x, y }: { x: number; y: number }) => (
-  <g transform={`translate(${x} ${y})`}>
-    <path className="sk" d="M8 0 H54 A8 8 0 0 1 62 8 V30 A8 8 0 0 1 54 38 H26 L14 48 V38 H8 A8 8 0 0 1 0 30 V8 A8 8 0 0 1 8 0 Z" />
-    <path className="sk faint" d="M12 14 H50 M12 24 H36" />
-  </g>
-);
 
-/** Keep it a surprise: how to reach them, and a question only they can answer. */
+/** Keep it a surprise: an email address, and a card with a question only they can answer. */
 function Reach() {
   return (
     <>
-      <Phone x={142} y={110} />
-      <g transform="translate(46 128)"><A a="rise" d={0.4}><Mail x={0} y={0} /></A></g>
-      <g transform="translate(252 112)"><A a="rise" d={0.9}><Bubble x={0} y={0} /></A></g>
-      <g transform="translate(120 290)">
-        <A a="pop" d={1.5} origin="60px 28px">
+      <g transform="translate(120 130)">
+        <A a="rise" d={0.4}>
+          <rect className="sk" x="0" y="0" width="120" height="80" rx="3" />
+          <path className="sk soft" d="M0 0 L60 46 L120 0" />
+        </A>
+      </g>
+      <g transform="translate(120 270)">
+        <A a="pop" d={1.4} origin="60px 28px">
           <rect className="sk" x="0" y="0" width="120" height="58" rx="6" />
           <text className="big" x="60" y="44" textAnchor="middle" style={{ fontSize: 44 }}>?</text>
         </A>
@@ -310,27 +300,25 @@ function Reach() {
   );
 }
 
-/** A second person, in case the first cannot be reached. */
+/** A second person, in case the first cannot be reached: a second envelope, with an arrow to it. */
 function Backup() {
   return (
     <>
-      <g transform="translate(70 120)"><Phone x={0} y={0} /></g>
-      <g transform="translate(212 150)"><A a="rise" d={0.7}><Phone x={0} y={0} /></A></g>
-      <A a="pop" d={1.6} origin="180px 190px"><path className="wxl" d="M152 196 H208 M198 186 L208 196 L198 206" /></A>
+      <g transform="translate(46 150)"><Mail x={0} y={0} /></g>
+      <g transform="translate(252 150)"><A a="rise" d={0.7}><Mail x={0} y={0} /></A></g>
+      <A a="pop" d={1.5} origin="180px 171px"><path className="wxl" d="M128 171 H232 M222 161 L232 171 L222 181" /></A>
     </>
   );
 }
 
-/** Tabella finds them: an email, a message, then a call. */
+/** Tabella finds them: an email, then a reminder, then a second person. */
 function Find() {
   return (
     <>
-      <g transform="translate(28 150)"><A a="pop" d={0.3} origin="31px 21px"><Mail x={0} y={0} /></A></g>
-      <g transform="translate(148 140)"><A a="pop" d={1.1} origin="31px 24px"><Bubble x={0} y={0} /></A></g>
-      <g transform="translate(262 120)">
-        <A a="pop" d={1.9} origin="38px 70px"><Phone x={0} y={0} w={62} h={112} /></A>
-        <A a="rise" d={2.4}><path className="wxl" d="M-12 40 A22 22 0 0 0 -12 74 M-24 32 A34 34 0 0 0 -24 82" /></A>
-      </g>
+      <g transform="translate(40 160)"><A a="pop" d={0.3} origin="31px 21px"><Mail x={0} y={0} /></A></g>
+      <g transform="translate(149 160)"><A a="pop" d={1.2} origin="31px 21px"><Mail x={0} y={0} /></A></g>
+      <g transform="translate(258 160)"><A a="pop" d={2.1} origin="31px 21px"><Mail x={0} y={0} /></A></g>
+      <g transform="translate(180 250)"><A a="rise" d={2.6}><path className="wxl" d="M-12 0 H12" /></A></g>
     </>
   );
 }
@@ -371,8 +359,8 @@ export const STORY_ALT: Record<StoryId, string> = {
   horizon: "A low sun on a horizon, I'm still here",
   clock: "A clock whose hands turn and settle, with a sun and a moon going round it",
   open: "An envelope opens: the seal cracks, the flap lifts and the letter slides out to be read",
-  reach: "A phone, an envelope and a message bubble, and a card with a question mark: how to reach someone, and a question only they can answer",
-  backup: "Two phones, and an arrow from the first to the second: a second person, in case the first cannot be reached",
-  find: "An email, a message and a ringing phone appear one after the other",
+  reach: "An envelope, and a card with a question mark: how to reach someone, and a question only they can answer",
+  backup: "Two envelopes, and an arrow from the first to the second: a second person, in case the first cannot be reached",
+  find: "Three envelopes appear one after the other: the email, a reminder, and a message to someone they trust",
   openq: "A question card, then an envelope opens: the seal cracks, the flap lifts and the letter slides out to be read",
 };

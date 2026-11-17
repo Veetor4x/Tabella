@@ -15,7 +15,7 @@ const SCRIPT = [
   "Some things should be said one day. Tabella helps you say them.", "Write a letter for someone you love.",
   "Keep it a surprise. Add how to reach them, and a question only they can answer.", "Add someone you trust, in case they can't be reached.",
   "Choose when it should open. If you go quiet for a while.", "Seal it. Safe even from future super-computers.", "Every so often, just tap: I'm still here.",
-  "And if one day you can't, Tabella finds them, by email, message or call.", "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
+  "And if one day you can't, Tabella finds them, and lets them know.", "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
 ];
 const INVITE_FIRST = "Write a letter for the people you love.";
 const VOICE_DIR = path.join(__dirname, "..", "src", "assets", "voice");
@@ -210,11 +210,11 @@ const prefOf = (page) => page.evaluate(() => localStorage.getItem("tabella.intro
     ok(before === 0 && (await p.locator(".opener").count()) === 1, "still version: nothing plays or advances by itself");
     const captions = [], hear = [], pics = [];
     // after the opener each beat is two stills: the picture, then the screen
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 17; i++) { // eight beats of two stills, then the last scene (no phone) is one still
       await p.getByRole("button", { name: "Next", exact: true }).click(); await p.waitForTimeout(450);
       const storyShown = (await p.locator(".cam-story svg.story.still").count()) === 1 && +(await p.locator(".cam-story").evaluate((e) => getComputedStyle(e).opacity)) > 0.9;
       pics.push(storyShown ? "picture" : "screen");
-      if (i % 2 === 1) { captions.push((await p.locator(".intro-caption").first().innerText()).trim()); hear.push(await p.getByRole("button", { name: "Hear this line" }).count()); }
+      if (i % 2 === 1 || i === 16) { captions.push((await p.locator(".intro-caption").first().innerText()).trim()); hear.push(await p.getByRole("button", { name: "Hear this line" }).count()); }
       if (i === 0 || i === 5 || i === 9 || i === 15) await shot(p, `09-still-${i + 1}`);
     }
     ok(pics.every((x, i) => x === (i % 2 === 0 ? "picture" : "screen")), `still version: each scene is a still picture, then its still screen (${pics.slice(0, 4).join(", ")}, ...)`);

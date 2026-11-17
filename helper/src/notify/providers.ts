@@ -5,7 +5,8 @@
  *   RESEND_API_KEY, RESEND_FROM                       email   (RESEND_FROM like  Tabella <letters@your-verified-domain>)
  *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN             SMS and calls
  *   TWILIO_FROM (SMS sender), TWILIO_VOICE_FROM       (calls; defaults to TWILIO_FROM)
- * A channel without its variables is simply off: its steps are skipped (once, with a log line).
+ * A channel without its variables is simply off, and its steps wait (EMAIL ONLY FOR NOW: with no TWILIO_* variables the
+ * ladder is email-only; adding the Twilio keys later switches texts and calls on, with no code change).
  */
 import type { Notifier } from "./types.js";
 
@@ -55,11 +56,11 @@ export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
 }
 
 /** Nothing leaves the machine: it only remembers what it would have sent (for tests and the dry-run test run). */
-export function createDryRunNotifier(): Notifier & { sent: { kind: "email" | "sms" | "call"; to: string; text: string; subject?: string }[] } {
+export function createDryRunNotifier(channels: Notifier["channels"] = { email: true, sms: true, call: true }): Notifier & { sent: { kind: "email" | "sms" | "call"; to: string; text: string; subject?: string }[] } {
   const sent: { kind: "email" | "sms" | "call"; to: string; text: string; subject?: string }[] = [];
   return {
     sent,
-    channels: { email: true, sms: true, call: true },
+    channels,
     async email(to, subject, text) {
       sent.push({ kind: "email", to, subject, text });
     },

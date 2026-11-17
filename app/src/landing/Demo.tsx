@@ -40,7 +40,7 @@ export const STEPS_SURPRISE = [
   { label: "Seal", caption: "Sealed on the phone. Only Mia can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
-  { label: "Found", caption: "Tabella finds Mia by email and message, then a call, then asks the backup to help.", ms: 9000 },
+  { label: "Found", caption: "Tabella finds Mia by email, sends a reminder, then asks the backup to help.", ms: 9000 },
   { label: "They open it", caption: "Mia answers the question only Mia knows, and the letter opens.", ms: 14500 },
 ] as const;
 
@@ -274,7 +274,7 @@ function Reach({ t }: { t: number }) {
         </div>
       </m.div>
       <m.div initial={false} animate={{ y: at(t, 5200) ? -300 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
-        <PersonFields id="demo-r" kind="recipient" heading="Who is it for?" showProblem={false} onChange={noop} p={{ name: typed("Mia", t, 700, 160), email: typed("mia@example.com", t, 1300, 55), phone: typed("+44 7700 900123", t, 2300, 70), question: typed(DEMO_Q, t, 3300, 40), answer: typed("Blue Heron", t, 5400, 110), relation: "" }} />
+        <PersonFields id="demo-r" kind="recipient" heading="Who is it for?" showProblem={false} onChange={noop} p={{ name: typed("Mia", t, 700, 160), email: typed("mia@example.com", t, 1300, 55), phone: "", question: typed(DEMO_Q, t, 3300, 40), answer: typed("Blue Heron", t, 5400, 110), relation: "" }} />
       </m.div>
     </div>
   );
@@ -287,7 +287,7 @@ function Backup({ t }: { t: number }) {
         <Lead>If Mia can't be reached, they can help.</Lead>
       </m.div>
       <m.div initial={false} animate={{ y: at(t, 4600) ? -190 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
-        <PersonFields id="demo-b" kind="backup" heading="Backup person 1" showProblem={false} onChange={noop} p={{ name: typed("Sofia", t, 500, 150), relation: typed("her oldest friend", t, 1100, 60), email: typed("sofia@example.com", t, 2100, 55), phone: typed("+44 7700 900456", t, 3000, 60), question: typed("Where did we first meet?", t, 4000, 40), answer: "", }} />
+        <PersonFields id="demo-b" kind="backup" heading="Backup person 1" showProblem={false} onChange={noop} p={{ name: typed("Sofia", t, 500, 150), relation: typed("her oldest friend", t, 1100, 60), email: typed("sofia@example.com", t, 2100, 55), phone: "", question: typed("Where did we first meet?", t, 4000, 40), answer: "", }} />
       </m.div>
     </div>
   );
@@ -303,8 +303,8 @@ function Found({ t }: { t: number }) {
     <div className="done-screen" style={{ paddingTop: 26 }}>
       <Headline text="Tabella finds *Mia*." />
       <ol className="found">
-        {row(900, "Email and message", "“Alex left you a letter. It's been kept safe until now.”", "a")}
-        {row(3000, "No answer? A call", "A short, calm message, and a gentle reminder.", "b")}
+        {row(900, "An email", "“Alex left you a letter. It's been kept safe until now.”", "a")}
+        {row(3000, "No answer? A gentle reminder", "The same link, a few days later.", "b")}
         {row(5200, "Still no answer? The backup", "“Alex left a letter for Mia and asked you to help them receive it.”", "c")}
       </ol>
     </div>

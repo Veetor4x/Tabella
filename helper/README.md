@@ -29,9 +29,11 @@ A "Keep it a surprise" letter carries, next to Part B, a **contact package** sea
 numbers, first names, the opening card's fingerprint). Only the Postman can read it. After the Postman publishes Part B it
 runs this ladder for the letter (real timings; in demo mode, 2 / 4 / 2 minutes):
 
-1. at once: email + SMS to the recipient ("<Owner> left you a letter. It's been kept safe until now." and a link to `/open?letter=<id>`);
-2. no open after 3 days: a phone call reading a short calm message, and a reminder SMS;
-3. no open after 7 days: backup 1 (email + SMS: "<Owner> left a letter for <Name> and asked you to help them receive it."), then backup 2 and 3, two days apart.
+1. at once: an email to the recipient ("<Owner> left you a letter. It's been kept safe until now." and a link to `/open?letter=<id>`);
+2. no open after 3 days: a reminder email;
+3. no open after 7 days: backup 1, by email ("<Owner> left a letter for <Name> and asked you to help them receive it."), then backup 2 and 3, two days apart.
+
+**Email only for now.** Text messages and phone calls are written and tested but sit behind a provider switch: they exist only while the Twilio variables below are set (an SMS with each email, and a call with the reminder). Turn them on later by adding the keys, with no code change. Phone numbers are optional in the app ("Text and call reminders coming soon."). Addresses on reserved domains (example.com and friends) are never sent to.
 
 It stops as soon as the letter is opened: the browser reports it with `POST /opened { letterId, pubkey, sig }`, a signature from
 the unlocked card that the Postman checks against the card fingerprint in the package. Every step is **claimed in the store
@@ -42,16 +44,16 @@ before it is sent** (so a second pass, a second process or a restart never sends
 
 | Variable | What it is |
 |---|---|
-| `RESEND_API_KEY` | Resend API key (email) |
-| `RESEND_FROM` | the sender, like `Tabella <letters@your-verified-domain>` (Resend's `onboarding@resend.dev` only reaches your own address) |
-| `TWILIO_ACCOUNT_SID` | Twilio account SID (SMS and calls) |
+| `RESEND_API_KEY` | Resend API key (email). **Needed now.** |
+| `RESEND_FROM` | the sender, like `Tabella <letters@your-verified-domain>` (Resend's `onboarding@resend.dev` only reaches your own address). **Needed now.** |
+| `TWILIO_ACCOUNT_SID` | later: Twilio account SID (SMS and calls) |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |
 | `TWILIO_FROM` | the Twilio number that sends SMS (E.164, like `+15550100123`) |
 | `TWILIO_VOICE_FROM` | optional: the number that places calls (defaults to `TWILIO_FROM`) |
 | `DATABASE_URL` | Postgres connection string, so "already sent" survives restarts (Render's free Postgres works). Without it the steps are remembered in memory only: a restart forgets them |
 | `APP_URL` | optional: the web app's address for the links (default `https://tabella-veetor4x.vercel.app`) |
 
-A channel without its variables is off: its steps are skipped (once, logged as "not set up") and the ladder carries on.
+A channel without its variables is off. With no email key at all the ladder waits (nothing is lost, and its clock starts when the first email can go out); `GET /health` shows `messages: { email, sms, call }` so you can check what is on, never the keys.
 
 The relay is **not trusted**. Every action carries the owner's or guardian's ML-DSA-87 signature,
 which `TabellaRegistry` verifies on-chain (`pqcVerify`). The helper can submit or withhold a call,

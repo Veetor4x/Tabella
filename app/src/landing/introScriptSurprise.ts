@@ -13,7 +13,7 @@ export const SURPRISE_LINES = [
   "Choose when it should open. If you go quiet for a while.",
   "Seal it. Safe even from future super-computers.",
   "Every so often, just tap: I'm still here.",
-  "And if one day you can't, Tabella finds them, by email, message or call.",
+  "And if one day you can't, Tabella finds them, and lets them know.",
   "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
 ] as const;
 
@@ -38,7 +38,7 @@ const BEATS: Beat[] = [
   { line: 6, story: "horizon", step: 5, label: "I'm still here", storyMs: STORY_MS, phoneMs: 5600, cues: [at(0, "t-sea"), at(2000, "tap", 0.5), at(PHONE_AT + 2400, "tap")] },
   // 7. a room settling; an old wall clock that slows and fades
   { line: null, story: "clock", step: 6, label: "Time passes", storyMs: STORY_MS, phoneMs: 6600, cues: [at(0, "t-room"), { at: 150, sfx: "clock", fadeAfter: 6000, fadeMs: 3800 }] },
-  // 8. a soft knock on wood; an email, a message, a call
+  // 8. a soft knock on wood; an email, a reminder, a second person
   { line: 7, story: "find", step: 7, label: "Found", storyMs: STORY_MS, phoneMs: 9000, cues: [at(0, "t-wood"), at(300, "tap", 0.5), at(1100, "tap", 0.5), at(PHONE_AT + 1200, "tap", 0.6), at(PHONE_AT + 3200, "tap", 0.6)] },
   // 9. tissue paper; the question, then the seal cracks and the letter slides out
   { line: 8, story: "openq", step: null, label: "They open it", storyMs: SURPRISE_FINAL_MS, phoneMs: 0, noPhone: true, cues: [at(0, "t-tissue"), at(2650, "crack"), at(3950, "open")] },

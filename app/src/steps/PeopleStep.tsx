@@ -17,7 +17,7 @@ export function PeopleStep(props: { draft: Draft; owner: string; patch: (p: Part
 
   const choice = (
     <div className="choices" role="radiogroup" aria-label="How should they receive it?">
-      <ChoiceCard name="mode" checked={mode === "surprise"} onChange={() => props.patch({ mode: "surprise" })} icon={<IconLetter />} title="Keep it a surprise" sub="They don't need to do anything. When the time comes, we find them: an email, a message, a call." />
+      <ChoiceCard name="mode" checked={mode === "surprise"} onChange={() => props.patch({ mode: "surprise" })} icon={<IconLetter />} title="Keep it a surprise" sub="They don't need to do anything. When the time comes, we find them by email." />
       <ChoiceCard name="mode" checked={mode === "invite"} onChange={() => props.patch({ mode: "invite" })} icon={<IconUser />} title="Invite someone" sub="They make their own opening card first, and you send them a link." />
     </div>
   );

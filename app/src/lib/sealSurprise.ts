@@ -56,7 +56,7 @@ export const isPhone = (s: string) => /^\+[1-9]\d{6,14}$/.test(cleanPhone(s));
 export function personProblem(p: SurprisePerson, kind: "recipient" | "backup"): string | null {
   if (!p.name.trim()) return "Add a first name.";
   if (!isEmail(p.email)) return "That email address doesn't look right.";
-  if (!isPhone(p.phone)) return "Add the phone number with its country code, like +44 7700 900123.";
+  if (p.phone.trim() && !isPhone(p.phone)) return "That phone number needs its country code, like +44 7700 900123, or leave it empty.";
   if (kind === "backup" && !(p.relation ?? "").trim()) return "Say who they are to them (a sister, an old friend...).";
   if (p.question.trim().length < 8) return "Write a question only they could answer.";
   if (p.answer.trim().length < 3) return "Add the answer.";

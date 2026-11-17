@@ -5,7 +5,8 @@
  *   Mia tries /open?letter=<id> early ("still safely sealed"); Alex goes quiet; the Postman publishes and starts its ladder;
  *   Mia gets wrong answers (kind messages, a slow-down), then the right one (different case and spaces) and opens the letter;
  *   Sofia, on another browser, answers her own question, then both "Send it to Mia" and "Open it with Mia" work.
- * Messages themselves are not sent here (no provider keys on the helper): the ladder logs "step ... skipped (not set up)".
+ * Email only for now: with RESEND_API_KEY on the helper and TEST_EMAIL set, the first email really goes to that inbox at release.
+ * Without a key the ladder waits ("waiting, no message channel is set up yet"); contacts on example.com are never sent to.
  *   cd app && npm run build && npx vite preview --port 5173 &
  *   node e2e/surprise.cjs [baseUrl] [outDir]      RECORD=<dir> records Mia's browser
  */
@@ -18,8 +19,12 @@ fs.mkdirSync(OUT, { recursive: true });
 const FORBIDDEN = /\b(ML-?KEM|ML-?DSA|KEM|DSA|ciphertext|encrypt\w*|decrypt\w*|signature|sign(ed|ing)?|mnemonic|seed|hash\w*|nonce|gas|blockchain|on-?chain|smart contract|private key|public key|keys?|token|crypto\w*|ethereum|solidity|argon\w*|scrypt)\b/i;
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 const LETTER = "Dear Mia,\n\nThe blue folder in my desk has everything. Look after Sofia, and let her look after you.\n\nAll my love, Alex.";
-const MIA = { name: "Mia", email: "mia.demo@example.com", phone: "+1 555 010 0123", question: "What did we call the little boat?", answer: "Blue Heron" };
-const SOFIA = { name: "Sofia", rel: "her oldest friend", email: "sofia.demo@example.com", phone: "+1 555 010 0456", question: "Where did we first meet?", answer: "The Lighthouse Cafe" };
+// TEST_EMAIL=you@gmail.com makes the helper send the real emails to YOUR inbox (Mia gets you@..., Sofia gets you+sofia@... ). Without it the
+// contacts are on a reserved domain (example.com): the helper never sends to those, so a test never reaches anyone.
+const TEST_EMAIL = (process.env.TEST_EMAIL || "").trim();
+const plus = (e, tag) => e.replace("@", `+${tag}@`);
+const MIA = { name: "Mia", email: TEST_EMAIL || "mia.demo@example.com", phone: "", question: "What did we call the little boat?", answer: "Blue Heron" };
+const SOFIA = { name: "Sofia", rel: "her oldest friend", email: TEST_EMAIL ? plus(TEST_EMAIL, "sofia") : "sofia.demo@example.com", phone: "", question: "Where did we first meet?", answer: "The Lighthouse Cafe" };
 const url = (p) => new URL(p, BASE).href;
 let failures = 0;
 const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) failures++; };
@@ -68,7 +73,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(true, "Continue with nothing filled in says what is missing, kindly");
   await a.locator("#r-name").fill(MIA.name);
   await a.locator("#r-email").fill(MIA.email);
-  await a.locator("#r-phone").fill(MIA.phone);
+  ok(await a.getByText("Text and call reminders coming soon.").count() >= 1, 'the phone number is optional, with the note "Text and call reminders coming soon."');
   await a.locator("#r-q").fill(MIA.question);
   await a.locator("#r-a").fill(MIA.answer);
   ok(await a.getByText("Pick something only Mia would know, not something online.").count() >= 1, 'the hint "Pick something only they\'d know, not something online."');
@@ -76,11 +81,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await a.locator("#b0-name").fill(SOFIA.name);
   await a.locator("#b0-rel").fill(SOFIA.rel);
   await a.locator("#b0-email").fill(SOFIA.email);
-  await a.locator("#b0-phone").fill(SOFIA.phone);
   await a.locator("#b0-q").fill(SOFIA.question);
   await a.locator("#b0-a").fill(SOFIA.answer);
   const honest = await a.locator(".honest").innerText();
-  ok(/only lock on delivery/.test(honest) && /depends on our service running/.test(honest) && /stored privately, for delivery only/.test(honest), "the honest copy: answers are the only lock, delivery depends on our service, contacts stored privately for delivery only");
+  ok(/only lock on delivery/.test(honest) && /depends on our service running/.test(honest) && /stored privately, for delivery only/.test(honest) && /by email/.test(honest), "the honest copy: answers are the only lock, delivery depends on our service, contacts stored privately for delivery only, email for now");
   await shot(a, "alex-02-who-filled", true);
   // the draft on this device never keeps an answer
   const draftRaw = await a.evaluate(() => localStorage.getItem("tabella.draft.v1"));
@@ -108,7 +112,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(!!L.letterId && L.surprise && L.surprise.backups === 1, `Alex sealed letter ${L.letterId} (2-minute timer), with 1 backup`);
   await a.waitForTimeout(3500);
   const done = await a.locator("main").innerText();
-  ok(/we'll find Mia by email, message or call/.test(done) && /your backup person/.test(done), "the sealed screen says how Mia will be found");
+  ok(/we'll find Mia by email/.test(done) && /your backup person/.test(done), "the sealed screen says how Mia will be found");
   await shot(a, "alex-04-sealed", true);
   // nothing secret is left on this device: the recipient's card was never saved, no answer anywhere
   const everything = await a.evaluate(() => JSON.stringify({ l: { ...localStorage }, s: { ...sessionStorage } }));

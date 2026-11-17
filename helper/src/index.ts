@@ -39,6 +39,7 @@ async function main() {
 
   const mutex = new Mutex(); // shared by /relay and the Postman: one nonce counter
   let postman: ReturnType<typeof createPostman> | undefined;
+  let messages: (() => { email: boolean; sms: boolean; call: boolean }) | undefined;
 
   if (cfg.postmanEnabled) {
     const keys = derivePostmanKeys(mnemonic);
@@ -48,14 +49,15 @@ async function main() {
     const notifier = createNotifier();
     const dbUrl = process.env.DATABASE_URL?.trim();
     const store = dbUrl ? await createPgStore(dbUrl) : createMemoryStore();
-    console.log(`Messages:  email ${notifier.channels.email ? "on" : "off"}, SMS ${notifier.channels.sms ? "on" : "off"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
+    console.log(`Messages:  email ${notifier.channels.email ? "on" : "off"}, SMS ${notifier.channels.sms ? "on" : "off (email only for now)"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
     const escalation = createEscalation({ notifier, store, appUrl: cfg.appUrl });
+    messages = () => notifier.channels;
     postman = createPostman({ chain, cfg, keys, mutex, escalation });
   } else {
     console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
   }
 
-  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info, reportOpened: postman?.reportOpened });
+  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info, reportOpened: postman?.reportOpened, messages });
   serve({ fetch: app.fetch, port: cfg.port }, (info) => console.log(`listening: http://localhost:${info.port}  (POST /relay, GET /health)`));
   if (postman) {
     // Catch-up first: after a sleep (free Render plan) this publishes anything that became overdue, right away.

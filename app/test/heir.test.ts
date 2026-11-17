@@ -77,3 +77,25 @@ describe("the sheet in the opening scene", () => {
     expect(sheetLines("Short note.")).toEqual(["Short note."]);
   });
 });
+
+describe("phone numbers are optional in a surprise letter", () => {
+  const base = { name: "Mia", email: "mia@gmail.com", phone: "", question: "What did we call the little boat?", answer: "Blue Heron", relation: "" };
+  it("a person with an email, a question and an answer is complete without a phone", async () => {
+    const { personProblem } = await import("../src/lib/sealSurprise");
+    expect(personProblem(base, "recipient")).toBeNull();
+    expect(personProblem({ ...base, phone: "+44 7700 900123" }, "recipient")).toBeNull();
+    expect(personProblem({ ...base, phone: "07700 900123" }, "recipient")).toMatch(/country code/);
+    expect(personProblem({ ...base, email: "nope" }, "recipient")).toMatch(/email/);
+    expect(personProblem({ ...base, relation: "" }, "backup")).toMatch(/who they are/i);
+    expect(personProblem({ ...base, relation: "her sister" }, "backup")).toBeNull();
+  });
+  it("the form says text and call reminders are coming, and nothing promises them", async () => {
+    const { readFileSync } = await import("node:fs");
+    const form = readFileSync(new URL("../src/steps/SurpriseForm.tsx", import.meta.url), "utf8");
+    expect(form).toContain("Text and call reminders coming soon.");
+    expect(form).toContain("Phone, with country code (optional)");
+    for (const f of ["../src/steps/PeopleStep.tsx", "../src/steps/DoneScreen.tsx", "../src/landing/Trust.tsx", "../src/landing/introScriptSurprise.ts", "../src/landing/Demo.tsx"]) {
+      expect(readFileSync(new URL(f, import.meta.url), "utf8")).not.toMatch(/email, message or call|by email and message|a message, a call|No answer\? A call/);
+    }
+  });
+});

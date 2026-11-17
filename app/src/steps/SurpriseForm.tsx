@@ -30,10 +30,11 @@ export function PersonFields(props: { id: string; kind: "recipient" | "backup"; 
       <Field>
         <input id={`${id}-email`} type="email" inputMode="email" value={p.email} placeholder="name@example.com" autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => set({ email: e.target.value })} />
       </Field>
-      <label htmlFor={`${id}-phone`}>Phone, with country code</label>
+      <label htmlFor={`${id}-phone`}>Phone, with country code (optional)</label>
       <Field>
         <input id={`${id}-phone`} type="tel" inputMode="tel" value={p.phone} placeholder="+44 7700 900123" autoComplete="off" onChange={(e) => set({ phone: e.target.value })} />
       </Field>
+      <p className="hint small">Text and call reminders coming soon.</p>
       <label htmlFor={`${id}-q`}>A private question only {p.name.trim() || "they"} could answer</label>
       <Field>
         <input id={`${id}-q`} type="text" value={p.question} placeholder="What did we call the boat?" autoComplete="off" onChange={(e) => set({ question: e.target.value })} />
@@ -82,7 +83,7 @@ export function SurpriseForm(props: { recipient: SurprisePerson; backups: Surpri
           <strong>The answers are the only lock on delivery,</strong> so choose private ones.
         </p>
         <p>Delivery depends on our service running.</p>
-        <p>Contact details are stored privately, for delivery only: only our Postman can read them.</p>
+        <p>Contact details are stored privately, for delivery only: only our Postman can read them. For now we reach people by email.</p>
       </aside>
     </div>
   );

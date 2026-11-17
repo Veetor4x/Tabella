@@ -32,6 +32,8 @@ export interface AppDeps {
   mutex?: Mutex;
   /** Public Postman info for /health (public key, last run). Omitted when the Postman is off. */
   postmanInfo?: () => Json;
+  /** Which message channels are set up (never the keys). Shown in /health. */
+  messages?: () => { email: boolean; sms: boolean; call: boolean };
   /** "This letter was opened", signed by its card. From the Postman; omitted when there is no escalation ladder. */
   reportOpened?: (letterId: bigint, publicKey: Uint8Array, sig: Uint8Array) => Promise<"ok" | "unknown" | "bad">;
 }
@@ -114,6 +116,7 @@ export function createApp(deps: AppDeps): Hono {
           },
           limits: { relayPerMinutePerIp: cfg.rateLimitPerMin, relayPerMinuteGlobal: cfg.globalRateLimitPerMin },
           ...(deps.postmanInfo ? { postman: deps.postmanInfo() } : {}),
+          ...(deps.messages ? { messages: deps.messages() } : {}),
           time: new Date(now()).toISOString(),
         },
       };

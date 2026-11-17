@@ -266,7 +266,7 @@ describe("the Surprise film", () => {
       "Choose when it should open. If you go quiet for a while.",
       "Seal it. Safe even from future super-computers.",
       "Every so often, just tap: I'm still here.",
-      "And if one day you can't, Tabella finds them, by email, message or call.",
+      "And if one day you can't, Tabella finds them, and lets them know.",
       "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
     ]);
     expect(S.voicePrefix).toBe("s");
