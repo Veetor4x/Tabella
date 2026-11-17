@@ -123,7 +123,7 @@ Never put a real wallet's recovery phrase in `.env`. Use a testnet-only account.
 | TabellaRegistry (current) | `0xbBC6d3eEE6f8472482d5a8860F4e2d65f4867aD0` |
 | Helper / relayer / Postman (EVM) | `0xdD6fDb80C583Ee7a28d98EbaeFa1Cf280995f518` |
 | Helper (native) | `qor1m4hahqx9s0h852xe36awlgw09qyetagc3ajfgp` |
-| PqcProbe (pqcVerify test contract) | `0xa9231db415a62a25d657e8d8011d283f935e0bdf` |
+| PqcProbe (pqcVerify test contract, spike 02, 16 Nov) | `0xa9231db415a62a25d657e8d8011d283f935e0bdf` (see `spike/README.md`) |
 | Earlier registry versions | `0x48E4e0B4957d7C8ED6ac3d38cF45A7e5fa03b78D` (first dated version, abandoned), `0xC0808aF18e2283dFE4d026315a462349561fFd1c` (original, no exact-date option). Letter numbers only mean something within one version; the app reads all three. |
 
 Explorer: https://explore.qore.network
