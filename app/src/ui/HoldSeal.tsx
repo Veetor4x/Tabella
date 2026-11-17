@@ -62,6 +62,18 @@ export function HoldSeal({ onSeal, busy, label = "Press and hold to seal" }: { o
     return () => document.removeEventListener("visibilitychange", f);
   }, []);
 
+  // if sealing did not work (the page says why), the button is ready to hold again
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy) {
+      fired.current = false;
+      p.current = 0;
+      setStamped(false);
+      draw();
+    }
+    wasBusy.current = busy;
+  }, [busy, draw]);
+
   const start = () => {
     if (busy || fired.current) return;
     holding.current = true;

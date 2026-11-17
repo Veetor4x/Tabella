@@ -133,7 +133,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log("... the browser makes Mia's card, the helper funds it, the key is registered, the card is locked with each answer, then sealed");
   const steps = new Set();
   const watch = setInterval(async () => { try { steps.add(await a.locator(".status-line").first().innerText()); } catch {} }, 700);
-  await a.getByRole("heading", { name: "Sealed." }).waitFor({ timeout: 300000 });
+  await Promise.race([
+    a.getByRole("heading", { name: "Sealed." }).waitFor({ timeout: 300000 }),
+    a.locator(".notice[role=alert]").waitFor({ timeout: 300000 }).then(async () => { throw new Error("sealing failed: " + (await a.locator(".notice[role=alert]").innerText())); }),
+  ]);
   clearInterval(watch);
   const sealedAt = Date.now();
   console.log(`   progress shown: ${[...steps].filter(Boolean).join(" -> ")}`);
