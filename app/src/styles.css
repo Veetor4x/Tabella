@@ -887,3 +887,8 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .stuck h2 { font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.1; margin: 0; }
 .stuck p { margin: 0; color: var(--soft); }
 .stuck-tag { justify-self: start; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+
+/* plain links inside text use the page's own ink, never the browser's blue */
+.hint a, .howthis a, a.inline, .faq-a a, .spare-ask a, .stuck a { color: var(--ink); }
+.hint a:visited, .howthis a:visited, a.inline:visited { color: var(--ink); }
+.howthis a, a.inline { text-decoration: none; font-weight: 500; }
