@@ -2,6 +2,8 @@ import { useState } from "react";
 import { loadLetters, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { APP_HOST, CARD_URL } from "../lib/config";
+import { CopyButton } from "../ui/CopyButton";
 import { Qr } from "../ui/Qr";
 import { Shell } from "./Shell";
 
@@ -14,24 +16,41 @@ function download(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** One printable card: the QR code, the code in words, and the one instruction that matters. */
-export function PrintCard(props: { kind: "owner" | "guardian" | "opening"; title: string; line: string; code: string; letterId?: string }) {
+/** One printable card: the QR code (which opens /card with the code filled in), the address, the code in words, and one plain line. */
+export function PrintCard(props: { kind: "owner" | "guardian" | "opening"; title: string; line: string; use: string; code: string; letterId?: string }) {
   return (
-    <article className={`print-card ${props.kind}`} aria-label={props.title}>
-      <header>
-        <span className="pc-brand">Tabella</span>
-        <span className="pc-no">{props.letterId ? `Letter ${props.letterId}` : "Opening card"}</span>
-      </header>
-      <div className="pc-body">
-        <Qr value={props.code} size={132} label={`QR code for the ${props.title}`} />
-        <div>
-          <h3>{props.title}</h3>
-          <p>{props.line}</p>
+    <>
+      <article className={`print-card ${props.kind}`} aria-label={props.title}>
+        <header>
+          <span className="pc-brand">Tabella</span>
+          <span className="pc-no">{props.letterId ? `Letter ${props.letterId}` : "Opening card"}</span>
+        </header>
+        <div className="pc-body">
+          <div className="pc-qr">
+            <Qr value={`${CARD_URL}#${props.code}`} size={132} label={`QR code for the ${props.title}`} />
+            <span className="pc-url">{APP_HOST}/card</span>
+          </div>
+          <div>
+            <h3>{props.title}</h3>
+            <p>{props.line}</p>
+            <p className="pc-use">{props.use}</p>
+          </div>
         </div>
-      </div>
-      <code className="mono">{props.code}</code>
-      <footer>Keep this safe, like a spare house key.</footer>
-    </article>
+        <code className="mono">{props.code}</code>
+        <div className="pc-copy no-print">
+          <CopyButton text={props.code} label="Copy code" className="btn glass share-btn" />
+        </div>
+        <footer>Keep this safe, like a spare house key.</footer>
+      </article>
+      <article className="print-card back" aria-label="How to use this card">
+        <h3>How to use this card</h3>
+        <ol>
+          <li>Go to {APP_HOST}/card</li>
+          <li>Scan this code or type it in</li>
+          <li>Follow the screen</li>
+        </ol>
+      </article>
+    </>
   );
 }
 
@@ -56,8 +75,8 @@ export function CardsView({ letter }: { letter: SealedLetter }) {
         )}
       </ol>
       <div className="print-area">
-        <PrintCard kind="owner" letterId={letter.letterId} title="I'm-still-here card" line="This is how you tell us you're okay, so your letter stays sealed. Scan it, or type the code, on a new phone." code={letter.ownerCard} />
-        {letter.guardianCard && <PrintCard kind="guardian" letterId={letter.letterId} title={`Guardian card for ${g}`} line={`For ${g} only. Lets them tap “They're okay” if you go quiet, up to twice.`} code={letter.guardianCard} />}
+        <PrintCard kind="owner" letterId={letter.letterId} title="I'm-still-here card" line="This is how you tell us you're okay, so your letter stays sealed." use="Use this on /card if you change phones." code={letter.ownerCard} />
+        {letter.guardianCard && <PrintCard kind="guardian" letterId={letter.letterId} title={`Guardian card for ${g}`} line={`For ${g} only. Lets them tap “They're okay” if you go quiet, up to twice.`} use={`Give this to ${g}. ${g} uses it on /card.`} code={letter.guardianCard} />}
       </div>
       <div className="no-print">
         <div className="restore-actions">

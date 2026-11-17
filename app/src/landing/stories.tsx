@@ -140,12 +140,9 @@ function SealScene() {
       {/* the seal is pressed */}
       <g transform="translate(0 20)">
         <A a="stamp" d={2.2} dur={0.55} origin="0px 0px" fill="backwards">
-          <g className="breathe">
-            <circle className="halo" r="26" />
-            <circle className="wx" r="17" />
-            <circle className="sk faint" r="11" />
-            <text className="stampT" x="0" y="5" textAnchor="middle">T</text>
-          </g>
+          <circle className="wx" r="17" />
+          <circle className="sk faint" r="11" />
+          <text className="stampT" x="0" y="5" textAnchor="middle">T</text>
         </A>
       </g>
     </g>

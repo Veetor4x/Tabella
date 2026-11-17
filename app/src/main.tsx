@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { Landing } from "./landing/Landing";
 import { CardsPage } from "./me/CardsPage";
+import { CardPage } from "./me/CardPage";
 import { JoinPage } from "./join/JoinPage";
 import { OpenPage } from "./open/OpenPage";
 import { GuardianPage } from "./me/GuardianPage";
@@ -11,12 +12,10 @@ import "@fontsource-variable/inter";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "./styles.css";
-import { initFx } from "./ui/fx";
 import { initSiteMusic } from "./lib/siteMusic";
 import { initTheme } from "./lib/theme";
 
 initTheme();
-initFx();
 initSiteMusic();
 const container = document.getElementById("root");
 if (!container) throw new Error("Root element #root not found");
@@ -29,6 +28,6 @@ if (window.location.hash === "#spike") {
 } else {
   // "/" is the front page; "/write" is the owner's flow
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
-  const page = path === "/write" ? <App /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : path === "/join" ? <JoinPage /> : path === "/open" ? <OpenPage /> : <Landing />;
+  const page = path === "/write" ? <App /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : path === "/card" ? <CardPage /> : path === "/join" ? <JoinPage /> : path === "/open" ? <OpenPage /> : <Landing />;
   root.render(<React.StrictMode>{page}</React.StrictMode>);
 }

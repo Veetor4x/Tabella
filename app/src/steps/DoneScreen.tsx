@@ -5,28 +5,12 @@ import { longDay } from "../lib/periods";
 import type { SealedLetter } from "../lib/storage";
 import { joinNames } from "../ui/steps";
 import { Button } from "../ui/Button";
+import { CopyButton } from "../ui/CopyButton";
 import { Headline } from "../ui/Headline";
 import { fadeUp, sealSettle } from "../ui/motion";
 import { PeopleMap } from "../ui/PeopleMap";
 import { playSealPress } from "../landing/sfx";
 import { WaxSeal } from "../ui/WaxSeal";
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  }
-}
 
 function download(filename: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
@@ -37,23 +21,15 @@ function download(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function Card(props: { title: string; blurb: string; code: string; file: string }) {
-  const [copied, setCopied] = useState(false);
+function Card(props: { title: string; blurb: string; use: string; code: string; file: string }) {
   return (
     <section className="card-box glass" aria-label={props.title}>
       <h2>{props.title}</h2>
       <p>{props.blurb}</p>
+      <p className="card-use">{props.use}</p>
       <code className="code mono">{props.code}</code>
       <div className="card-actions">
-        <Button
-          variant="glass"
-          onClick={async () => {
-            setCopied(await copyText(props.code));
-            setTimeout(() => setCopied(false), 2500);
-          }}
-        >
-          {copied ? "Copied" : "Copy"}
-        </Button>
+        <CopyButton text={props.code} label="Copy" className="btn glass" />
         <Button variant="glass" onClick={() => download(props.file, `Tabella: ${props.title}\nKeep this safe, like a spare house key.\n\n${props.code}\n`)}>
           Save a copy
         </Button>
@@ -105,6 +81,7 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
       <m.div {...fadeUp(2.4)}>
         <Card
           title={letter.releaseAt ? "Your card" : "Your I'm-still-here card"}
+          use="Use this on /card if you change phones."
           blurb={letter.releaseAt ? "Keep this safe, like a spare house key. It's the only way to cancel the letter before its day." : "Keep this safe, like a spare house key. It's how you tell us you're okay, so the letter stays sealed."}
           code={letter.ownerCard}
           file={letter.releaseAt ? "tabella-card.txt" : "tabella-im-still-here-card.txt"}
@@ -112,7 +89,8 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
         {letter.guardianCard && letter.guardianName && (
           <Card
             title={`${letter.guardianName}'s guardian card`}
-            blurb={`Give this to ${letter.guardianName}. It lets them tap “They're okay” if you go quiet.`}
+            use={`Give this to ${letter.guardianName}. ${letter.guardianName} uses it on /card.`}
+            blurb={`It lets them tap “They're okay” if you go quiet.`}
             code={letter.guardianCard}
             file="tabella-guardian-card.txt"
           />

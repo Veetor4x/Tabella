@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Headline } from "../ui/Headline";
 import { Reveal } from "./Reveal";
 
@@ -7,29 +7,14 @@ const QA = [
   { q: "Can Tabella read my letter?", a: "No. It's locked on your phone before it leaves, and our delivery helper only ever carries a half. It can't read your letter, and it can't pretend to be you." },
   { q: "What if I'm just away?", a: "Check in with one tap whenever you like, and the time starts again. A guardian you name can pause it if you're ill or travelling, and there's a countdown before anything opens. You can cancel any time before it opens. (A letter set for a date opens on that day, so it has no check-ins to forget.)" },
   { q: "What if they lose their card?", a: "That copy can't be recovered, because nobody keeps a spare. That's why you can name a backup person, and why it helps to keep the card somewhere safe, like a spare house key." },
+  { q: "I found or received a Tabella card. What do I do?", a: "Go to tabella-veetor4x.vercel.app/card, scan the card's code or type it in, and follow the screen. Tabella works out what kind of card it is: an I'm-still-here card takes you to your letters, a guardian card lets you tell Tabella someone is okay, and an opening card lets you read a letter left for you." },
   { q: "What happens to my email and phone number?", a: "The contact details you enter for your loved ones are sealed so that only the Postman can read them, and only once your letter is released. They're used for one thing: letting them know a letter is waiting. Today that's by email. Text and call reminders are coming soon, and phone numbers are optional." },
 ];
 
-/** A short FAQ whose answers unfold like a sheet of paper. The things below slide down to make room (movement only). */
+/** A short FAQ: tap a question to open its answer, tap again to close it. */
 export function Faq() {
   const [open, setOpen] = useState<number | null>(null);
-  const tops = useRef<number[] | null>(null);
-  const pieces = () => Array.from(document.querySelectorAll<HTMLElement>(".faq-item, .land-footer"));
-
-  const toggle = (i: number) => {
-    tops.current = pieces().map((el) => el.getBoundingClientRect().top);
-    setOpen(open === i ? null : i);
-  };
-  // make the room by sliding what is below into its new place, instead of jumping there
-  useLayoutEffect(() => {
-    const before = tops.current;
-    tops.current = null;
-    if (!before || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    pieces().forEach((el, i) => {
-      const d = (before[i] ?? 0) - el.getBoundingClientRect().top;
-      if (Math.abs(d) > 1) el.animate([{ transform: `translate3d(0, ${d}px, 0)` }, { transform: "translate3d(0, 0, 0)" }], { duration: 560, easing: "cubic-bezier(0.22, 1, 0.36, 1)" });
-    });
-  }, [open]);
+  const toggle = (i: number) => setOpen(open === i ? null : i);
 
   return (
     <section className="land-section" id="faq">

@@ -135,6 +135,6 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
     ...(sent.releaseAt ? { releaseAt: sent.releaseAt } : {}),
     ownerCard: cardEncode(ownerSeed),
     guardianCard: guardianSeed ? cardEncode(guardianSeed) : null,
-    surprise: { backups: backups.length },
+    surprise: { backups: backups.length, emailed: !!recipient.email?.trim() },
   };
 }

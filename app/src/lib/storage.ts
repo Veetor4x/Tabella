@@ -63,7 +63,7 @@ export interface SealedLetter {
   /** "Your guardian card", to hand to the guardian */
   guardianCard: string | null;
   /** a "keep it a surprise" letter: the recipient's card is NOT here (it is locked with their answers, nowhere else) */
-  surprise?: { backups: number };
+  surprise?: { backups: number; /** false when no email was given for the recipient */ emailed?: boolean };
 }
 
 const DRAFT_KEY = "tabella.draft.v1";
@@ -124,4 +124,9 @@ export function saveGuardian(e: GuardianEntry): boolean {
 }
 export function removeLetter(letterId: string): boolean {
   return write(LETTERS_KEY, loadLetters().filter((l) => l.letterId !== letterId));
+}
+
+/** True when this device already holds a card of its own (an I'm-still-here card or a guardian card). */
+export function deviceHasCard(): boolean {
+  return loadLetters().some((l) => !!l.ownerCard) || loadGuardian().length > 0;
 }

@@ -1,11 +1,12 @@
 import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import type { ReactNode } from "react";
 import { Background } from "../ui/Background";
+import { Notices } from "../ui/Notices";
 import { SoundWave } from "../ui/SoundWave";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 /** The frame around My letters, the guardian page and the cards: the same pearl, ink and glass as the rest. */
-export function Shell({ children, here, className = "" }: { children: ReactNode; here: "me" | "guardian" | "cards" | "join" | "open"; className?: string }) {
+export function Shell({ children, here, className = "" }: { children: ReactNode; here: "me" | "guardian" | "cards" | "card" | "join" | "open"; className?: string }) {
   return (
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
@@ -25,6 +26,9 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
                   <a href="/guardian" aria-current={here === "guardian" ? "page" : undefined}>
                     Guardian
                   </a>
+                  <a href="/card" aria-current={here === "card" ? "page" : undefined}>
+                    Use a card
+                  </a>
                   <a href="/write">Write</a>
                 </nav>
                 )}
@@ -37,6 +41,7 @@ export function Shell({ children, here, className = "" }: { children: ReactNode;
             <main>{children}</main>
             <footer>A demo on a test network. Please don't write real secrets yet.</footer>
           </div>
+          <Notices />
         </div>
       </MotionConfig>
     </LazyMotion>

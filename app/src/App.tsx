@@ -10,6 +10,7 @@ import { WhenStep } from "./steps/WhenStep";
 import { PeopleStep } from "./steps/PeopleStep";
 import { WriteStep } from "./steps/WriteStep";
 import { Background } from "./ui/Background";
+import { Notices } from "./ui/Notices";
 import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
 import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
@@ -157,6 +158,7 @@ export function App() {
             </main>
             <footer>A demo on a test network. Please don't write real secrets yet.</footer>
           </div>
+          <Notices />
           <m.div className="veil" aria-hidden="true" initial={false} animate={{ opacity: veil ? 1 : 0 }} transition={veilTransition} style={{ pointerEvents: veil ? "auto" : "none" }} />
         </div>
       </MotionConfig>

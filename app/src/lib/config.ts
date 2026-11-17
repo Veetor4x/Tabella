@@ -13,3 +13,7 @@ export const EXPLORER = "https://explore.qore.network";
 // Functions, not constants, so nothing touches `window` at import time.
 export const restUrl = () => `${window.location.origin}/lcd-testnet`;
 export const evmRpcUrl = () => `${window.location.origin}/evm-testnet`;
+
+/** The address printed on every card, under the QR code: one door for every kind of card. */
+export const APP_HOST = "tabella-veetor4x.vercel.app";
+export const CARD_URL = `https://${APP_HOST}/card`;

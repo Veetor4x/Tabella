@@ -3,24 +3,22 @@ import { useEffect, useRef, useState } from "react";
 import { identityFromCard, type Identity } from "../lib/heir";
 import { friendlyError, SealProblem } from "../lib/helper";
 import { openLetter, reportOpened } from "../lib/openLetter";
-import { announceOpened } from "../lib/openedSignal";
-import { DecodedText } from "../ui/Decode";
-import { Signature, signerOf } from "../ui/Signature";
 import { SurpriseOpen } from "./SurpriseOpen";
 import { findLettersForHeir, readHeirLetter, type HeirLetter } from "../lib/registry";
 import { Story, sheetLines } from "../landing/stories";
+import { OpenEnvelope } from "../ui/OpenEnvelope";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
 import { Headline } from "../ui/Headline";
-import { PenLine } from "../ui/PenLine";
 import { cardAppear, EASE } from "../ui/motion";
 import { QrScanner } from "../ui/QrScanner";
 import { Shell } from "../me/Shell";
 
-const KEY = "tabella.open.v1"; // this tab only: the card is kept in session storage so a refresh does not ask again
+export const OPEN_CARD_KEY = "tabella.open.v1";
+const KEY = OPEN_CARD_KEY; // this tab only: the card is kept in session storage so a refresh does not ask again
 
 /** Time the scene needs: the envelope opens, the camera comes in over about 2.6 s, then holds for a moment. */
-export const OPEN_SCENE_MS = 8800;
+export const OPEN_SCENE_MS = 6000;
 
 function CardFinder({ onFound }: { onFound: (id: Identity, letters: HeirLetter[]) => void }) {
   const [code, setCode] = useState("");
@@ -81,7 +79,6 @@ function CardFinder({ onFound }: { onFound: (id: Identity, letters: HeirLetter[]
         </div>
       )}
       <p className="status-line" role="status" aria-live="polite">
-        {busy && <PenLine label="Looking" />}
         {busy ? "Looking for your letter…" : message ?? ""}
       </p>
       <div className="restore-actions">
@@ -107,7 +104,6 @@ export function LetterCard({ id, first, autoOpen = false }: { id: Identity; firs
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [decoded, setDecoded] = useState(false);
   const calm = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -140,7 +136,6 @@ export function LetterCard({ id, first, autoOpen = false }: { id: Identity; firs
     try {
       const t = await openLetter(id, letter);
       setText(t);
-      announceOpened(); // the envelope on the front page's cloud floats away
       void reportOpened(id.card, letter.id); // a surprise letter's Postman stops asking (quiet for ordinary letters)
       if (calm) setPhase("reading");
       else {
@@ -158,7 +153,7 @@ export function LetterCard({ id, first, autoOpen = false }: { id: Identity; firs
     return (
       <m.div className="letter-open" {...cardAppear}>
         <Panel>
-          <Story id="open" lines={sheetLines(text)} />
+          <OpenEnvelope lines={sheetLines(text)} />
         </Panel>
         <button type="button" className="link skip-open" onClick={() => { clearTimeout(timer.current); setPhase("reading"); }}>
           Skip
@@ -169,8 +164,7 @@ export function LetterCard({ id, first, autoOpen = false }: { id: Identity; firs
   if (phase === "reading" && text !== null)
     return (
       <m.article className="reader glass" aria-label="Your letter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, ease: EASE }}>
-        <DecodedText text={text} onDone={() => setDecoded(true)} />
-        <Signature name={signerOf(text)} play={decoded || !!calm} />
+        {text.split("\n").map((l, i) => (l.trim() ? <p key={i}>{l}</p> : <br key={i} />))}
         {!calm && (
           <button type="button" className="link" onClick={() => setPhase("opening")}>
             Watch it open again
@@ -196,8 +190,10 @@ export function HeirStateView({ state, busy = false, pressed = false, error, onO
           <p className="lead small" role="status" aria-live="polite">
             It's being delivered to you now. This page updates by itself, so you can stay here a moment.
           </p>
-          <div className="waiting-pen">
-            <PenLine label="Waiting for your letter" />
+          <div className="waiting-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
           </div>
         </>
       )}
@@ -271,7 +267,7 @@ export function OpenPage() {
             </div>
           ) : restoring ? (
             <p className="lead" key="r" role="status">
-              <PenLine label="Looking" /> Looking for your letter…
+              Looking for your letter…
             </p>
           ) : (
             <CardFinder key="finder" onFound={(id, letters) => setFound({ id, letters })} />

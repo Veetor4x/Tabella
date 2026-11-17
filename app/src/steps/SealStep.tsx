@@ -11,7 +11,6 @@ import { parseAddress } from "../lib/addr";
 import { IconLetter } from "../ui/icons";
 import { PeopleMap } from "../ui/PeopleMap";
 import { HoldSeal } from "../ui/HoldSeal";
-import { PenLine } from "../ui/PenLine";
 import { StepFrame } from "../ui/StepFrame";
 import { WaxSeal } from "../ui/WaxSeal";
 import { isSoundOn, primeAudio } from "../lib/sound";
@@ -131,7 +130,6 @@ export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () =
     >
       <PeopleMap root={root} people={names} guardian={!dated && draft.guardian ? draft.guardian.name.trim() : null} variant="day" working={busy} />
       <p className="status-line center" role="status" aria-live="polite">
-        {busy && <PenLine label="Sealing" />}
         {busy ? (slow ? "The Postman is waking up. This can take a minute…" : progress) : ""}
       </p>
       <p className="hint center">{dated ? (draft.dateDemo ? "Opens 2 minutes after you seal it, whether or not you check in." : `Opens at the start of ${datedLabel}, whether or not you check in. You can cancel it until then.`) : when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>

@@ -4,7 +4,6 @@ import { becomeReady, identityFromCard, isOpeningKeyRegistered, newCard, registe
 import { friendlyError } from "../lib/helper";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
-import { PenLine } from "../ui/PenLine";
 import { IconCheck } from "../ui/icons";
 import { EASE, cardAppear } from "../ui/motion";
 import { SharePanel } from "../ui/SharePanel";
@@ -173,8 +172,10 @@ export function JoinPage() {
             <p className="lead" role="status" aria-live="polite">
               {STEP_TEXT[progress]}
             </p>
-            <div className="waiting-pen">
-              <PenLine label="Working" />
+            <div className="waiting-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
             </div>
             <p className="hint">This can take up to a minute. Please keep this page open.</p>
           </m.div>
@@ -199,7 +200,7 @@ export function JoinPage() {
             <Headline text="Your opening card is *ready*." />
             <p className="lead no-print">This card is what opens the letter. Print it or save a copy.</p>
             <div className="print-area">
-              <PrintCard kind="opening" title="Your opening card" line={`Scan it, or type the code, on the day you open your letter. It works on any phone.`} code={card} />
+              <PrintCard kind="opening" title="Your opening card" line={`This card is what opens your letter. It works on any phone.`} use="Use this on /card to open your letter." code={card} />
             </div>
             <div className="card-actions no-print">
               <Button variant="glass" onClick={() => window.print()}>

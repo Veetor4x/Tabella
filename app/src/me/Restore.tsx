@@ -5,7 +5,6 @@ import { friendlyError } from "../lib/helper";
 import { findLetters } from "../lib/registry";
 import { loadLetters, saveGuardian, saveLetter, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
-import { PenLine } from "../ui/PenLine";
 import { Field } from "../ui/Field";
 import { QrScanner } from "../ui/QrScanner";
 
@@ -75,7 +74,6 @@ export function RestorePanel({ role, onDone }: { role: "owner" | "guardian"; onD
         />
       )}
       <p className="status-line" role="status" aria-live="polite">
-        {busy && <PenLine label="Looking" />}
         {busy ? "Looking for your letters…" : message ?? ""}
       </p>
       <div className="restore-actions">

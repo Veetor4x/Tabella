@@ -18,14 +18,9 @@ export const screenVariants = {
 
 /** A headline word rising through its mask. */
 export const headlineContainer = { hidden: {}, show: { transition: { staggerChildren: 0.075, delayChildren: 0.12 } } };
-/** A headline word coming into focus: a soft copy of it fades out while the sharp one fades in and settles (a cross-fade, so only opacity and a small rise move). */
-export const wordBlur = {
-  hidden: { opacity: 1 },
-  show: { opacity: 0, transition: { duration: 1.0, ease: EASE } },
-};
-export const wordSharp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
+export const maskWord = {
+  hidden: { y: "115%" },
+  show: { y: "0%", transition: { duration: 0.8, ease: EASE } },
 };
 
 export const fadeUp = (delay = 0) => ({

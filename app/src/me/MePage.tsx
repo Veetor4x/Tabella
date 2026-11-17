@@ -1,19 +1,37 @@
 import { AnimatePresence, m } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cancelLetter, checkIn } from "../lib/actions";
 import { friendlyError } from "../lib/helper";
+import { notify } from "../lib/notices";
 import { type LetterView } from "../lib/registry";
 import { countdown } from "../lib/time";
 import { loadLetters, saveLetter, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
-import { PenLine } from "../ui/PenLine";
 import { EASE, cardAppear } from "../ui/motion";
 import { Ring } from "../ui/Ring";
 import { useLetter, useNow, useRoute } from "./hooks";
 import { CheckInView, StatePill, namesOf, nextLine, type CheckInPhase } from "./parts";
 import { RestorePanel } from "./Restore";
 import { Shell } from "./Shell";
+
+/** One plain line under the ring: how this letter will reach the people it is for. */
+export function deliveryLine(saved: SealedLetter): string {
+  const name = saved.heirs[0]?.name?.trim() || "them";
+  if (saved.surprise) return saved.surprise.emailed === false ? "Add an email so we can reach them" : `Delivery ready: we'll email ${name} when it opens`;
+  return "Delivery ready: they'll open it with the card or link you gave them";
+}
+
+function HowThisWorks() {
+  return (
+    <aside className="howthis glass" aria-label="How this works">
+      <strong>How this works</strong>
+      <p>
+        Tap I'm still here every so often. On a new phone, use <a className="inline" href="/card">Restore</a> and your I'm-still-here card.
+      </p>
+    </aside>
+  );
+}
 
 function ListRow({ saved, go }: { saved: SealedLetter; go: (p: string) => void }) {
   const { view, failed } = useLetter(saved.letterId, 15_000);
@@ -42,13 +60,20 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const pauses = useRef<number | null>(null);
+  // when a guardian pauses the timer, say so
+  useEffect(() => {
+    if (!view) return;
+    if (pauses.current !== null && view.pausesUsed > pauses.current) notify(`${saved.guardianName || "Your guardian"} paused the timer. You have more time.`);
+    pauses.current = view.pausesUsed;
+  }, [view?.pausesUsed]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (phase !== "done") return;
     const t = setTimeout(() => setPhase("idle"), 14_000); // the thanks fades back to the plain screen
     return () => clearTimeout(t);
   }, [phase]);
 
-  if (!view) return <p className="lead"><PenLine label="Looking" /> Looking for your letter…</p>;
+  if (!view) return <p className="lead">Looking for your letter…</p>;
   const names = namesOf(saved.heirs.map((h) => h.name), saved.heirs.map((h) => h.evm));
 
   async function tap() {
@@ -58,6 +83,7 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
       await checkIn(saved.ownerCard, BigInt(saved.letterId));
       await refresh();
       setPhase("done");
+      notify(`Thanks${saved.ownerName ? `, ${saved.ownerName}` : ""}. Your letter stays sealed.`);
     } catch (e) {
       setError(friendlyError(e));
       setPhase("idle");
@@ -71,6 +97,7 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
       await cancelLetter(saved.ownerCard, BigInt(saved.letterId));
       await refresh();
       setConfirming(false);
+      notify("Your letter was cancelled. Nobody will be able to open it.");
     } catch (e) {
       setError(friendlyError(e));
     } finally {
@@ -90,6 +117,7 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
         phase={phase}
         error={error}
         onTap={tap}
+        statusLine={deliveryLine(saved)}
         extra={
           <>
             <dl className="facts glass">
@@ -159,9 +187,13 @@ export function MePage() {
   return (
     <Shell here="me">
       {detail ? (
-        <Detail saved={detail} go={go} onChanged={reload} />
+        <>
+          <HowThisWorks />
+          <Detail saved={detail} go={go} onChanged={reload} />
+        </>
       ) : (
         <div className="step">
+          <HowThisWorks />
           <Headline text="My *letters*" />
           <p className="lead">Every letter you've sealed on this phone, and how long until each one needs you.</p>
           {letters.length === 0 ? (
@@ -177,6 +209,9 @@ export function MePage() {
             <a className="btn glass" href="/write">
               Write a letter
             </a>
+          </p>
+          <p className="center hint">
+            Got a card from someone else? <a href="/card">Use it here.</a>
           </p>
           <RestorePanel role="owner" onDone={reload} />
         </div>
