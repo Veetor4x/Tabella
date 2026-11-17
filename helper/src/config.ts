@@ -50,6 +50,8 @@ export interface Config {
   // --- messages to the people a surprise letter is for
   /** The web app's address, used in the links we send. */
   appUrl: string;
+  /** Letters whose ladder is finished for good (old test letters): nothing more is ever sent for them. LADDER_FINISHED_LETTERS="1,2,3" */
+  finishedLetters: string[];
   openedPerMinPerIp: number;
 
   // --- Postman
@@ -116,6 +118,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     fundGlobalPerHour: num(env, "FUND_GLOBAL_PER_HOUR", 40),
 
     appUrl: (env.APP_URL?.trim() || "https://tabella-veetor4x.vercel.app").replace(/\/+$/, ""),
+    finishedLetters: (env.LADDER_FINISHED_LETTERS ?? "").split(/[\s,]+/).filter((x) => /^\d+$/.test(x)),
     openedPerMinPerIp: num(env, "OPENED_PER_MIN", 6),
 
     postmanEnabled: (env.POSTMAN_ENABLED?.trim() ?? "true").toLowerCase() !== "false",

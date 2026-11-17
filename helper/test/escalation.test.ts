@@ -362,3 +362,25 @@ describe("the email wrapper", () => {
   });
 });
 
+describe("finishing an old letter for good", () => {
+  it("marks it finished once, and then nothing is ever sent for it, even after a restart (the same store)", async () => {
+    const store = createMemoryStore();
+    const notifier = createDryRunNotifier();
+    const logs: string[] = [];
+    const esc = createEscalation({ notifier, store, appUrl: "https://app.test", log: (l) => logs.push(l) });
+    expect(await esc.markFinished("3")).toBe(true);
+    expect(await esc.markFinished("3")).toBe(false); // quiet: only the first time says anything
+    expect(logs.filter((l) => /marked finished/.test(l)).length).toBe(1);
+    // a new helper process on the same database
+    const esc2 = createEscalation({ notifier, store, appUrl: "https://app.test" });
+    const pkg = { recipient: { name: "Mia", email: "mia@gmail.com" }, backups: [], owner: "Alex" } as unknown as Parameters<typeof esc2.run>[1];
+    const r = await esc2.run("3", pkg);
+    expect(r.finished).toBe(true);
+    expect(notifier.sent.length).toBe(0);
+  });
+  it("reads LADDER_FINISHED_LETTERS", () => {
+    const cfg = loadConfig({ REGISTRY_ADDRESS: REGISTRY, LADDER_FINISHED_LETTERS: "1, 2,3 x 8" });
+    expect(cfg.finishedLetters).toEqual(["1", "2", "3", "8"]);
+  });
+});
+

@@ -103,7 +103,7 @@ export function createEscalation(deps: EscalationDeps) {
   async function run(letterId: string, pkg: PostmanPackage): Promise<PassReport> {
     const report: PassReport = { sent: [], skipped: [], failed: [], finished: false, opened: false };
     const done = await store.steps(letterId);
-    if (done.has("opened")) return { ...report, finished: true, opened: true };
+    if (done.has("opened") || done.has("finished")) return { ...report, finished: true, opened: done.has("opened") };
 
     // the clock starts when the first message CAN go out (no key yet = nothing starts, nothing is lost)
     if (!notifier.channels.email && !notifier.channels.sms) {
@@ -121,7 +121,8 @@ export function createEscalation(deps: EscalationDeps) {
     for (const s of steps) {
       if (s.at > elapsed) continue;
       // the letter may have been opened while we were busy: look again before every step
-      if ((await store.steps(letterId)).has("opened")) return { ...report, finished: true, opened: true };
+      const now2 = await store.steps(letterId);
+      if (now2.has("opened") || now2.has("finished")) return { ...report, finished: true, opened: now2.has("opened") };
       if (done.has(s.key)) continue;
       if (!notifier.channels[s.channel]) {
         // not set up yet (no key): leave the step waiting, so it goes out the moment the key is added
@@ -162,6 +163,16 @@ export function createEscalation(deps: EscalationDeps) {
     return first;
   }
 
-  return { run, markOpened };
+  /**
+   * Finish a letter's ladder for good without it having been opened (old test letters): the same "this letter is done" record in the database,
+   * so after a restart nothing is retried for it. Quiet: one log line, only the first time.
+   */
+  async function markFinished(letterId: string): Promise<boolean> {
+    const first = await store.claim(letterId, "finished", now());
+    if (first) log(`letter #${letterId}: marked finished, no more messages will be sent for it`);
+    return first;
+  }
+
+  return { run, markOpened, markFinished };
 }
 export type Escalation = ReturnType<typeof createEscalation>;

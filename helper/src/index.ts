@@ -51,6 +51,7 @@ async function main() {
     const store = dbUrl ? await createPgStore(dbUrl) : createMemoryStore();
     console.log(`Messages:  email ${notifier.channels.email ? "on" : "off"}, SMS ${notifier.channels.sms ? "on" : "off (email only for now)"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
     const escalation = createEscalation({ notifier, store, appUrl: cfg.appUrl });
+    for (const id of cfg.finishedLetters) await escalation.markFinished(id); // old test letters: done, kept quiet
     messages = () => notifier.channels;
     postman = createPostman({ chain, cfg, keys, mutex, escalation });
   } else {

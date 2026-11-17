@@ -51,6 +51,7 @@ before it is sent** (so a second pass, a second process or a restart never sends
 | `TWILIO_FROM` | the Twilio number that sends SMS (E.164, like `+15550100123`) |
 | `TWILIO_VOICE_FROM` | optional: the number that places calls (defaults to `TWILIO_FROM`) |
 | `DATABASE_URL` | Postgres connection string, so "already sent" survives restarts (Render's free Postgres works). Without it the steps are remembered in memory only: a restart forgets them |
+| `LADDER_FINISHED_LETTERS` | optional: letter numbers whose ladder is finished for good (old test letters), e.g. `1,2,3,4,5,6,7,8`: at startup each gets a "finished" record in the database, so nothing is ever retried for it |
 | `APP_URL` | optional: the web app's address for the links (default `https://tabella-veetor4x.vercel.app`) |
 
 A channel without its variables is off. With no email key at all the ladder waits (nothing is lost, and its clock starts when the first email can go out); `GET /health` shows `messages: { email, sms, call }` so you can check what is on, never the keys.
