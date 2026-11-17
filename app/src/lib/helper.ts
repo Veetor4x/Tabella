@@ -79,6 +79,8 @@ export function friendlyError(err: unknown): string {
       if (err.reason === "NotOpen") return "This letter has already opened or been cancelled, so nothing can change now.";
       if (err.reason === "WrongKey") return "That card doesn't belong to this letter.";
       if (err.reason === "NoGuardian") return "This letter has no guardian.";
+      if (err.reason === "DatedLetter") return "This letter opens on its day, so there is nothing to check in or pause.";
+      if (err.reason === "BadDate") return "That day doesn't work. Pick a day from tomorrow, up to 50 years ahead.";
     }
     switch (err.code) {
       case "helper_unreachable":

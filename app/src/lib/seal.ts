@@ -10,6 +10,7 @@ import {
   MAX_LETTER_BYTES,
   actionMessage,
   cardEncode,
+  createDatedPayloadHash,
   createPayloadHash,
   encryptLetter,
   keyHash,
@@ -38,6 +39,8 @@ export interface SealInput {
   quiet: number;
   warning: number;
   whenLabel: string;
+  /** a dated letter: the unix time it opens, or "demo" for 2 minutes from now. Then there is no quiet time and no guardian. */
+  releaseAt?: number | "demo";
 }
 
 /** The steps shown to the person while sealing. */
@@ -87,6 +90,72 @@ export function buildCreateBody(p: {
   };
 }
 
+export function buildDatedBody(p: {
+  heirs: Hex[];
+  releaseAt: number;
+  letterCiphertext: Uint8Array;
+  partAEnvelope: Uint8Array;
+  partBForPostman: Uint8Array;
+  ownerPublicKey: Uint8Array;
+  sig: Uint8Array;
+}) {
+  return {
+    fn: "createDatedLetter",
+    args: {
+      heirs: p.heirs,
+      releaseAt: String(p.releaseAt),
+      letterCiphertext: toHex(p.letterCiphertext),
+      partAEnvelope: toHex(p.partAEnvelope),
+      partBForPostman: toHex(p.partBForPostman),
+    },
+    pubkey: toHex(p.ownerPublicKey),
+    sig: toHex(p.sig),
+  };
+}
+
+/** The network's own clock (unix seconds): a dated letter's day is checked against it, not against the phone's. */
+export async function chainNowSeconds(): Promise<number> {
+  const client = createPublicClient({ transport: http(evmRpcUrl()) });
+  return Number((await client.getBlock({ blockTag: "latest" })).timestamp);
+}
+
+export const DEMO_DATED_SECONDS = 120;
+
+/**
+ * Sign a new letter (ordinary or dated) and have the helper send it. If someone else sealed a letter a moment ago,
+ * our number is taken: look again, once or twice. Returns the new letter's number and, for a dated letter, its date.
+ */
+export async function sendCreate(p: {
+  ownerSeed: Uint8Array;
+  ownerPublicKey: Uint8Array;
+  heirs: Hex[];
+  guardianKeyHash: Hex;
+  quiet: number;
+  warning: number;
+  releaseAt?: number | "demo";
+  letterCiphertext: Uint8Array;
+  partAEnvelope: Uint8Array;
+  partBForPostman: Uint8Array;
+}): Promise<{ txHash: string; letterId: bigint; releaseAt?: number }> {
+  const releaseAt = p.releaseAt === "demo" ? (await chainNowSeconds()) + DEMO_DATED_SECONDS : p.releaseAt;
+  const parts = { heirs: p.heirs, letterCiphertext: p.letterCiphertext, partAEnvelope: p.partAEnvelope, partBForPostman: p.partBForPostman };
+  const payloadHash = releaseAt ? createDatedPayloadHash({ ...parts, releaseAt }) : createPayloadHash({ ...parts, guardianKeyHash: p.guardianKeyHash, quietPeriod: p.quiet, warningPeriod: p.warning });
+  for (let attempt = 0; ; attempt++) {
+    const letterId = await nextLetterId();
+    const sig = signAction(p.ownerSeed, actionMessage({ chainId: EVM_CHAIN_ID, registry: REGISTRY, letterId, action: releaseAt ? "CREATE_DATED" : "CREATE", nonce: 0, payloadHash }));
+    try {
+      const body = releaseAt
+        ? buildDatedBody({ ...parts, releaseAt, ownerPublicKey: p.ownerPublicKey, sig })
+        : buildCreateBody({ ...parts, guardianKeyHash: p.guardianKeyHash, quietPeriod: p.quiet, warningPeriod: p.warning, ownerPublicKey: p.ownerPublicKey, sig });
+      const { txHash } = await relay(body);
+      return { txHash, letterId, releaseAt };
+    } catch (e) {
+      const raced = e instanceof HelperError && e.code === "would_revert" && e.reason === "InvalidSignature";
+      if (!raced || attempt >= 2) throw e;
+    }
+  }
+}
+
 export async function sealLetter(input: SealInput, onProgress: (p: Progress) => void = () => {}): Promise<SealedLetter> {
   if (new TextEncoder().encode(input.text).length > MAX_LETTER_BYTES) throw new SealProblem("That letter is a little too long to seal. Please shorten it.");
 
@@ -107,7 +176,7 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
   // 3. Lock the letter on this device.
   onProgress("wrap");
   const ownerSeed = newSeed(); // the I'm-still-here card
-  const guardianSeed = input.guardianName ? newSeed() : undefined; // the guardian card
+  const guardianSeed = input.guardianName && !input.releaseAt ? newSeed() : undefined; // the guardian card (a dated letter has none)
   const owner = signingKeysFromSeed(ownerSeed);
   const guardianKeyHash = guardianSeed ? keyHash(signingKeysFromSeed(guardianSeed).publicKey) : ZERO_HASH;
 
@@ -117,32 +186,10 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
   const partAEnvelope = sealPartA(A, heirKeys);
   const partBForPostman = sealPartB(B, postmanPublic);
 
-  // 4. Sign and send. If someone else sealed a letter a moment ago, our number is taken: look again.
+  // 4. Sign and send.
   onProgress("send");
-  const payload = {
-    heirs: input.heirs.map((h) => h.evm),
-    guardianKeyHash,
-    quietPeriod: input.quiet,
-    warningPeriod: input.warning,
-    letterCiphertext,
-    partAEnvelope,
-    partBForPostman,
-  };
-  const payloadHash = createPayloadHash(payload);
-
-  let txHash = "";
-  let letterId = 0n;
-  for (let attempt = 0; ; attempt++) {
-    letterId = await nextLetterId();
-    const sig = signAction(ownerSeed, actionMessage({ chainId: EVM_CHAIN_ID, registry: REGISTRY, letterId, action: "CREATE", nonce: 0, payloadHash }));
-    try {
-      ({ txHash } = await relay(buildCreateBody({ ...payload, ownerPublicKey: owner.publicKey, sig })));
-      break;
-    } catch (e) {
-      const raced = e instanceof HelperError && e.code === "would_revert" && e.reason === "InvalidSignature";
-      if (!raced || attempt >= 2) throw e;
-    }
-  }
+  const sent = await sendCreate({ ownerSeed, ownerPublicKey: owner.publicKey, heirs: input.heirs.map((h) => h.evm), guardianKeyHash, quiet: input.quiet, warning: input.warning, releaseAt: input.releaseAt, letterCiphertext, partAEnvelope, partBForPostman });
+  const { txHash, letterId } = sent;
 
   return {
     version: 1,
@@ -152,10 +199,11 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
     createdAt: new Date().toISOString(),
     registry: REGISTRY,
     heirs: input.heirs,
-    guardianName: input.guardianName,
+    guardianName: input.releaseAt ? null : input.guardianName,
     whenLabel: input.whenLabel,
-    quietSeconds: input.quiet,
-    warningSeconds: input.warning,
+    quietSeconds: sent.releaseAt ? 0 : input.quiet,
+    warningSeconds: sent.releaseAt ? 0 : input.warning,
+    ...(sent.releaseAt ? { releaseAt: sent.releaseAt } : {}),
     ownerCard: cardEncode(ownerSeed),
     guardianCard: guardianSeed ? cardEncode(guardianSeed) : null,
   };

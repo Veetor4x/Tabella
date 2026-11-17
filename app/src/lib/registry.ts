@@ -6,7 +6,7 @@ import { createPublicClient, http, parseAbi, type Hex } from "viem";
 import { REGISTRY, evmRpcUrl } from "./config";
 
 const abi = parseAbi([
-  "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
+  "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 releaseAt; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
   "function letterCount() view returns (uint256)",
   "function status(uint256 letterId) view returns (uint8)",
   "function getLetter(uint256 letterId) view returns (Letter)",
@@ -23,6 +23,8 @@ export interface LetterView {
   quiet: number;
   warning: number;
   nonce: number;
+  /** a dated letter: the unix time it opens; 0 for an ordinary letter */
+  releaseAt: number;
   pausesUsed: number;
   hasGuardian: boolean;
   heirs: Hex[];
@@ -52,6 +54,7 @@ export async function readLetter(id: bigint): Promise<LetterView> {
     quiet: Number(l.quietPeriod),
     warning: Number(l.warningPeriod),
     nonce: Number(l.nonce),
+    releaseAt: Number(l.releaseAt),
     pausesUsed: l.pausesUsed,
     hasGuardian: l.guardianKeyHash !== ZERO,
     heirs: [...l.heirs],

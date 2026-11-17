@@ -10,6 +10,7 @@ import {
   actionMessage,
   cardDecode,
   cardEncode,
+  createDatedPayloadHash,
   createPayloadHash,
   decryptLetter,
   encryptLetter,
@@ -266,6 +267,15 @@ describe("actionMessage matches the contract byte for byte (Foundry vectors)", (
       partBForPostman: hexToBytes(c.partBForPostman),
     });
     expect(hash).toBe(c.payloadHash);
+  });
+
+  it("CREATE_DATED's payload hash matches the contract's, and the vectors include a dated message", () => {
+    const d = (vectors as unknown as { createDated: { heirs: Hex[]; releaseAt: number; letterCiphertext: Hex; partAEnvelope: Hex; partBForPostman: Hex; payloadHash: Hex } }).createDated;
+    const hash = createDatedPayloadHash({ heirs: d.heirs, releaseAt: d.releaseAt, letterCiphertext: hexToBytes(d.letterCiphertext), partAEnvelope: hexToBytes(d.partAEnvelope), partBForPostman: hexToBytes(d.partBForPostman) });
+    expect(hash).toBe(d.payloadHash);
+    // the date is part of what is signed: a different date gives a different hash
+    expect(createDatedPayloadHash({ heirs: d.heirs, releaseAt: d.releaseAt + 1, letterCiphertext: hexToBytes(d.letterCiphertext), partAEnvelope: hexToBytes(d.partAEnvelope), partBForPostman: hexToBytes(d.partBForPostman) })).not.toBe(d.payloadHash);
+    expect(vectors.cases.some((c) => c.name === "create-dated" && c.action === "CREATE_DATED")).toBe(true);
   });
 
   it("key hash matches the contract's keccak256(pubkey)", () => {

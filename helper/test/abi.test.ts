@@ -8,7 +8,7 @@ const artifactPath = new URL("../../contracts/out/TabellaRegistry.sol/TabellaReg
 const built = existsSync(artifactPath);
 
 describe("helper ABI matches the compiled TabellaRegistry", () => {
-  it.skipIf(!built)("has the same selectors for the four relayed functions", () => {
+  it.skipIf(!built)("has the same selectors for the five relayed functions", () => {
     const real = JSON.parse(readFileSync(artifactPath, "utf8")).abi as Abi;
     for (const name of RELAYED_FUNCTIONS) {
       const ours = registryAbi.find((i) => i.type === "function" && i.name === name) as AbiFunction;
@@ -48,8 +48,8 @@ describe("helper ABI matches the compiled TabellaRegistry", () => {
     expect(postmanAbi.some((i) => i.type === "function" && i.name === "publishPartB")).toBe(true);
   });
 
-  it("relays exactly four functions", () => {
-    expect([...RELAYED_FUNCTIONS]).toEqual(["createLetter", "checkIn", "guardianPause", "cancel"]);
+  it("relays exactly five functions", () => {
+    expect([...RELAYED_FUNCTIONS]).toEqual(["createLetter", "createDatedLetter", "checkIn", "guardianPause", "cancel"]);
     const fnNames = registryAbi.filter((i) => i.type === "function").map((i) => (i as { name: string }).name);
     expect(fnNames.sort()).toEqual([...RELAYED_FUNCTIONS].sort());
   });

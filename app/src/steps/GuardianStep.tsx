@@ -7,7 +7,7 @@ export function GuardianStep(props: { guardian: { name: string } | null; onChang
   const on = props.guardian !== null;
   return (
     <StepFrame
-      step={2}
+      step={3}
       title="Is there someone who can say you're *okay*?"
       lead="A guardian is someone you trust. If you go quiet, they can tap “They're okay” to give you more time."
       onBack={props.onBack}

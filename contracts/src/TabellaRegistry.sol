@@ -27,11 +27,14 @@ interface IQorePQC {
 /// Signed message (bytes handed to pqcVerify; build it exactly like this off-chain):
 ///   abi.encode("TABELLA_V1", block.chainid, address(this), letterId, action, nonce, keccak256(payload))
 ///   ABI types: (string, uint256, address, uint256, string, uint256, bytes32)
-///   action  : "CREATE" | "CHECKIN" | "PAUSE" | "CANCEL"
+///   action  : "CREATE" | "CREATE_DATED" | "CHECKIN" | "PAUSE" | "CANCEL"
 ///   nonce   : the letter's current nonce; it is incremented after every successful action
 ///             (CREATE signs nonce 0 for the id it is about to get, and leaves the letter at nonce 1)
 ///   payload : CHECKIN / PAUSE / CANCEL -> empty bytes
 ///             CREATE -> abi.encode(heirs, guardianKeyHash, quietPeriod, warningPeriod,
+///                                  keccak256(letterCiphertext), keccak256(partAEnvelope),
+///                                  keccak256(partBForPostman))
+///             CREATE_DATED -> abi.encode(heirs, releaseAt,
 ///                                  keccak256(letterCiphertext), keccak256(partAEnvelope),
 ///                                  keccak256(partBForPostman))
 ///
@@ -39,6 +42,10 @@ interface IQorePQC {
 ///   Active   : now <  lastCheckIn + quietPeriod
 ///   Warning  : now <  lastCheckIn + quietPeriod + warningPeriod
 ///   Released : otherwise
+///
+/// A DATED letter (createDatedLetter) has no quiet time at all: it is Active until `releaseAt` and Released from that
+/// exact second, whether or not anyone checks in. Check-ins and guardian pauses are refused for it (DatedLetter);
+/// the owner can still cancel it any time before `releaseAt`.
 contract TabellaRegistry {
     // ---------------------------------------------------------------- types
 
@@ -55,6 +62,7 @@ contract TabellaRegistry {
         address[] heirs; // QoreChain 0x addresses, 1 to 3
         uint64 quietPeriod; // seconds
         uint64 warningPeriod; // seconds
+        uint64 releaseAt; // 0 = an ordinary letter (opens if the owner goes quiet); else the exact timestamp a dated letter opens
         uint64 lastCheckIn; // timestamp
         uint64 nonce; // replay protection, +1 after each signed action
         uint8 pausesUsed; // guardian pauses so far, max MAX_PAUSES
@@ -76,10 +84,12 @@ contract TabellaRegistry {
     string internal constant ACTION_CHECKIN = "CHECKIN";
     string internal constant ACTION_PAUSE = "PAUSE";
     string internal constant ACTION_CANCEL = "CANCEL";
+    string internal constant ACTION_CREATE_DATED = "CREATE_DATED";
 
     uint8 public constant MAX_PAUSES = 2;
     uint256 public constant MAX_HEIRS = 3;
     uint64 public constant MAX_PERIOD = 3650 days; // sanity cap, also rules out overflow
+    uint64 public constant MAX_DATED_AHEAD = 18_263 days; // a dated letter may open at most 50 years from now (50 calendar years is 18,262 days, leap days included)
     uint256 public constant MAX_BYTES = 8192; // cap for every stored blob
 
     // ---------------------------------------------------------------- state
@@ -95,6 +105,7 @@ contract TabellaRegistry {
     event Created(
         uint256 indexed letterId, bytes32 indexed ownerKeyHash, address[] heirs, uint64 quietPeriod, uint64 warningPeriod
     );
+    event CreatedDated(uint256 indexed letterId, bytes32 indexed ownerKeyHash, address[] heirs, uint64 releaseAt);
     event CheckedIn(uint256 indexed letterId, uint64 at);
     event Paused(uint256 indexed letterId, uint8 pausesUsed, uint64 at);
     event Cancelled(uint256 indexed letterId);
@@ -108,6 +119,8 @@ contract TabellaRegistry {
     error UnknownLetter();
     error BadHeirs();
     error BadPeriod();
+    error BadDate(); // a dated letter must open in the future, at most MAX_DATED_AHEAD from now
+    error DatedLetter(); // check-ins and guardian pauses do not apply to a dated letter
     error TooLarge();
     error Empty();
     error WrongKey();
@@ -198,9 +211,55 @@ contract TabellaRegistry {
         emit Created(letterId, ownerKeyHash, heirs, quietPeriod, warningPeriod);
     }
 
+    /// @notice Create a DATED letter: it opens at exactly `releaseAt` (a timestamp, between now and MAX_DATED_AHEAD
+    ///         from now), whether or not the owner checks in, like a time capsule. There is no guardian and no quiet
+    ///         period. The owner may cancel before `releaseAt`. Same signature rules as createLetter, with the action
+    ///         "CREATE_DATED" so a signature for one kind can never be used for the other.
+    function createDatedLetter(
+        address[] calldata heirs,
+        uint64 releaseAt,
+        bytes calldata letterCiphertext,
+        bytes calldata partAEnvelope,
+        bytes calldata partBForPostman,
+        bytes calldata ownerPubkey,
+        bytes calldata sig
+    ) external returns (uint256 letterId) {
+        if (heirs.length == 0 || heirs.length > MAX_HEIRS) revert BadHeirs();
+        for (uint256 i = 0; i < heirs.length; i++) {
+            if (heirs[i] == address(0)) revert BadHeirs();
+        }
+        // forge-lint: disable-next-line(block-timestamp)
+        if (releaseAt <= block.timestamp || releaseAt > block.timestamp + MAX_DATED_AHEAD) revert BadDate();
+        _checkBlob(letterCiphertext);
+        _checkBlob(partAEnvelope);
+        _checkBlob(partBForPostman);
+
+        letterId = letterCount + 1;
+        bytes32 payloadHash = keccak256(
+            abi.encode(heirs, releaseAt, keccak256(letterCiphertext), keccak256(partAEnvelope), keccak256(partBForPostman))
+        );
+        bytes memory message = _message(letterId, ACTION_CREATE_DATED, 0, payloadHash);
+        if (!PQC.pqcVerify(ownerPubkey, sig, message)) revert InvalidSignature();
+
+        letterCount = letterId;
+        bytes32 ownerKeyHash = keccak256(ownerPubkey);
+        Letter storage l = letters[letterId];
+        l.ownerKeyHash = ownerKeyHash;
+        l.heirs = heirs;
+        l.releaseAt = releaseAt;
+        l.lastCheckIn = uint64(block.timestamp);
+        l.nonce = 1;
+        l.letterCiphertext = letterCiphertext;
+        l.partAEnvelope = partAEnvelope;
+        l.partBForPostman = partBForPostman;
+
+        emit CreatedDated(letterId, ownerKeyHash, heirs, releaseAt);
+    }
+
     /// @notice "I'm still here." Resets the clock. Works while Active and while in Warning.
     function checkIn(uint256 letterId, bytes calldata ownerPubkey, bytes calldata sig) external {
         Letter storage l = _open(letterId);
+        if (l.releaseAt != 0) revert DatedLetter();
         _authorize(l, letterId, ACTION_CHECKIN, l.ownerKeyHash, ownerPubkey, sig);
         l.nonce++;
         l.lastCheckIn = uint64(block.timestamp);
@@ -211,6 +270,7 @@ contract TabellaRegistry {
     ///         and only before the letter is Released.
     function guardianPause(uint256 letterId, bytes calldata guardianPubkey, bytes calldata sig) external {
         Letter storage l = _open(letterId);
+        if (l.releaseAt != 0) revert DatedLetter();
         if (l.guardianKeyHash == bytes32(0)) revert NoGuardian();
         if (l.pausesUsed >= MAX_PAUSES) revert PauseLimitReached();
         _authorize(l, letterId, ACTION_PAUSE, l.guardianKeyHash, guardianPubkey, sig);
@@ -278,6 +338,9 @@ contract TabellaRegistry {
 
     function _status(Letter storage l) internal view returns (Status) {
         if (l.cancelled) return Status.Cancelled;
+        // A dated letter: Active until its exact release second, Released from then on (no warning time).
+        // forge-lint: disable-next-line(block-timestamp)
+        if (l.releaseAt != 0) return block.timestamp < l.releaseAt ? Status.Active : Status.Released;
         // Timestamps are the design (the brief forbids block numbers). Second-level validator
         // drift is irrelevant for periods measured in minutes to years.
         // forge-lint: disable-start(block-timestamp)

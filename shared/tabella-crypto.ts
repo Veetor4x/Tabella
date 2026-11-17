@@ -36,7 +36,7 @@ export const MAX_LETTER_BYTES = CONTRACT_MAX_BYTES - GCM_NONCE_BYTES - GCM_TAG_B
 export const SEED_BYTES = 32;
 export const KEY_BYTES = 32;
 
-export type Action = "CREATE" | "CHECKIN" | "PAUSE" | "CANCEL";
+export type Action = "CREATE" | "CREATE_DATED" | "CHECKIN" | "PAUSE" | "CANCEL";
 
 // ------------------------------------------------------------------ helpers
 
@@ -204,6 +204,31 @@ export interface CreatePayload {
   letterCiphertext: Uint8Array;
   partAEnvelope: Uint8Array;
   partBForPostman: Uint8Array;
+}
+
+export interface DatedPayload {
+  heirs: Hex[];
+  /** the exact moment it opens (unix seconds) */
+  releaseAt: bigint | number;
+  letterCiphertext: Uint8Array;
+  partAEnvelope: Uint8Array;
+  partBForPostman: Uint8Array;
+}
+
+/** A dated letter opens at most this far ahead: 50 years, leap days included (18,263 days), as in the contract. */
+export const MAX_DATED_AHEAD_SECONDS = 18_263 * 86_400;
+
+/** Payload hash for CREATE_DATED; mirrors TabellaRegistry.createDatedLetter. */
+export function createDatedPayloadHash(p: DatedPayload): Hex {
+  return keccak256(
+    encodeAbiParameters(parseAbiParameters("address[], uint64, bytes32, bytes32, bytes32"), [
+      p.heirs,
+      BigInt(p.releaseAt),
+      keccak256(p.letterCiphertext),
+      keccak256(p.partAEnvelope),
+      keccak256(p.partBForPostman),
+    ]),
+  );
 }
 
 /** Payload hash for CREATE; mirrors TabellaRegistry.createLetter. */

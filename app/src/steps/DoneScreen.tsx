@@ -1,6 +1,7 @@
 import { m } from "framer-motion";
 import { useEffect, useState } from "react";
 import { EXPLORER } from "../lib/config";
+import { longDay } from "../lib/periods";
 import type { SealedLetter } from "../lib/storage";
 import { joinNames } from "../ui/steps";
 import { Button } from "../ui/Button";
@@ -77,6 +78,11 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
       <m.p className="lead center" {...fadeUp(0.7)}>
         Only {names} can open this.
       </m.p>
+      {letter.releaseAt && (
+        <m.p className="lead center small" {...fadeUp(0.8)}>
+          It opens on {longDay(letter.releaseAt)}, whether or not you check in.
+        </m.p>
+      )}
       {letter.surprise && (
         <m.p className="lead center small" {...fadeUp(0.9)}>
           When the time comes, we'll find {names} by email
@@ -98,10 +104,10 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
 
       <m.div {...fadeUp(2.4)}>
         <Card
-          title="Your I'm-still-here card"
-          blurb="Keep this safe, like a spare house key. It's how you tell us you're okay, so the letter stays sealed."
+          title={letter.releaseAt ? "Your card" : "Your I'm-still-here card"}
+          blurb={letter.releaseAt ? "Keep this safe, like a spare house key. It's the only way to cancel the letter before its day." : "Keep this safe, like a spare house key. It's how you tell us you're okay, so the letter stays sealed."}
           code={letter.ownerCard}
-          file="tabella-im-still-here-card.txt"
+          file={letter.releaseAt ? "tabella-card.txt" : "tabella-im-still-here-card.txt"}
         />
         {letter.guardianCard && letter.guardianName && (
           <Card

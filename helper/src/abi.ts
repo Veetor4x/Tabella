@@ -10,6 +10,8 @@ const errors = [
   "error UnknownLetter()",
   "error BadHeirs()",
   "error BadPeriod()",
+  "error BadDate()",
+  "error DatedLetter()",
   "error TooLarge()",
   "error Empty()",
   "error WrongKey()",
@@ -24,6 +26,7 @@ const errors = [
 
 export const registryAbi = parseAbi([
   "function createLetter(address[] heirs, bytes32 guardianKeyHash, uint64 quietPeriod, uint64 warningPeriod, bytes letterCiphertext, bytes partAEnvelope, bytes partBForPostman, bytes ownerPubkey, bytes sig) returns (uint256 letterId)",
+  "function createDatedLetter(address[] heirs, uint64 releaseAt, bytes letterCiphertext, bytes partAEnvelope, bytes partBForPostman, bytes ownerPubkey, bytes sig) returns (uint256 letterId)",
   "function checkIn(uint256 letterId, bytes ownerPubkey, bytes sig)",
   "function guardianPause(uint256 letterId, bytes guardianPubkey, bytes sig)",
   "function cancel(uint256 letterId, bytes ownerPubkey, bytes sig)",
@@ -31,7 +34,7 @@ export const registryAbi = parseAbi([
   ...errors,
 ]);
 
-export const RELAYED_FUNCTIONS = ["createLetter", "checkIn", "guardianPause", "cancel"] as const;
+export const RELAYED_FUNCTIONS = ["createLetter", "createDatedLetter", "checkIn", "guardianPause", "cancel"] as const;
 export type RelayedFunction = (typeof RELAYED_FUNCTIONS)[number];
 
 /**
@@ -39,7 +42,7 @@ export type RelayedFunction = (typeof RELAYED_FUNCTIONS)[number];
  * public /relay (which only knows `registryAbi`) can never encode a publishPartB call.
  */
 export const postmanAbi = parseAbi([
-  "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
+  "struct Letter { bytes32 ownerKeyHash; bytes32 guardianKeyHash; address[] heirs; uint64 quietPeriod; uint64 warningPeriod; uint64 releaseAt; uint64 lastCheckIn; uint64 nonce; uint8 pausesUsed; bool cancelled; bool released; bytes letterCiphertext; bytes partAEnvelope; bytes partBForPostman; bytes partBForHeirs; }",
   "function letterCount() view returns (uint256)",
   "function status(uint256 letterId) view returns (uint8)",
   "function getLetter(uint256 letterId) view returns (Letter)",

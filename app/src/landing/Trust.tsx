@@ -7,7 +7,7 @@ const CLAIMS = [
   { icon: <IconLetter />, title: "Sealed on your device.", body: "Your letter is locked on your phone before it leaves. We never see the words." },
   { icon: <IconPeople />, title: "Two halves.", body: "Your loved ones hold one half from day one, and the other half is released only if you go quiet. Nobody can open it early, not even them." },
   { icon: <IconShield />, title: "The Postman can't read it.", body: "Our delivery helper only carries a half. It can't read your letter or pretend to be you." },
-  { icon: <IconCheck />, title: "You stay in control.", body: "Check in with one tap. A guardian can pause it if you're just ill or away, and you can cancel any time before it opens." },
+  { icon: <IconCheck />, title: "You stay in control.", body: "Check in with one tap. A guardian can pause it if you're just ill or away, and you can cancel any time before it opens. Or skip all that: pick a date, and the letter opens on that day, like a time capsule." },
   { icon: <IconPeople />, title: "Found by email, for now.", body: "If you keep it a surprise, our Postman emails them when the time comes, and a backup person you name if they can't be reached. Text and call reminders are coming soon." },
   { icon: <IconClock />, title: "Built for the future.", body: "It uses new protection designed to stay safe even against future quantum computers, on the QoreChain network." },
 ];

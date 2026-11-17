@@ -24,7 +24,7 @@ export const STEPS = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
   { label: "People", caption: "Alex chooses who can read it. Each person turns Ready.", ms: 8000 },
   { label: "Guardian", caption: "A guardian can say “they're okay” if Alex goes quiet.", ms: 5500 },
-  { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open.", ms: 6000 },
+  { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open. Or he picks a date, like a time capsule.", ms: 6000 },
   { label: "Seal", caption: "Sealed on the phone. Only Mia and Leo can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
@@ -36,7 +36,7 @@ export const STEPS_SURPRISE = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
   { label: "Reach them", caption: "Alex adds how to reach Mia, and a question only Mia can answer.", ms: 9000 },
   { label: "Backup", caption: "Alex adds someone Mia trusts, in case Mia can't be reached.", ms: 7000 },
-  { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open.", ms: 6000 },
+  { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open. Or he picks a date, like a time capsule.", ms: 6000 },
   { label: "Seal", caption: "Sealed on the phone. Only Mia can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
@@ -156,8 +156,12 @@ function Timing({ t }: { t: number }) {
   const six = at(t, 2200);
   const p = six ? 0.5 : 1;
   return (
-    <div className="step">
-      <Headline text="If you go quiet, when should it *open*?" />
+    <div className="step" style={{ paddingTop: 14 }}>
+      <Headline text="When should it *open*?" />
+      <div className="choices" aria-hidden="true">
+        <ChoiceCard name="dw-mode" checked onChange={() => {}} icon={<IconClock />} title="If I go quiet" sub="Opens only if you stop checking in." />
+        <ChoiceCard name="dw-mode" checked={false} onChange={() => {}} icon={<IconLetter />} title="On a date" sub="Opens on the day you pick, like a time capsule." />
+      </div>
       <div className="timeline">
         <div className="track">
           <m.div className="track-fill" initial={false} animate={{ scaleX: p }} transition={{ duration: 0.9, ease: EASE }} />
@@ -214,7 +218,7 @@ function SealScreen({ t }: { t: number }) {
 const DAY = 86400;
 const SAMPLE_NOW = 1_800_000_000;
 const sample = (lastCheckIn: number): LetterView => ({
-  id: 7n, state: "Sealed", lastCheckIn, quiet: 180 * DAY, warning: 14 * DAY, nonce: 1, pausesUsed: 0, hasGuardian: true,
+  id: 7n, state: "Sealed", lastCheckIn, quiet: 180 * DAY, warning: 14 * DAY, nonce: 1, releaseAt: 0, pausesUsed: 0, hasGuardian: true,
   released: false, heirs: ["0x1", "0x2"], ownerKeyHash: "0x01", guardianKeyHash: "0x02", chainNow: SAMPLE_NOW, fetchedAt: 0,
 });
 function StillHere({ t }: { t: number }) {
@@ -414,9 +418,7 @@ export function Demo() {
         </div>
         <div className="demo">
           <div className="phone-wrap">
-            <div className="fx-beam">
-              <PhoneView set={variant} step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
-            </div>
+            <PhoneView set={variant} step={step} t={t} shownT={shownT} still={!running} veilOn={veil} />
           </div>
           <p className="demo-caption" aria-live="polite">
             <span className="demo-num">{String(step + 1).padStart(2, "0")}</span>

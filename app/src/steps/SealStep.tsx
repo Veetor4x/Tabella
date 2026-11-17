@@ -5,7 +5,7 @@ import { friendlyError } from "../lib/helper";
 import { sealLetter, type Progress } from "../lib/seal";
 import { sealSurprise, type SurpriseProgress } from "../lib/sealSurprise";
 import type { JoinProgress } from "../lib/heir";
-import { whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
+import { longDay, releaseAtFor, whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
 import type { Draft, SealedLetter } from "../lib/storage";
 import { parseAddress } from "../lib/addr";
 import { IconLetter } from "../ui/icons";
@@ -36,7 +36,7 @@ const CARD_TEXT: Record<JoinProgress, string> = {
   done: "Locking it with their answers…",
 };
 
-export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l: SealedLetter) => void }) {
+export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () => void; onSealed: (l: SealedLetter) => void }) {
   const { draft } = props;
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -47,6 +47,10 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
   const surprise = (draft.mode ?? "surprise") === "surprise";
   const names = surprise ? [draft.recipient?.name.trim() ?? ""] : draft.heirs.map((h) => h.name.trim());
   const when = whenById(draft.when as WhenId);
+  const dated = draft.whenMode === "date";
+  // a dated letter: the picked day (the start of it, in this person's time zone), or the 2-minute demo
+  const releaseAt: number | "demo" | undefined = dated ? (draft.dateDemo ? "demo" : releaseAtFor(draft.releaseDay ?? "") ?? undefined) : undefined;
+  const datedLabel = dated ? (draft.dateDemo ? "In 2 minutes (demo)" : typeof releaseAt === "number" ? longDay(releaseAt) : "") : "";
   const quote = draft.text.trim().split("\n")[0]!.slice(0, 44);
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -68,11 +72,12 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
                 ownerName: draft.owner ?? "",
                 recipient: draft.recipient!,
                 backups: draft.backups ?? [],
-                guardianName: draft.guardian ? draft.guardian.name.trim() : null,
+                guardianName: !dated && draft.guardian ? draft.guardian.name.trim() : null,
                 quiet: when.quiet,
                 warning: when.warning,
-                whenLabel: when.label,
-                demo: when.id === "demo",
+                whenLabel: dated ? datedLabel : when.label,
+                demo: when.id === "demo" || (dated && !!draft.dateDemo),
+                releaseAt,
                 onCard: (p) => setProgress(CARD_TEXT[p]),
               },
               (p) => p !== "card" && setProgress(SURPRISE_TEXT[p]),
@@ -84,7 +89,7 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
                 return { name: h.name.trim(), evm: p.evm, qor: p.qor };
               });
               return sealLetter(
-                { text: draft.text, heirs, guardianName: draft.guardian ? draft.guardian.name.trim() : null, ownerName: draft.owner, quiet: when.quiet, warning: when.warning, whenLabel: when.label },
+                { text: draft.text, heirs, guardianName: !dated && draft.guardian ? draft.guardian.name.trim() : null, ownerName: draft.owner, quiet: when.quiet, warning: when.warning, whenLabel: dated ? datedLabel : when.label, releaseAt },
                 (p) => setProgress(PROGRESS_TEXT[p]),
               );
             })(),
@@ -113,7 +118,7 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
 
   return (
     <StepFrame
-      step={4}
+      step={props.stepIndex ?? 4}
       title="Ready to *seal* it?"
       lead="One last look. Once it's sealed, nobody can change it."
       onBack={busy ? undefined : props.onBack}
@@ -121,11 +126,11 @@ export function SealStep(props: { draft: Draft; onBack: () => void; onSealed: (l
       nextLabel={busy ? "Sealing…" : "Seal it"}
       nextDisabled={busy}
     >
-      <PeopleMap root={root} people={names} guardian={draft.guardian ? draft.guardian.name.trim() : null} variant="day" working={busy} />
+      <PeopleMap root={root} people={names} guardian={!dated && draft.guardian ? draft.guardian.name.trim() : null} variant="day" working={busy} />
       <p className="status-line center" role="status" aria-live="polite">
         {busy ? (slow ? "The Postman is waking up. This can take a minute…" : progress) : ""}
       </p>
-      <p className="hint center">{when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>
+      <p className="hint center">{dated ? (draft.dateDemo ? "Opens 2 minutes after you seal it, whether or not you check in." : `Opens at the start of ${datedLabel}, whether or not you check in. You can cancel it until then.`) : when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>
       {error && (
         <p className="notice" role="alert">
           {error}

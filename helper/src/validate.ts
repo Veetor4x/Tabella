@@ -58,10 +58,22 @@ const createArgs = z
   })
   .strict();
 
+// A dated letter: opens at one exact moment (a unix time between now and 50 years ahead; the contract checks the range).
+const datedArgs = z
+  .object({
+    heirs: z.array(address).min(1).max(MAX_HEIRS),
+    releaseAt: uint("releaseAt", { min: 1n, max: MAX_UINT64 }),
+    letterCiphertext: blob,
+    partAEnvelope: blob,
+    partBForPostman: blob,
+  })
+  .strict();
+
 const letterArgs = z.object({ letterId }).strict();
 
 const requestSchema = z.discriminatedUnion("fn", [
   z.object({ fn: z.literal("createLetter"), args: createArgs, pubkey, sig: signature }).strict(),
+  z.object({ fn: z.literal("createDatedLetter"), args: datedArgs, pubkey, sig: signature }).strict(),
   z.object({ fn: z.literal("checkIn"), args: letterArgs, pubkey, sig: signature }).strict(),
   z.object({ fn: z.literal("guardianPause"), args: letterArgs, pubkey, sig: signature }).strict(),
   z.object({ fn: z.literal("cancel"), args: letterArgs, pubkey, sig: signature }).strict(),
@@ -75,8 +87,8 @@ export function parseRelayRequest(body: unknown): ParsedRelay {
   // Say "not allowed" (not just "invalid") for a well-formed request to some other function.
   if (typeof body === "object" && body !== null && "fn" in body) {
     const fn = (body as { fn: unknown }).fn;
-    if (typeof fn === "string" && !["createLetter", "checkIn", "guardianPause", "cancel"].includes(fn)) {
-      return { ok: false, error: "function_not_allowed", details: [{ path: "fn", message: "only createLetter, checkIn, guardianPause and cancel can be relayed" }] };
+    if (typeof fn === "string" && !["createLetter", "createDatedLetter", "checkIn", "guardianPause", "cancel"].includes(fn)) {
+      return { ok: false, error: "function_not_allowed", details: [{ path: "fn", message: "only createLetter, createDatedLetter, checkIn, guardianPause and cancel can be relayed" }] };
     }
   }
 
@@ -89,7 +101,13 @@ export function parseRelayRequest(body: unknown): ParsedRelay {
 
   const q = r.data;
   const data =
-    q.fn === "createLetter"
+    q.fn === "createDatedLetter"
+      ? encodeFunctionData({
+          abi: registryAbi,
+          functionName: "createDatedLetter",
+          args: [q.args.heirs, q.args.releaseAt, q.args.letterCiphertext, q.args.partAEnvelope, q.args.partBForPostman, q.pubkey, q.sig],
+        })
+      : q.fn === "createLetter"
       ? encodeFunctionData({
           abi: registryAbi,
           functionName: "createLetter",

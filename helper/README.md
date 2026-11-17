@@ -237,7 +237,7 @@ src/config.ts     environment -> settings (no secrets in it)
 
 ## Last testnet E2E (`npm run e2e`)
 
-Registry `0xC0808aF18e2283dFE4d026315a462349561fFd1c` on qorechain-diana. Letter #2 (2 heirs, guardian, quiet 120 s,
+Registry `0xbBC6d3eEE6f8472482d5a8860F4e2d65f4867aD0` on qorechain-diana. Letter #2 (2 heirs, guardian, quiet 120 s,
 warning 60 s): one check-in, then silence. Released at chain time 1794815644; the Postman's `publishPartB` landed
 in block 10182920 at 1794815657, **13 s after release** (the loop runs every 20 s, so it is 0-20 s plus ~2 blocks).
 Both heirs opened the letter; the Postman could not re-open what it published; a second `publishPartB` was refused

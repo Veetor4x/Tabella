@@ -32,6 +32,12 @@ export interface Draft {
   /** null = no guardian */
   guardian: { name: string } | null;
   when: WhenId;
+  /** "quiet" (the default) opens if Alex goes quiet; "date" opens on an exact day, whether or not he checks in */
+  whenMode?: "quiet" | "date";
+  /** the picked day, YYYY-MM-DD (for "date") */
+  releaseDay?: string;
+  /** the 2-minute demo for a dated letter (hidden, with the demo timer) */
+  dateDemo?: boolean;
 }
 
 export const emptyDraft = (): Draft => ({ mode: "surprise", recipient: emptyPerson(), backups: [], text: "", heirs: [{ name: "", address: "" }], guardian: null, when: "6m" });
@@ -50,6 +56,8 @@ export interface SealedLetter {
   whenLabel: string;
   quietSeconds: number;
   warningSeconds: number;
+  /** a dated letter: the unix time it opens (then quietSeconds and warningSeconds are 0) */
+  releaseAt?: number;
   /** "Your I'm-still-here card" */
   ownerCard: string;
   /** "Your guardian card", to hand to the guardian */

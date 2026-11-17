@@ -36,7 +36,7 @@ services:
       - key: TRUSTED_PROXY_HOPS
         value: "1" # Render adds one X-Forwarded-For entry: that one is the real client
       - key: REGISTRY_ADDRESS
-        value: "0xC0808aF18e2283dFE4d026315a462349561fFd1c" # public contract address on qorechain-diana
+        value: "0xbBC6d3eEE6f8472482d5a8860F4e2d65f4867aD0" # public contract address on qorechain-diana
       - key: CORS_ORIGINS
         value: "https://tabella-veetor4x.vercel.app,https://tabella-five.vercel.app,http://localhost:5173"
       # --- the only secret: type it into the Render dashboard yourself

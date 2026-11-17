@@ -1,35 +1,15 @@
 /**
- * A preview of extra polish, OFF by default so the site looks exactly as before.
- *   add ?fx=1 to any address to turn it on (remembered on this device); ?fx=0 turns it off again.
- * What it adds (all moves are transform and opacity only, and none of it runs with reduced motion):
- *   - a soft light that follows the pointer across glass cards
- *   - a slow shine that crosses the main (wax) button
- *   - a thin light that travels around the demo phone
- * Patterns in the spirit of Aceternity UI, Magic UI and React Bits, written from scratch for this site.
+ * Two small touches of polish, on for everyone:
+ *   - a soft light that follows the pointer across glass cards (mouse and pen only, never on touch)
+ *   - a slow shine that crosses the main wax-red button every few seconds
+ * Both move only transform and opacity, and neither runs for people who ask their device for less motion.
+ * Patterns in the spirit of Aceternity UI and Magic UI, written from scratch for this site.
  */
-const KEY = "tabella.fx";
-
-export function fxEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 export function initFx(): void {
   if (typeof window === "undefined") return;
-  try {
-    const q = new URLSearchParams(window.location.search).get("fx");
-    if (q === "1") window.localStorage.setItem(KEY, "1");
-    if (q === "0") window.localStorage.removeItem(KEY);
-  } catch {
-    /* storage blocked: the preview simply stays off */
-  }
-  if (!fxEnabled()) return;
   document.documentElement.dataset.fx = "1";
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    document.documentElement.dataset.fxCalm = "1"; // the static parts only
+    document.documentElement.dataset.fxCalm = "1"; // no shine, no moving light
     return;
   }
 

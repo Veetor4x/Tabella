@@ -1,7 +1,7 @@
 import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { warmUp } from "./lib/helper";
-import { whenById } from "./lib/periods";
+import { longDay, releaseAtFor, whenById } from "./lib/periods";
 import { clearDraft, emptyDraft, loadDraft, saveDraft, saveLetter, type Draft, type SealedLetter } from "./lib/storage";
 import { DoneScreen } from "./steps/DoneScreen";
 import { GuardianStep } from "./steps/GuardianStep";
@@ -15,7 +15,7 @@ import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
 import { SoundWave } from "./ui/SoundWave";
 import { ThemeToggle } from "./ui/ThemeToggle";
-import { STEP_COUNT, countWords, joinNames } from "./ui/steps";
+import { countWords, joinNames } from "./ui/steps";
 
 const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
 
@@ -38,9 +38,14 @@ export function App() {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
+  // Write, People, When, then Guardian (only if it opens when Alex goes quiet), then Seal. A dated letter has no guardian and no check-ins.
+  const dated = draft.whenMode === "date";
+  const order = dated ? (["write", "people", "when", "seal"] as const) : (["write", "people", "when", "guardian", "seal"] as const);
+  const count = order.length;
+  const name = order[Math.min(step, count - 1)]!;
   const next = () => {
     dir.current = 1;
-    setStep((s) => Math.min(STEP_COUNT - 1, s + 1));
+    setStep((s) => Math.min(count - 1, s + 1));
   };
   const back = () => {
     dir.current = -1;
@@ -78,29 +83,46 @@ export function App() {
   const owner = draft.owner ?? "";
   const words = countWords(draft.text);
   const pills: { key: string; label: string }[] = [];
+  const at = dated && draft.releaseDay ? releaseAtFor(draft.releaseDay) : null;
+  const whenLabel = dated ? (draft.dateDemo ? "In 2 minutes (demo)" : at ? `Opens ${longDay(at)}` : "On a date") : whenById(draft.when).label;
   if (!sealed) {
-    if (step >= 1) pills.push({ key: "letter", label: `Letter · ${words} ${words === 1 ? "word" : "words"}` });
-    if (step >= 2) {
+    const pos = (n: string) => order.indexOf(n as never);
+    if (step > pos("write")) pills.push({ key: "letter", label: `Letter · ${words} ${words === 1 ? "word" : "words"}` });
+    if (step > pos("people")) {
       const surprise = (draft.mode ?? "surprise") === "surprise";
       const nb = draft.backups?.length ?? 0;
       pills.push({ key: "people", label: surprise ? `${draft.recipient?.name.trim() || "Someone"} · surprise${nb ? ` + ${nb} backup${nb === 1 ? "" : "s"}` : ""}` : `${draft.heirs.length} ${draft.heirs.length === 1 ? "person" : "people"}` });
     }
-    if (step >= 3) pills.push({ key: "guardian", label: draft.guardian?.name.trim() ? `${draft.guardian.name.trim()} · guardian` : "No guardian" });
-    if (step >= 4) pills.push({ key: "when", label: whenById(draft.when).label });
+    if (step > pos("when")) pills.push({ key: "when", label: whenLabel });
+    if (!dated && step > pos("guardian")) pills.push({ key: "guardian", label: draft.guardian?.name.trim() ? `${draft.guardian.name.trim()} · guardian` : "No guardian" });
   }
 
+  const peopleNames = (draft.mode ?? "surprise") === "surprise" ? draft.recipient?.name.trim() ?? "" : joinNames(draft.heirs.map((h) => h.name));
   const screen = sealed ? (
     <DoneScreen letter={sealed} onAnother={another} />
-  ) : step === 0 ? (
+  ) : name === "write" ? (
     <WriteStep text={draft.text} owner={owner} onChange={(text) => patch({ text })} onOwner={(o) => patch({ owner: o })} onNext={next} />
-  ) : step === 1 ? (
+  ) : name === "people" ? (
     <PeopleStep draft={draft} owner={owner} patch={patch} onBack={back} onNext={next} />
-  ) : step === 2 ? (
+  ) : name === "when" ? (
+    <WhenStep
+      mode={dated ? "date" : "quiet"}
+      onMode={(m) => patch({ whenMode: m })}
+      when={draft.when}
+      releaseDay={draft.releaseDay}
+      onDay={(d) => patch({ releaseDay: d })}
+      dateDemo={draft.dateDemo}
+      onDateDemo={(v) => patch({ dateDemo: v })}
+      names={peopleNames}
+      demo={demo}
+      onChange={(when) => patch({ when })}
+      onBack={back}
+      onNext={next}
+    />
+  ) : name === "guardian" ? (
     <GuardianStep guardian={draft.guardian} onChange={(guardian) => patch({ guardian })} onBack={back} onNext={next} />
-  ) : step === 3 ? (
-    <WhenStep when={draft.when} demo={demo} names={(draft.mode ?? "surprise") === "surprise" ? draft.recipient?.name.trim() ?? "" : joinNames(draft.heirs.map((h) => h.name))} onChange={(when) => patch({ when })} onBack={back} onNext={next} />
   ) : (
-    <SealStep draft={{ ...draft, when: whenById(draft.when).id }} onBack={back} onSealed={onSealed} />
+    <SealStep draft={{ ...draft, when: whenById(draft.when).id }} stepIndex={count - 1} onBack={back} onSealed={onSealed} />
   );
 
   return (
@@ -123,7 +145,7 @@ export function App() {
             <main>
               {!sealed && (
                 <>
-                  <Numeral step={step} onTap={() => setTaps((t) => t + 1)} />
+                  <Numeral step={step} count={count} onTap={() => setTaps((t) => t + 1)} />
                   <Pills items={pills} />
                 </>
               )}

@@ -4,7 +4,7 @@ import type { Hex } from "viem";
 export const HELPER_URL = (import.meta.env.VITE_HELPER_URL?.trim() || "https://tabella-helper-oecu.onrender.com").replace(/\/+$/, "");
 
 /** The TabellaRegistry on qorechain-diana (the helper is its Postman). */
-export const REGISTRY = (import.meta.env.VITE_REGISTRY_ADDRESS?.trim() || "0xC0808aF18e2283dFE4d026315a462349561fFd1c") as Hex;
+export const REGISTRY = (import.meta.env.VITE_REGISTRY_ADDRESS?.trim() || "0xbBC6d3eEE6f8472482d5a8860F4e2d65f4867aD0") as Hex;
 
 export const EXPLORER = "https://explore.qore.network";
 

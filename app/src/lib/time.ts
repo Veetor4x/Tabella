@@ -13,6 +13,12 @@ export interface Countdown {
 
 export function countdown(l: LetterView, nowMs = Date.now()): Countdown {
   const now = chainNowOf(l, nowMs);
+  if (l.releaseAt) {
+    // a dated letter: one stretch, from when it was made to its day (no quiet time, no warning)
+    const total = Math.max(1, l.releaseAt - l.lastCheckIn);
+    if (now < l.releaseAt) return { fraction: Math.max(0, Math.min(1, (l.releaseAt - now) / total)), left: l.releaseAt - now, phase: "quiet" };
+    return { fraction: 0, left: 0, phase: "over" };
+  }
   const quietEnd = l.lastCheckIn + l.quiet;
   const warnEnd = quietEnd + l.warning;
   if (now < quietEnd) return { fraction: Math.max(0, Math.min(1, (quietEnd - now) / l.quiet)), left: quietEnd - now, phase: "quiet" };
@@ -38,6 +44,7 @@ export function span(seconds: number): string {
 export function ringText(l: LetterView, c: Countdown): { big: string; small: string } {
   if (l.state === "Cancelled") return { big: "Cancelled", small: "Nobody can open it" };
   if (l.state === "Opened") return { big: "Opened", small: "For the people you chose" };
+  if (l.releaseAt) return { big: span(c.left), small: "until it opens" };
   if (c.phase === "warning" || l.state === "Warning") return { big: span(c.left), small: "until it opens" };
   return { big: span(c.left), small: "until your next check-in" };
 }

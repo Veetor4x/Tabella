@@ -206,6 +206,7 @@ export class MockChain implements Chain {
             heirs: l.heirs,
             quietPeriod: 120n,
             warningPeriod: 60n,
+            releaseAt: 0n,
             lastCheckIn: 1n,
             nonce: 1n,
             pausesUsed: 0,

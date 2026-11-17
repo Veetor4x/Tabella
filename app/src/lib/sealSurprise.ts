@@ -28,7 +28,7 @@ import { REGISTRY } from "./config";
 import { becomeReady, type JoinProgress } from "./heir";
 import { HelperError, SealProblem, relay, warmUp } from "./helper";
 import { lockSeed } from "./locks";
-import { ZERO_HASH, buildCreateBody, hexToU8, nextLetterId } from "./seal";
+import { ZERO_HASH, hexToU8, sendCreate } from "./seal";
 import type { SealedLetter, SurprisePerson } from "./storage";
 
 export type SurpriseProgress = "postman" | "card" | "lock" | "wrap" | "send";
@@ -42,6 +42,8 @@ export interface SurpriseInput {
   quiet: number;
   warning: number;
   whenLabel: string;
+  /** a dated letter: the unix time it opens, or "demo" for 2 minutes from now (no quiet time, no guardian) */
+  releaseAt?: number | "demo";
   /** the 2-minute demo timer: the Postman then runs its ladder in minutes instead of days */
   demo: boolean;
   onCard?: (p: JoinProgress) => void;
@@ -96,7 +98,7 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
   // 3. Lock the letter, split the key, seal Part A to the recipient's card and Part B (with the contacts) to the Postman.
   onProgress("wrap");
   const ownerSeed = newSeed();
-  const guardianSeed = input.guardianName ? newSeed() : undefined;
+  const guardianSeed = input.guardianName && !input.releaseAt ? newSeed() : undefined;
   const owner = signingKeysFromSeed(ownerSeed);
   const guardianKeyHash = guardianSeed ? keyHash(signingKeysFromSeed(guardianSeed).publicKey) : ZERO_HASH;
   const K = makeContentKey();
@@ -113,23 +115,10 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
   };
   const partBForPostman = sealPostmanPackage(B, pkg, postmanPublic);
 
-  // 4. Sign and send (the same as an ordinary letter).
+  // 4. Sign and send (the same as an ordinary letter, or a dated one).
   onProgress("send");
-  const payload = { heirs: [id.evm], guardianKeyHash, quietPeriod: input.quiet, warningPeriod: input.warning, letterCiphertext, partAEnvelope, partBForPostman };
-  const payloadHash = createPayloadHash(payload);
-  let txHash = "";
-  let letterId = 0n;
-  for (let attempt = 0; ; attempt++) {
-    letterId = await nextLetterId();
-    const sig = signAction(ownerSeed, actionMessage({ chainId: EVM_CHAIN_ID, registry: REGISTRY, letterId, action: "CREATE", nonce: 0, payloadHash }));
-    try {
-      ({ txHash } = await relay(buildCreateBody({ ...payload, ownerPublicKey: owner.publicKey, sig })));
-      break;
-    } catch (e) {
-      const raced = e instanceof HelperError && e.code === "would_revert" && e.reason === "InvalidSignature";
-      if (!raced || attempt >= 2) throw e;
-    }
-  }
+  const sent = await sendCreate({ ownerSeed, ownerPublicKey: owner.publicKey, heirs: [id.evm], guardianKeyHash, quiet: input.quiet, warning: input.warning, releaseAt: input.releaseAt, letterCiphertext, partAEnvelope, partBForPostman });
+  const { txHash, letterId } = sent;
 
   return {
     version: 1,
@@ -139,10 +128,11 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
     createdAt: new Date().toISOString(),
     registry: REGISTRY,
     heirs: [{ name: recipient.name.trim(), evm: id.evm, qor: id.qor }],
-    guardianName: input.guardianName,
+    guardianName: input.releaseAt ? null : input.guardianName,
     whenLabel: input.whenLabel,
-    quietSeconds: input.quiet,
-    warningSeconds: input.warning,
+    quietSeconds: sent.releaseAt ? 0 : input.quiet,
+    warningSeconds: sent.releaseAt ? 0 : input.warning,
+    ...(sent.releaseAt ? { releaseAt: sent.releaseAt } : {}),
     ownerCard: cardEncode(ownerSeed),
     guardianCard: guardianSeed ? cardEncode(guardianSeed) : null,
     surprise: { backups: backups.length },

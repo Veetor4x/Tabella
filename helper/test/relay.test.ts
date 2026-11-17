@@ -69,6 +69,51 @@ describe("what /relay accepts", () => {
     expect(create[8]).toBe(SIG);
   });
 
+  const datedBody = (over: Record<string, unknown> = {}) => ({
+    fn: "createDatedLetter",
+    args: { heirs: [ADA, SAM], releaseAt: "1900000000", letterCiphertext: "0x" + "c1".repeat(100), partAEnvelope: "0x" + "a1".repeat(300), partBForPostman: "0x" + "b1".repeat(200) },
+    pubkey: PUBKEY,
+    sig: SIG,
+    ...over,
+  });
+
+  it("relays createDatedLetter (a letter that opens on an exact date) with the right calldata", async () => {
+    const app = makeApp();
+    const res = await post(app, datedBody());
+    expect(res.status).toBe(200);
+    const d = decodeFunctionData({ abi: registryAbi, data: chain.sent[0]!.data });
+    expect(d.functionName).toBe("createDatedLetter");
+    const a = d.args as readonly unknown[];
+    expect((a[0] as string[]).map((x) => x.toLowerCase())).toEqual([ADA, SAM]);
+    expect(a[1]).toBe(1_900_000_000n);
+    expect(a[5]).toBe(PUBKEY);
+    expect(a[6]).toBe(SIG);
+    expect(chain.sent[0]!.to).toBe(REGISTRY);
+  });
+  it("refuses a dated letter with a missing or odd date, extra fields, or a guardian (dated letters have none)", async () => {
+    const app = makeApp();
+    const base = datedBody().args;
+    for (const bad of [
+      datedBody({ args: { ...base, releaseAt: undefined } }),
+      datedBody({ args: { ...base, releaseAt: "0" } }),
+      datedBody({ args: { ...base, releaseAt: "tomorrow" } }),
+      datedBody({ args: { ...base, releaseAt: "-5" } }),
+      datedBody({ args: { ...base, releaseAt: "99999999999999999999999" } }),
+      datedBody({ args: { ...base, guardianKeyHash: "0x" + "ab".repeat(32) } }),
+      datedBody({ args: { ...base, quietPeriod: 120 } }),
+      datedBody({ args: { ...base, heirs: [] } }),
+    ]) {
+      expect((await post(app, bad)).status).toBe(400);
+    }
+    expect(chain.sent).toHaveLength(0);
+  });
+  it("names the contract's dated-letter refusals kindly (BadDate)", async () => {
+    chain.revertWith("BadDate");
+    const res = await post(makeApp(), datedBody());
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ error: "would_revert", reason: "BadDate" });
+  });
+
   it("returns the tx hash, gas used and block", async () => {
     const res = await post(makeApp(), checkInBody());
     expect(await res.json()).toMatchObject({ ok: true, fn: "checkIn", txHash: expect.stringMatching(/^0x[0-9a-f]{64}$/), gasUsed: "250000", blockNumber: "1001" });

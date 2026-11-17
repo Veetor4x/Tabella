@@ -1,6 +1,7 @@
 import { m } from "framer-motion";
 import type { ReactNode } from "react";
 import type { LetterState, LetterView } from "../lib/registry";
+import { longDay } from "../lib/periods";
 import { countdown, ringText, span } from "../lib/time";
 import { Headline } from "../ui/Headline";
 import { EASE } from "../ui/motion";
@@ -22,6 +23,7 @@ export function nextLine(v: LetterView, now = Date.now()): string {
   const c = countdown(v, now);
   if (v.state === "Cancelled") return "Cancelled. Nobody can open it.";
   if (v.state === "Opened") return "Opened for the people you chose.";
+  if (v.releaseAt) return `Opens on ${longDay(v.releaseAt)}.`;
   if (c.phase === "warning" || v.state === "Warning") return `Opens in ${span(c.left)} unless you check in.`;
   return `Next check-in in ${span(c.left)}`;
 }
@@ -49,12 +51,13 @@ export function CheckInView(props: {
 }) {
   const { view, now, phase } = props;
   const c = countdown(view, now);
-  const open = view.state === "Sealed" || view.state === "Warning";
+  const dated = view.releaseAt > 0; // a dated letter: nothing to tap, it opens on its day
+  const open = !dated && (view.state === "Sealed" || view.state === "Warning");
   const urgent = view.state === "Warning" && phase !== "done";
   const text = ringText(view, c);
-  const title =
+  const title = dated && view.state !== "Cancelled" && view.state !== "Opened" ? "Nothing to do." : 
     view.state === "Cancelled" ? "This letter was cancelled." : view.state === "Opened" ? "Your letter has opened." : phase === "done" ? `Thanks${props.ownerName ? `, ${props.ownerName}` : ""}.` : urgent ? "Your letter will open soon." : "Still here?";
-  const lead =
+  const lead = dated && view.state !== "Cancelled" && view.state !== "Opened" ? `It opens on ${longDay(view.releaseAt)}, whether or not you check in. You can cancel it until then.` :
     view.state === "Cancelled" ? "It was withdrawn, and nobody will ever be able to open it." : view.state === "Opened" ? "The time ran out, so it was opened for the people you chose." : phase === "done" ? "Your letter stays sealed." : urgent ? "You haven't checked in for a while. One tap, and the time starts again." : "One tap tells everyone you're okay.";
   return (
     <div className={`checkin ${urgent ? "urgent" : ""}`}>

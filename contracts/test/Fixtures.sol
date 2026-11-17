@@ -22,6 +22,7 @@ abstract contract Fixtures is Test {
     uint64 constant QUIET = 120;
     uint64 constant WARNING = 60;
     bytes32 constant GUARDIAN_HASH = keccak256("fixture guardian key");
+    uint64 constant RELEASE_AT = 1_000_000 + 90 days; // a dated letter's fixture date
 
     string constant VECTORS_PATH = "/../shared/test-vectors/contract-vectors.json";
     string constant SIGNATURES_PATH = "/../shared/test-vectors/lib-signatures.json";
@@ -68,6 +69,11 @@ abstract contract Fixtures is Test {
                 keccak256(_partB())
             )
         );
+    }
+
+    /// Payload hash of CREATE_DATED, computed independently of the contract.
+    function _datedPayloadHash() internal pure returns (bytes32) {
+        return keccak256(abi.encode(_heirs(), RELEASE_AT, keccak256(_letterCiphertext()), keccak256(_partA()), keccak256(_partB())));
     }
 
     /// The signed message, computed independently of the contract (spec section 6).
