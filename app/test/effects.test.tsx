@@ -19,6 +19,8 @@ import { extractCode } from "../src/lib/cards";
 import { notify, getToasts, dismiss } from "../src/lib/notices";
 import { APP_HOST, CARD_URL } from "../src/lib/config";
 import { Landing } from "../src/landing/Landing";
+import { SpareCardRow } from "../src/me/SpareCards";
+import * as storage from "../src/lib/storage";
 import type { SealedLetter } from "../src/lib/storage";
 
 const html = (el: JSX.Element) => renderToStaticMarkup(<LazyMotion features={domAnimation}>{el}</LazyMotion>);
@@ -127,3 +129,44 @@ describe("one door for all cards", () => {
     expect(deliveryLine(letter({ surprise: { backups: 0, emailed: false } }))).toBe("Add an email so we can reach them");
   });
 });
+
+describe("light sky and glass; dark left alone", () => {
+  it("light has one main cloud and fainter small ones, each drifting 60 to 90 seconds, far slower and fainter than near", () => {
+    const T = (n: string) => Number(new RegExp(`\\.lc-${n} \\{[^}]*--T: (\\d+)s`).exec(css)![1]);
+    const O = (n: string) => Number(new RegExp(`\\.lc-${n} \\{[^}]*--o: ([0-9.]+)`).exec(css)![1]);
+    for (const n of ["a", "b", "c", "main"]) expect(T(n)).toBeGreaterThanOrEqual(60), expect(T(n)).toBeLessThanOrEqual(90);
+    expect(T("a")).toBeGreaterThan(T("main"));
+    expect(T("c")).toBeGreaterThan(T("main"));
+    expect(O("main")).toBeGreaterThan(O("a"));
+    expect(O("main")).toBeGreaterThan(O("b"));
+    const b = html(<Background />);
+    expect((b.match(/class="lc lc-/g) ?? []).length).toBe(4); // a, c, b, main (the first copy of each)
+    expect((b.match(/lc2/g) ?? []).length).toBe(4); // and the copy that cross-fades with it
+    expect(html(<Background main={false} />)).not.toContain("lc-main");
+  });
+  it("the dark sky is still the three tiling layers, and light hides them (and the reverse)", () => {
+    expect(css).toContain(':root[data-theme="dark"] .bgl { display: none; }');
+    expect(css).toContain(':root:not([data-theme="dark"]) .bgd { display: none; }');
+    expect(css).toMatch(/\.cl-drift \{[^}]*animation: cl-drift var\(--dur\) linear infinite/);
+  });
+  it("light glass is frosted with a thin light border and a soft shadow, and never reaches the dark glass", () => {
+    const rule = /:root:not\(\[data-theme="dark"\]\) \.glass:not\(\.night \.glass\) \{([^}]*)\}/.exec(css)![1]!;
+    expect(rule).toContain("backdrop-filter: blur(18px)");
+    expect(rule).toMatch(/border: 1px solid rgba\(255, 255, 255/);
+    expect(rule).toContain("box-shadow");
+  });
+});
+
+describe("removing cards that have no sealed letter", () => {
+  it("a spare card offers Remove from this device, and the question comes first", () => {
+    const h = html(<SpareCardRow title="An opening card" line="x" onRemove={() => {}} />);
+    expect(h).toContain("Remove from this device");
+    expect(h).not.toContain("Remove this card from this phone?");
+  });
+  it("cards that belong to a sealed letter have no remove option, and no letter can be deleted", () => {
+    const h = html(<CardsView letter={letter()} />);
+    expect(h).not.toContain("Remove from this device");
+    expect("removeLetter" in storage).toBe(false);
+  });
+});
+

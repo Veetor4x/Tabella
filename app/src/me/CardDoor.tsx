@@ -10,6 +10,7 @@ import { cardAppear } from "../ui/motion";
 import { QrScanner } from "../ui/QrScanner";
 import { HOWTO_TITLE, HowTo } from "./HowTo";
 import { restoreFromCard } from "./Restore";
+import { SpareCards } from "./SpareCards";
 
 const TILES: { kind: CardKind; title: string; line: string }[] = [
   { kind: "owner", title: HOWTO_TITLE.owner, line: "Your I'm-still-here card: check in, manage your letters." },
@@ -136,6 +137,7 @@ export function CardDoor() {
           </Button>
         </div>
       </section>
+      <SpareCards />
     </div>
   );
 }

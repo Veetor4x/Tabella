@@ -13,6 +13,7 @@ import { Ring } from "../ui/Ring";
 import { useLetter, useNow, useRoute } from "./hooks";
 import { CheckInView, StatePill, namesOf, nextLine, type CheckInPhase } from "./parts";
 import { RestorePanel } from "./Restore";
+import { SpareCards } from "./SpareCards";
 import { Shell } from "./Shell";
 
 /** One plain line under the ring: how this letter will reach the people it is for. */
@@ -213,6 +214,7 @@ export function MePage() {
           <p className="center hint">
             Got a card from someone else? <a href="/card">Use it here.</a>
           </p>
+          <SpareCards />
           <RestorePanel role="owner" onDone={reload} />
         </div>
       )}

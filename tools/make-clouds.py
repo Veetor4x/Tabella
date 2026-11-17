@@ -30,7 +30,7 @@ def blur(a, sigma):
     return np.real(np.fft.ifft2(np.fft.fft2(a) * g))
 
 
-def cloud(w, h, blobs, sigma, seed, wobble=0.0, wrap=False):
+def cloud(w, h, blobs, sigma, seed, wobble=0.0, wrap=False, depth=0.26):
     """blobs: (cx, cy, rx, ry) in pixels. Returns (lit, shade) alpha in 0..1."""
     rng = np.random.default_rng(seed)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
@@ -58,7 +58,7 @@ def cloud(w, h, blobs, sigma, seed, wobble=0.0, wrap=False):
     lit = smooth(lit, 0.1, 0.95)
     lit = blur(lit, sigma * 1.5)
     # one soft mask: a little denser at the lower left, so it has a shape without any second layer or edge
-    return np.clip(d * (0.74 + 0.26 * (1 - lit)), 0, 1)
+    return np.clip(d * ((1 - depth) + depth * (1 - lit)), 0, 1)
 
 
 def save(name, alpha):
@@ -81,6 +81,13 @@ def main():
     far = [b for (x, y, k) in [(0.08, 0.2, 0.9), (0.33, 0.74, 1.1), (0.58, 0.12, 0.8), (0.83, 0.56, 1.0)] for b in puff(TW * x, TH * y, k)]
     mid = [b for (x, y, k) in [(0.17, 0.46, 1.9), (0.52, 0.8, 1.6), (0.78, 0.22, 2.1)] for b in puff(TW * x, TH * y, k)]
     near = [(TW * 0.5 + dx * 1.0, TH * 0.5 + dy * 1.0, rx, ry) for dx, dy, rx, ry in [(-245, 55, 125, 85), (-100, -30, 140, 118), (70, -48, 145, 128), (215, 0, 120, 100), (330, 72, 80, 60), (45, 90, 360, 66)]]
+    # three small soft clouds for the edges of the light sky (each its own picture, so they can sit anywhere)
+    # light sky, matched to the references: a main cloud of two soft lobes (the left lower and pinker, the right taller and lighter),
+    # and small round puffs that are fainter and greyer
+    made["soft-main"] = cloud(1000, 560, [(300, 335, 165, 128), (590, 280, 190, 178), (790, 385, 95, 70), (470, 430, 290, 58)], sigma=11, seed=11, wobble=0.0, depth=0.5)
+    made["puff-a"] = cloud(640, 320, [(230, 170, 120, 78), (360, 150, 110, 86), (450, 190, 80, 56)], sigma=15, seed=2, wobble=0.0, depth=0.35)
+    made["puff-b"] = cloud(640, 320, [(200, 170, 105, 72), (330, 160, 125, 82), (450, 190, 80, 54)], sigma=15, seed=3, wobble=0.0, depth=0.35)
+    made["puff-c"] = cloud(640, 320, [(230, 170, 140, 66), (380, 150, 120, 78)], sigma=15, seed=4, wobble=0.0, depth=0.35)
     made["far"] = cloud(TW, TH, far, sigma=18, seed=5, wobble=0.15, wrap=True)
     made["mid"] = cloud(TW, TH, mid, sigma=26, seed=6, wobble=0.15, wrap=True)
     made["near"] = cloud(TW, TH, near, sigma=30, seed=7, wobble=0.2, wrap=True)

@@ -3,7 +3,6 @@
  * most. Only a transform is written, a few times a second at most while something is moving, and nothing runs at all
  * for people who ask their device for less motion, or while the tab is hidden.
  */
-const DEPTH = [0.35, 0.75, 1.5]; // far, middle, near
 const POINTER_PX = 16; // how far the nearest layer moves with the pointer
 const SCROLL_PX = 90; // and with a whole page of scrolling
 
@@ -43,8 +42,8 @@ export function startParallax(root: HTMLElement): () => void {
     cx += (tx - cx) * 0.06;
     cy += (ty - cy) * 0.06;
     cs += (ts - cs) * 0.08;
-    layers.forEach((el, i) => {
-      const d = DEPTH[i] ?? 1;
+    layers.forEach((el) => {
+      const d = Number(el.dataset.depth) || 1; // far clouds move least, near ones most
       el.style.transform = `translate3d(${(-cx * POINTER_PX * d).toFixed(2)}px, ${(-cy * POINTER_PX * 0.6 * d - cs * SCROLL_PX * d).toFixed(2)}px, 0)`;
     });
     if (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002 || Math.abs(ts - cs) > 0.0005) raf = requestAnimationFrame(frame);

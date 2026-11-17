@@ -122,11 +122,31 @@ export const loadGuardian = (): GuardianEntry[] => read<GuardianEntry[]>(GUARDIA
 export function saveGuardian(e: GuardianEntry): boolean {
   return write(GUARDIAN_KEY, [...loadGuardian().filter((g) => g.letterId !== e.letterId), e]);
 }
-export function removeLetter(letterId: string): boolean {
-  return write(LETTERS_KEY, loadLetters().filter((l) => l.letterId !== letterId));
-}
 
 /** True when this device already holds a card of its own (an I'm-still-here card or a guardian card). */
 export function deviceHasCard(): boolean {
   return loadLetters().some((l) => !!l.ownerCard) || loadGuardian().length > 0;
+}
+
+/**
+ * An opening card made on this phone (on /join) and kept here. It is the one kind of card that can sit on a device with no sealed letter
+ * attached (made but never used). Cards that belong to a sealed letter (an I'm-still-here card, a guardian card) are never offered for removal.
+ */
+const JOIN_KEY = "tabella.join.v1";
+export function loadJoinCard(): { card: string; qor?: string } | null {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(JOIN_KEY) ?? "null");
+    return v && typeof v.card === "string" ? v : null;
+  } catch {
+    return null;
+  }
+}
+/** Clears the card from this phone only. It never touches the network, and no letter is ever deleted. */
+export function clearJoinCard(): boolean {
+  try {
+    window.localStorage.removeItem(JOIN_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }

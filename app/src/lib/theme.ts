@@ -38,7 +38,9 @@ function paint(s: Sky) {
   const set = (k: string, v: string) => el.style.setProperty(k, v);
   set("--sky-top", rgb(s.top));
   set("--sky-bot", rgb(s.bot));
-  set("--cloud-tint", rgb([0, 1, 2].map((i) => (s.lit[i]! + s.shade[i]!) / 2) as Sky["lit"]));
+  // the light sky takes the pinker of the two colours; the dark sky keeps an even mix, as before
+  const k = isDark(s) ? 0.5 : 0.7;
+  set("--cloud-tint", rgb([0, 1, 2].map((i) => s.lit[i]! * (1 - k) + s.shade[i]! * k) as Sky["lit"]));
   set("--cloud", s.cloud.toFixed(3));
   set("--stars", s.stars.toFixed(3));
   set("--pearl", hex(s.bot));

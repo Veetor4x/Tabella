@@ -74,6 +74,30 @@ body { margin: 0; font-family: var(--sans); font-size: 16px; line-height: 1.55; 
 @keyframes cl-drift { to { transform: translate3d(calc(var(--tile) * -1), 0, 0); } }
 html[data-hidden] .cl-drift, html[data-hidden] .hero-cloud, html[data-hidden] .hero-float { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) { .cl-drift, .hero-cloud { animation: none; } }
+
+/* light sky: one main cloud near the middle, a few fainter small ones near the edges. Two copies of each cloud cross-fade as they
+   drift (a triangle of opacity, half a cycle apart, always adds up to one cloud), so it moves the whole time and loops without a seam. */
+:root[data-theme="dark"] .bgl { display: none; }
+:root:not([data-theme="dark"]) .bgd { display: none; }
+.bg-night .bgl { display: none !important; }
+.bg-night .bgd { display: block !important; }
+.lc { --T: 80s; --o: 0.5; position: absolute; display: block; aspect-ratio: 640 / 320; background: rgb(var(--cloud-tint)); opacity: 0; animation: lc-drift var(--T) linear infinite; will-change: transform, opacity; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.lc2 { animation-delay: calc(var(--T) / -2); }
+@keyframes lc-drift { 0% { transform: translate3d(-9%, 0, 0); opacity: 0; } 50% { opacity: var(--o); } 100% { transform: translate3d(9%, 0, 0); opacity: 0; } }
+/* far (fainter, slower), then nearer */
+.lc-a { left: 5vw; top: 13%; width: max(150px, 26vw); --T: 90s; --o: 0.7; -webkit-mask-image: url("./assets/sky/puff-a.webp"); mask-image: url("./assets/sky/puff-a.webp"); }
+.lc-c { left: 60vw; top: 72%; width: max(160px, 30vw); --T: 86s; --o: 0.65; -webkit-mask-image: url("./assets/sky/puff-c.webp"); mask-image: url("./assets/sky/puff-c.webp"); }
+.lc-b { left: 66vw; top: 21%; width: max(150px, 27vw); --T: 78s; --o: 0.75; -webkit-mask-image: url("./assets/sky/puff-b.webp"); mask-image: url("./assets/sky/puff-b.webp"); }
+.lc-main { --w: max(280px, min(58vw, 640px)); left: 50%; top: calc(50% - var(--w) * 0.28); width: var(--w); margin-left: calc(var(--w) / -2); aspect-ratio: 1000 / 560; --T: 66s; --o: 1; -webkit-mask-image: url("./assets/sky/soft-main.webp"); mask-image: url("./assets/sky/soft-main.webp"); }
+html[data-hidden] .lc { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .lc { animation: none; opacity: var(--o); } .lc.lc2 { display: none; } }
+
+/* the hero's cloud in light: the same soft main cloud (the dark one keeps its own picture) */
+:root:not([data-theme="dark"]) .hero-cloud { aspect-ratio: 1000 / 560; -webkit-mask-image: url("./assets/sky/soft-main.webp"); mask-image: url("./assets/sky/soft-main.webp"); }
+:root:not([data-theme="dark"]) .bg::after { opacity: 0.09; }
+
+/* light glass: frosted, with a thin light border and a soft shadow, so the drifting clouds show gently through cards and panels */
+:root:not([data-theme="dark"]) .glass:not(.night .glass) { background: rgba(255, 255, 255, 0.36); border: 1px solid rgba(255, 255, 255, 0.78); -webkit-backdrop-filter: blur(18px) saturate(1.25); backdrop-filter: blur(18px) saturate(1.25); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 30px -16px rgba(95, 70, 70, 0.28), 0 1px 2px rgba(60, 50, 50, 0.06); }
 .bg::after { content: ""; position: absolute; inset: 0; opacity: 0.075; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; pointer-events: none; }
 .night .bg::after, :root[data-theme="dark"] .bg::after { opacity: 0.06; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); }
 @keyframes shimmer { from { transform: translate3d(-130%, 0, 0) skewX(-18deg); } to { transform: translate3d(330%, 0, 0) skewX(-18deg); } }
@@ -844,3 +868,13 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
 .print-card.back ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; }
 .me-nav a { white-space: nowrap; }
 .me-nav { flex-wrap: wrap; row-gap: 4px; }
+
+/* cards saved on this phone with no letter attached */
+.spare-cards { margin: 22px 0 0; }
+.spare-cards h2 { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 0 0 8px; }
+.spare-cards ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.spare-card { padding: 14px 16px; display: grid; gap: 8px; }
+.spare-card > div:first-child { display: grid; gap: 2px; }
+.spare-card strong { font-weight: 500; }
+.spare-card span { font-size: 14px; color: var(--soft); }
+.spare-ask p { margin: 0 0 10px; font-size: 15px; }
