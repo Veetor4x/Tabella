@@ -707,10 +707,10 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
    there is always exactly one cloud's worth of cloud, moving slowly and never jumping. */
 .hero-art { position: relative; padding-bottom: 74px; }
 .hero-stage { z-index: 1; }
-.hero-cloud { position: absolute; left: 50%; bottom: -4px; width: min(440px, 120vw); aspect-ratio: 1000 / 520; margin-left: calc(min(440px, 120vw) / -2); pointer-events: none; background: rgb(var(--cloud-tint)); opacity: 0; -webkit-mask: url("./assets/sky/main.webp") center / 100% 100% no-repeat; mask: url("./assets/sky/main.webp") center / 100% 100% no-repeat; animation: hero-drift 72s linear infinite; will-change: transform, opacity; }
+.hero-cloud { position: absolute; left: 50%; bottom: 8px; width: min(520px, 132vw); aspect-ratio: 1000 / 520; margin-left: calc(min(520px, 132vw) / -2); pointer-events: none; background: rgb(var(--cloud-tint)); opacity: 0; -webkit-mask: url("./assets/sky/main.webp") center / 100% 100% no-repeat; mask: url("./assets/sky/main.webp") center / 100% 100% no-repeat; animation: hero-drift 72s linear infinite; will-change: transform, opacity; }
 .hero-cloud + .hero-cloud { animation-delay: -36s; }
 @keyframes hero-drift { 0% { transform: translate3d(-15%, 0, 0); opacity: 0; } 50% { opacity: 0.95; } 100% { transform: translate3d(15%, 0, 0); opacity: 0; } }
-@media (min-width: 860px) { .hero-cloud { width: 560px; margin-left: -280px; } }
+@media (min-width: 860px) { .hero-cloud { width: 620px; margin-left: -310px; } }
 @media (prefers-reduced-motion: reduce) { .hero-cloud { opacity: 0.48; } }
 
 /* the FAQ: answers unfold softly, like paper */
