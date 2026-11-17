@@ -20,9 +20,9 @@ export function PersonFields(props: { id: string; kind: "recipient" | "backup"; 
       </Field>
       {kind === "backup" && (
         <>
-          <label htmlFor={`${id}-rel`}>Who are they to {kind === "backup" ? "the person you're writing to" : ""}?</label>
+          <label htmlFor={`${id}-rel`}>Who are they to you?</label>
           <Field>
-            <input id={`${id}-rel`} type="text" value={p.relation ?? ""} placeholder="Her sister" autoComplete="off" onChange={(e) => set({ relation: e.target.value })} />
+            <input id={`${id}-rel`} type="text" value={p.relation ?? ""} placeholder="My sister" autoComplete="off" onChange={(e) => set({ relation: e.target.value })} />
           </Field>
         </>
       )}
@@ -37,8 +37,9 @@ export function PersonFields(props: { id: string; kind: "recipient" | "backup"; 
       <p className="hint small">Text and call reminders coming soon.</p>
       <label htmlFor={`${id}-q`}>A private question only {p.name.trim() || "they"} could answer</label>
       <Field>
-        <input id={`${id}-q`} type="text" value={p.question} placeholder="What did we call the boat?" autoComplete="off" onChange={(e) => set({ question: e.target.value })} />
+        <input id={`${id}-q`} type="text" value={p.question} placeholder="What did we name the cat that kept stealing your socks?" autoComplete="off" onChange={(e) => set({ question: e.target.value })} />
       </Field>
+      <p className="hint small">Ask about something only the two of you share.</p>
       <label htmlFor={`${id}-a`}>The answer</label>
       <Field>
         <input id={`${id}-a`} type="text" value={p.answer} placeholder="The answer" autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => set({ answer: e.target.value })} />

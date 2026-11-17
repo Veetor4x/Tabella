@@ -36,7 +36,7 @@ export function scrub(text: string): string {
     .slice(0, 160);
 }
 
-async function post(url: string, init: RequestInit): Promise<void> {
+async function post(url: string, init: RequestInit, recipient?: string): Promise<void> {
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
   if (!res.ok) {
     let reason = "";
@@ -45,6 +45,12 @@ async function post(url: string, init: RequestInit): Promise<void> {
       const name = typeof j.name === "string" ? j.name : typeof j.code === "string" ? j.code : "";
       const msg = typeof j.message === "string" ? j.message : typeof j.error === "string" ? j.error : "";
       reason = scrub(`${name}${name && msg ? ": " : ""}${msg}`);
+      // "you can only send testing emails to your own address (x@y)": say whether that address is the recipient, never what it is
+      const allowed = /([^\s<>"',;()]+)@([^\s<>"',;()]+?)[).]*(?:[\s,;]|$)/.exec(msg);
+      if (allowed && recipient) {
+        const same = `${allowed[1]}@${allowed[2]}`.toLowerCase() === recipient.toLowerCase();
+        reason += same ? " [the address Resend allows is the recipient]" : ` [the address Resend allows differs from the recipient: it is on ${allowed[2]!.toLowerCase()}]`;
+      }
     } catch {
       /* not JSON */
     }
@@ -70,7 +76,7 @@ export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
         method: "POST",
         headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json", "idempotency-key": idempotencyKey },
         body: JSON.stringify({ from: resendFrom, to: [to], subject, text }),
-      });
+      }, to);
     },
     async sms(to, text) {
       await post(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {

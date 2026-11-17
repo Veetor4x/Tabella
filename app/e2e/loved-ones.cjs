@@ -114,12 +114,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await shot(a, "alex-02-both-ready", true);
   await a.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^Continue/.test(b.textContent.trim()) && !b.disabled));
   await a.getByRole("button", { name: /^Continue/ }).click();
-  await a.getByRole("heading", { name: /Is there someone/ }).waitFor(); await a.waitForTimeout(600);
-  await a.getByRole("button", { name: /^Continue/ }).click();
-  await a.getByRole("heading", { name: /If you go quiet/ }).waitFor(); await a.waitForTimeout(800);
+  await a.getByRole("heading", { name: /When should it open/ }).waitFor(); await a.waitForTimeout(800);
   for (let i = 0; i < 5; i++) await a.locator(".numeral").click();
-  await a.locator(".choice").filter({ hasText: "2 minutes (demo)" }).click();
-  await a.getByRole("button", { name: /^Continue/ }).click();
+  if (process.env.DATED) {
+    // "On a date", with the 2-minute demo: it opens whether or not anyone checks in, and there is no guardian step
+    await a.getByRole("radio", { name: /On a date/ }).check();
+    ok(await a.locator("#release-day").isVisible(), "When: \"On a date\" shows a calm date picker");
+    ok((await a.locator("#release-day").getAttribute("max")) > (await a.locator("#release-day").getAttribute("min")), "When: the picker has a first day (tomorrow) and a last day (50 years ahead)");
+    await a.locator(".choice").filter({ hasText: "In 2 minutes (demo)" }).click();
+    await shot(a, "alex-02b-when-date");
+    await a.getByRole("button", { name: /^Continue/ }).click();
+  } else {
+    await a.locator(".choice").filter({ hasText: "2 minutes (demo)" }).click();
+    await a.getByRole("button", { name: /^Continue/ }).click();
+    await a.getByRole("heading", { name: /Is there someone/ }).waitFor(); await a.waitForTimeout(600);
+    await a.getByRole("button", { name: /^Continue/ }).click();
+  }
   await a.getByRole("heading", { name: "Ready to seal it?" }).waitFor(); await a.waitForTimeout(800);
   await a.getByRole("button", { name: "Seal it" }).click();
   await a.getByRole("heading", { name: "Sealed." }).waitFor({ timeout: 240000 });

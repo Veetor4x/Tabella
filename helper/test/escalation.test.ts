@@ -309,6 +309,20 @@ describe("a provider that says no", () => {
     expect(scrub("validation_error: You can only send testing emails to your own email address (me.secret@gmail.com). Call +44 7700 900123 or see https://resend.com/domains")).toBe("validation_error: You can only send testing emails to your own email address (<email>). Call <number> or see <link>");
     expect(scrub("x".repeat(500))).toHaveLength(160);
   });
+  it("says whether the address Resend allows is the recipient, without showing it", async () => {
+    const { createNotifier } = await import("../src/notify/providers.js");
+    const real = globalThis.fetch;
+    const say = (msg: string) => (globalThis.fetch = (async () => new Response(JSON.stringify({ name: "validation_error", message: msg }), { status: 403 })) as typeof fetch);
+    const n = createNotifier({ RESEND_API_KEY: "k", RESEND_FROM: "Tabella <a@b.co>" });
+    try {
+      say("You can only send testing emails to your own email address (Me.Owner@Gmail.com). To send emails to other recipients, please verify a domain at resend.com");
+      await expect(n.email("me.owner@gmail.com", "s", "t", "k")).rejects.toThrow(/allows is the recipient/);
+      await expect(n.email("someone.else@gmail.com", "s", "t", "k")).rejects.toThrow(/differs from the recipient: it is on gmail\.com/);
+      await n.email("someone.else@gmail.com", "s", "t", "k").catch((e) => expect(String(e.message)).not.toMatch(/owner/i));
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
   it("a 4xx refusal (a key or sender problem) waits ten minutes; a hiccup backs off 30 s, 1 min, 2 min, then 5 min", async () => {
     const { ProviderError } = await import("../src/notify/providers.js");
     const n = createDryRunNotifier(EMAIL_ONLY);

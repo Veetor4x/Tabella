@@ -18,14 +18,14 @@ const OUT = process.argv[3] || path.join(__dirname, "..", "..", "docs", "screens
 fs.mkdirSync(OUT, { recursive: true });
 const FORBIDDEN = /\b(ML-?KEM|ML-?DSA|KEM|DSA|ciphertext|encrypt\w*|decrypt\w*|signature|sign(ed|ing)?|mnemonic|seed|hash\w*|nonce|gas|blockchain|on-?chain|smart contract|private key|public key|keys?|token|crypto\w*|ethereum|solidity|argon\w*|scrypt)\b/i;
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
-const LETTER = "Dear Mia,\n\nThe blue folder in my desk has everything. Look after Sofia, and let her look after you.\n\nAll my love, Alex.";
+const LETTER = "Dear Mia,\n\nThe blue folder in my desk has everything. Look after your aunt Sofia, and let her look after you.\n\nAll my love, Dad.";
 // TEST_EMAIL=you@gmail.com makes the helper send the real emails to YOUR inbox (Mia gets you@..., Sofia gets you+sofia@... ). Without it the
 // contacts are on a reserved domain (example.com): the helper never sends to those, so a test never reaches anyone.
 const TEST_EMAIL = (process.env.TEST_EMAIL || "").trim();
 const plus = (e, tag) => e.replace("@", `+${tag}@`);
-const MIA = { name: "Mia", email: TEST_EMAIL || "mia.demo@example.com", phone: "", question: "What did we call the little boat?", answer: "Blue Heron" };
+const MIA = { name: "Mia", email: TEST_EMAIL || "mia.demo@example.com", phone: "", question: "What did we name the cat that kept stealing your socks?", answer: "Biscuit" };
 // The backup's address: with Resend's test sender only the account's own address can receive, so TEST_BACKUP_EMAIL may be the same inbox.
-const SOFIA = { name: "Sofia", rel: "her oldest friend", email: (process.env.TEST_BACKUP_EMAIL || "").trim() || (TEST_EMAIL ? plus(TEST_EMAIL, "sofia") : "sofia.demo@example.com"), phone: "", question: "Where did we first meet?", answer: "The Lighthouse Cafe" };
+const SOFIA = { name: "Sofia", rel: "My sister", email: (process.env.TEST_BACKUP_EMAIL || "").trim() || (TEST_EMAIL ? plus(TEST_EMAIL, "sofia") : "sofia.demo@example.com"), phone: "", question: "What was the name of the street we grew up on?", answer: "Maple Lane" };
 const url = (p) => new URL(p, BASE).href;
 let failures = 0;
 const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) failures++; };
@@ -91,12 +91,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const draftRaw = await a.evaluate(() => localStorage.getItem("tabella.draft.v1"));
   ok(!!draftRaw && !draftRaw.includes(MIA.answer) && !draftRaw.includes(SOFIA.answer), "the draft saved on this device holds no answers");
   await a.getByRole("button", { name: /^Continue/ }).click();
-  await a.getByRole("heading", { name: /Is there someone/ }).waitFor(); await a.waitForTimeout(700);
-  await a.getByRole("button", { name: /^Continue/ }).click();
-  await a.getByRole("heading", { name: /If you go quiet/ }).waitFor(); await a.waitForTimeout(800);
+  await a.getByRole("heading", { name: /When should it open/ }).waitFor(); await a.waitForTimeout(800);
   for (let i = 0; i < 5; i++) await a.locator(".numeral").click();
-  await a.locator(".choice").filter({ hasText: "2 minutes (demo)" }).click();
-  await a.getByRole("button", { name: /^Continue/ }).click();
+  if (process.env.DATED) {
+    // "On a date", with the 2-minute demo: it opens whether or not anyone checks in, and there is no guardian step
+    await a.getByRole("radio", { name: /On a date/ }).check();
+    ok(await a.locator("#release-day").isVisible(), "When: \"On a date\" shows a calm date picker");
+    ok((await a.locator("#release-day").getAttribute("max")) > (await a.locator("#release-day").getAttribute("min")), "When: the picker has a first day (tomorrow) and a last day (50 years ahead)");
+    await a.locator(".choice").filter({ hasText: "In 2 minutes (demo)" }).click();
+    await shot(a, "alex-02b-when-date");
+    await a.getByRole("button", { name: /^Continue/ }).click();
+  } else {
+    await a.locator(".choice").filter({ hasText: "2 minutes (demo)" }).click();
+    await a.getByRole("button", { name: /^Continue/ }).click();
+    await a.getByRole("heading", { name: /Is there someone/ }).waitFor(); await a.waitForTimeout(600);
+    await a.getByRole("button", { name: /^Continue/ }).click();
+  }
   await a.getByRole("heading", { name: "Ready to seal it?" }).waitFor(); await a.waitForTimeout(3000);
   const pills = (await a.locator(".pills .pill").allInnerTexts()).join(" | ");
   ok(/Mia · surprise \+ 1 backup/.test(pills), `the pills say it (${pills})`);
@@ -110,7 +120,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const sealedAt = Date.now();
   console.log(`   progress shown: ${[...steps].filter(Boolean).join(" -> ")}`);
   const L = await a.evaluate(() => JSON.parse(localStorage.getItem("tabella.letters.v1")).at(-1));
-  ok(!!L.letterId && L.surprise && L.surprise.backups === 1, `Alex sealed letter ${L.letterId} (2-minute timer), with 1 backup`);
+  ok(!!L.letterId && L.surprise && L.surprise.backups === 1, `Alex sealed letter ${L.letterId} (2-minute timer${process.env.DATED ? ", a dated letter" : ""}), with 1 backup`);
   await a.waitForTimeout(3500);
   const done = await a.locator("main").innerText();
   ok(/we'll find Mia by email/.test(done) && /your backup person/.test(done), "the sealed screen says how Mia will be found");
@@ -119,8 +129,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const everything = await a.evaluate(() => JSON.stringify({ l: { ...localStorage }, s: { ...sessionStorage } }));
   const cards = (everything.match(/tbl1_[A-Za-z0-9_-]+/g) || []);
   const mine = new Set([L.ownerCard]);
-  ok(cards.every((c) => mine.has(c)) && !everything.includes(MIA.answer) && !everything.includes(SOFIA.answer) && !everything.includes("Heron"), `this device holds only Alex's own card (${cards.length} card code(s) found, none is Mia's), and no answers`);
+  ok(cards.every((c) => mine.has(c)) && !everything.includes(MIA.answer) && !everything.includes(SOFIA.answer) && !everything.includes("Biscuit"), `this device holds only Alex's own card (${cards.length} card code(s) found, none is Mia's), and no answers`);
   console.log(`   letter ${L.letterId}, tx ${L.txHash}`);
+  if (process.env.DATED) {
+    ok(!!L.releaseAt && L.quietSeconds === 0 && L.warningSeconds === 0 && L.guardianCard === null, `a dated letter: it opens at ${new Date(L.releaseAt * 1000).toISOString()}, with no quiet time and no guardian card`);
+    ok(/It opens on/.test(done) && /whether or not you check in/.test(done), "the sealed screen says it opens on its day, whether or not Alex checks in");
+    // My letters: a dated letter has nothing to tap, and says when it opens
+    await a.goto(url("me"), { waitUntil: "networkidle" });
+    await a.locator(".letter-row").first().waitFor({ timeout: 30000 });
+    await a.waitForFunction(() => /Opens on/.test(document.body.innerText), null, { timeout: 30000 });
+    await shot(a, "alex-05-my-letters-dated");
+    await a.locator(".letter-row").first().click();
+    await a.getByRole("heading", { name: "Nothing to do." }).waitFor({ timeout: 30000 });
+    ok((await a.getByRole("button", { name: "I'm still here" }).count()) === 0, "My letters: a dated letter has no check-in button");
+    ok(/whether or not you check in/.test(await a.locator("main").innerText()), "My letters: it says it opens on its day, whether or not Alex checks in");
+    await shot(a, "alex-06-dated-detail");
+  }
 
   // ----------------------------------------------------------------- 2. Mia, early
   const M = await fresh("Mia", { record: true });
@@ -162,7 +186,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const openBtn = m.getByRole("button", { name: "Open it", exact: true });
   const msgs = [];
   for (let i = 0; i < 3; i++) {
-    await m.locator("#answer").fill(["red kite", "Blue Jay", "heron blue"][i]);
+    await m.locator("#answer").fill(["Whiskers", "Mittens", "socks"][i]);
     await openBtn.click();
     await m.getByText(/Take your time|Not this time|Still not right|Not yet/).waitFor({ timeout: 20000 });
     msgs.push((await m.getByRole("status").last().innerText()).trim());
@@ -180,7 +204,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await shot(m, "mia-04-slow-down");
 
   // ----------------------------------------------------------------- 5. the right answer, in a different case and with extra spaces
-  await m.locator("#answer").fill("  BLUE   heron ");
+  await m.locator("#answer").fill("  BISCUIT  ");
   await openBtn.click();
   await m.locator(".scene-stage").waitFor({ timeout: 30000 });
   ok(true, "the right answer (different case, extra spaces) plays the envelope scene");
@@ -201,10 +225,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await s.waitForTimeout(600);
   ok((await s.locator(".question").innerText()) === SOFIA.question, "Sofia is asked her own question");
   await shot(s, "sofia-01-question-dark");
-  await s.locator("#answer").fill("Mia's cafe"); // wrong
+  await s.locator("#answer").fill("Oak Street"); // wrong
   await s.getByRole("button", { name: "Open it", exact: true }).click();
   await s.getByText(/Take your time/).waitFor({ timeout: 20000 });
-  await s.locator("#answer").fill("the lighthouse CAFE");
+  await s.locator("#answer").fill("maple LANE");
   await s.getByRole("button", { name: "Open it", exact: true }).click();
   await s.getByRole("heading", { name: "Thank you, Sofia." }).waitFor({ timeout: 30000 });
   ok(await s.getByRole("button", { name: "Open it with Mia" }).isVisible() && await s.getByRole("button", { name: "Send it to Mia" }).isVisible(), 'a backup gets "Open it with Mia" and "Send it to Mia"');

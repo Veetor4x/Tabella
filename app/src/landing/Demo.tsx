@@ -22,10 +22,10 @@ import { fitRhythm, lettersAt, rhythmFor } from "./rhythm";
  */
 export const STEPS = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
-  { label: "People", caption: "Alex chooses who can read it. Each person turns Ready.", ms: 8000 },
-  { label: "Guardian", caption: "A guardian can say “they're okay” if Alex goes quiet.", ms: 5500 },
+  { label: "People", caption: "Alex chooses who can read it: Mia, his daughter, and Leo, his son. Each person turns Ready.", ms: 8000 },
+  { label: "Guardian", caption: "Sofia, his sister, is his guardian: she can say “they're okay” if Alex goes quiet.", ms: 5500 },
   { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open. Or he picks a date, like a time capsule.", ms: 6000 },
-  { label: "Seal", caption: "Sealed on the phone. Only Mia and Leo can open it.", ms: 11000 },
+  { label: "Seal", caption: "Sealed on the phone. Only Mia, his daughter, and Leo, his son, can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
   { label: "Mia opens it", caption: "Mia opens it. The seal cracks, and the letter is hers.", ms: 13500 },
@@ -34,14 +34,14 @@ export const STEPS = [
 /** The "Keep it a surprise" walkthrough: the owner's flow with how-to-reach-them, the ladder, and the question. */
 export const STEPS_SURPRISE = [
   { label: "Write", caption: "Alex writes a few honest lines, in Alex's own words.", ms: 12000 },
-  { label: "Reach them", caption: "Alex adds how to reach Mia, and a question only Mia can answer.", ms: 9000 },
-  { label: "Backup", caption: "Alex adds someone Mia trusts, in case Mia can't be reached.", ms: 7000 },
+  { label: "Reach them", caption: "Alex adds how to reach Mia, his daughter, and a question only the two of them share.", ms: 9000 },
+  { label: "Backup", caption: "Alex adds Sofia, his sister, as his guardian and a backup, in case Mia can't be reached.", ms: 7000 },
   { label: "Timing", caption: "If Alex goes quiet for six months, the letter starts to open. Or he picks a date, like a time capsule.", ms: 6000 },
-  { label: "Seal", caption: "Sealed on the phone. Only Mia can open it.", ms: 11000 },
+  { label: "Seal", caption: "Sealed on the phone. Only Mia, his daughter, can open it.", ms: 11000 },
   { label: "I'm still here", caption: "One tap says “I'm still here” and starts the time again.", ms: 6000 },
   { label: "Time passes", caption: "Years pass. The check-ins stop, and the countdown runs out.", ms: 7000 },
-  { label: "Found", caption: "Tabella finds Mia by email, sends a reminder, then asks the backup to help.", ms: 9000 },
-  { label: "They open it", caption: "Mia answers the question only Mia knows, and the letter opens.", ms: 14500 },
+  { label: "Found", caption: "Tabella finds Mia by email, sends a reminder, then asks Sofia, his sister, to help.", ms: 9000 },
+  { label: "They open it", caption: "Mia answers the question only she and her dad share, and the letter opens.", ms: 14500 },
 ] as const;
 
 /** The demo letter. No recovery words, no codes, no amounts: it only says where things are and who can help. */
@@ -184,19 +184,19 @@ function Timing({ t }: { t: number }) {
     </div>
   );
 }
-function SealScreen({ t }: { t: number }) {
+function SealScreen({ t, people = ["Mia", "Leo"] }: { t: number; people?: string[] }) {
   const working = at(t, 3200) && !at(t, 7000);
   const night = at(t, 8000);
   return night ? (
     <div className="done-screen" style={{ paddingTop: 30 }}>
       <Headline text="Sealed." />
       <m.p className="lead center" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}>
-        Only Mia and Leo can open this.
+        Only {people.join(" and ")} can open this.
       </m.p>
       <PeopleMap
         variant="night"
         start={0.9}
-        people={["Mia", "Leo"]}
+        people={people}
         guardian="Sofia"
         root={
           <m.div className="seal-wrap" initial={{ opacity: 0, scale: 1.5, y: -18 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 1.4, ease: EASE, delay: 0.4 }}>
@@ -209,7 +209,7 @@ function SealScreen({ t }: { t: number }) {
     <div className="step">
       <Headline text="Ready to *seal* it?" />
       <Lead>One last look. Once it's sealed, nobody can change it.</Lead>
-      <PeopleMap root={letterRoot} people={["Mia", "Leo"]} guardian="Sofia" variant="day" working={working} start={0.3} />
+      <PeopleMap root={letterRoot} people={people} guardian="Sofia" variant="day" working={working} start={0.3} />
       <p className="status-line center">{working ? (t < 4600 ? "Checking everyone is ready…" : t < 5800 ? "Wrapping your letter…" : "Pressing the wax…") : ""}</p>
     </div>
   );
@@ -264,7 +264,7 @@ function Open({ t }: { t: number }) {
 export const SCREENS = [Write, People, Guardian, Timing, SealScreen, StillHere, TimePasses, Open];
 
 /* ---------- the "keep it a surprise" screens ---------- */
-const DEMO_Q = "What did we call the little boat?";
+const DEMO_Q = "What did we name the cat that kept stealing your socks?";
 const noop = () => {};
 function Reach({ t }: { t: number }) {
   return (
@@ -278,7 +278,7 @@ function Reach({ t }: { t: number }) {
         </div>
       </m.div>
       <m.div initial={false} animate={{ y: at(t, 5200) ? -300 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
-        <PersonFields id="demo-r" kind="recipient" heading="Who is it for?" showProblem={false} onChange={noop} p={{ name: typed("Mia", t, 700, 160), email: typed("mia@example.com", t, 1300, 55), phone: "", question: typed(DEMO_Q, t, 3300, 40), answer: typed("Blue Heron", t, 5400, 110), relation: "" }} />
+        <PersonFields id="demo-r" kind="recipient" heading="Who is it for?" showProblem={false} onChange={noop} p={{ name: typed("Mia", t, 700, 160), email: typed("mia@example.com", t, 1300, 55), phone: "", question: typed(DEMO_Q, t, 3300, 40), answer: typed("Biscuit", t, 5400, 110), relation: "" }} />
       </m.div>
     </div>
   );
@@ -291,7 +291,7 @@ function Backup({ t }: { t: number }) {
         <Lead>If Mia can't be reached, they can help.</Lead>
       </m.div>
       <m.div initial={false} animate={{ y: at(t, 4600) ? -190 : 0 }} transition={{ duration: 1.2, ease: EASE }}>
-        <PersonFields id="demo-b" kind="backup" heading="Backup person 1" showProblem={false} onChange={noop} p={{ name: typed("Sofia", t, 500, 150), relation: typed("her oldest friend", t, 1100, 60), email: typed("sofia@example.com", t, 2100, 55), phone: "", question: typed("Where did we first meet?", t, 4000, 40), answer: "", }} />
+        <PersonFields id="demo-b" kind="backup" heading="Backup person 1" showProblem={false} onChange={noop} p={{ name: typed("Sofia", t, 500, 150), relation: typed("My sister", t, 1100, 80), email: typed("sofia@example.com", t, 2100, 55), phone: "", question: typed("What was the name of the street we grew up on?", t, 4000, 40), answer: "", }} />
       </m.div>
     </div>
   );
@@ -316,7 +316,7 @@ function Found({ t }: { t: number }) {
 }
 function OpenQ({ t }: { t: number }) {
   const scene = at(t, 5200);
-  const typedAnswer = typed("blue heron", t, 1200, 120);
+  const typedAnswer = typed("biscuit", t, 1200, 140);
   return (
     <div className="step" style={{ paddingTop: 14 }}>
       <Headline text="Your *letter*." />
@@ -339,7 +339,8 @@ function OpenQ({ t }: { t: number }) {
     </div>
   );
 }
-export const SCREENS_SURPRISE = [Write, Reach, Backup, Timing, SealScreen, StillHere, TimePasses, Found, OpenQ];
+const SealSurprise = ({ t }: { t: number }) => <SealScreen t={t} people={["Mia"]} />;
+export const SCREENS_SURPRISE = [Write, Reach, Backup, Timing, SealSurprise, StillHere, TimePasses, Found, OpenQ];
 
 
 /* ---------- the phone and the controls ---------- */

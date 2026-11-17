@@ -57,19 +57,20 @@ function Desk() {
 
 /** Two chairs, one after the other, side by side. */
 function Chairs() {
-  const chair = (x: number, name: string, d: number) => (
+  const chair = (x: number, name: string, who: string, d: number) => (
     <g transform={`translate(${x} 320)`}>
       <A a="rise" d={d} dur={0.9}>
         <path className="sk" d="M0 0 V-62 H66 V0 M0 -62 V-128 M0 -128 H10" />
         <text className="nm" x="33" y="40" textAnchor="middle">{name}</text>
+        <text className="cap" x="33" y="62" textAnchor="middle" style={{ fontSize: 13 }}>{who}</text>
       </A>
     </g>
   );
   return (
     <>
       <path className="sk faint" d="M60 322 H300" />
-      {chair(80, "Mia", 0.5)}
-      {chair(210, "Leo", 1.5)}
+      {chair(80, "Mia", "his daughter", 0.5)}
+      {chair(210, "Leo", "his son", 1.5)}
     </>
   );
 }
@@ -85,6 +86,7 @@ function Shield() {
         <path className="wxl" d="M152 196 L174 218 L212 170" />
       </A>
       <text className="nm" x="180" y="318" textAnchor="middle">Sofia</text>
+      <text className="cap" x="180" y="340" textAnchor="middle" style={{ fontSize: 13 }}>his sister</text>
     </>
   );
 }
@@ -352,8 +354,8 @@ export function Story({ id, still = false, lines }: { id: StoryId; still?: boole
 
 export const STORY_ALT: Record<StoryId, string> = {
   desk: "A pen writes lines on a sheet of paper",
-  chairs: "Two chairs, one for Mia and one for Leo",
-  shield: "A shield with a check mark, for Sofia",
+  chairs: "Two chairs, one for Mia, his daughter, and one for Leo, his son",
+  shield: "A shield with a check mark, for Sofia, his sister",
   calendar: "A calendar whose pages turn up to six months",
   seal: "A letter slides into an envelope, the flap closes and a wax seal is pressed",
   horizon: "A low sun on a horizon, I'm still here",
