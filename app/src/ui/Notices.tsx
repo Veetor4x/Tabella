@@ -20,7 +20,7 @@ export function Notices() {
   }, [toasts, heights]);
   let y = 0;
   return (
-    <div className="toasts" role="status" aria-live="polite">
+    <div className="toasts" role="region" aria-label="Notices" aria-live="polite">
       <AnimatePresence initial={false}>
         {toasts.map((t) => {
           const at = y;

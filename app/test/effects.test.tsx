@@ -47,7 +47,7 @@ describe("only the effects that were asked for are left", () => {
     const a = notify("Thanks, Alex. Your letter stays sealed.", 60_000);
     const b = notify("Sofia paused the timer. You have more time.", 60_000);
     expect(getToasts().map((t) => t.id)).toEqual([b, a]);
-    expect(html(<Notices />)).toContain('role="status"');
+    expect(html(<Notices />)).toContain('aria-label="Notices"');
     dismiss(a);
     dismiss(b);
     expect(getToasts()).toEqual([]);
