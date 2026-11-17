@@ -10,11 +10,45 @@
  */
 import type { Notifier } from "./types.js";
 
+/** A provider said no. `reason` is the provider's own error name and a short message with every address and number removed. */
+export class ProviderError extends Error {
+  constructor(
+    readonly status: number,
+    readonly reason: string,
+  ) {
+    super(`provider answered HTTP ${status}${reason ? ` (${reason})` : ""}`);
+    this.name = "ProviderError";
+  }
+  /** a 4xx other than "slow down" will not fix itself in seconds: wait a long time before trying again */
+  get hopeless(): boolean {
+    return this.status >= 400 && this.status < 500 && this.status !== 429 && this.status !== 408;
+  }
+}
+
+/** Provider error bodies can echo the recipient or the account's address: keep only the error's name and a scrubbed message. */
+export function scrub(text: string): string {
+  return text
+    .replace(/[^\s<>"',;()]+@[^\s<>"',;()]+/g, "<email>")
+    .replace(/\+?\d[\d\s().-]{6,}\d/g, "<number>")
+    .replace(/https?:\/\/\S+/g, "<link>")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
+}
+
 async function post(url: string, init: RequestInit): Promise<void> {
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
   if (!res.ok) {
-    // status code only: provider error bodies can echo the recipient
-    throw new Error(`provider answered HTTP ${res.status}`);
+    let reason = "";
+    try {
+      const j = (await res.json()) as { name?: unknown; message?: unknown; code?: unknown; error?: unknown };
+      const name = typeof j.name === "string" ? j.name : typeof j.code === "string" ? j.code : "";
+      const msg = typeof j.message === "string" ? j.message : typeof j.error === "string" ? j.error : "";
+      reason = scrub(`${name}${name && msg ? ": " : ""}${msg}`);
+    } catch {
+      /* not JSON */
+    }
+    throw new ProviderError(res.status, reason);
   }
 }
 

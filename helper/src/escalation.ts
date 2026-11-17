@@ -16,6 +16,7 @@
  * Never logged: addresses, phone numbers, names, links. Logs say "letter #N: step X sent".
  */
 import type { PostmanPackage } from "../../shared/surprise.ts";
+import { ProviderError } from "./notify/providers.js";
 import type { LadderStore, Notifier } from "./notify/types.js";
 
 const MIN = 60_000;
@@ -95,6 +96,8 @@ export function createEscalation(deps: EscalationDeps) {
   const now = deps.now ?? Date.now;
   const log = deps.log ?? ((l: string) => console.log(`[ladder] ${l}`));
   const waitingLogged = new Set<string>();
+  /** after a failed send a step waits before the next try (30 s, 1 min, 2 min, 5 min), and a refusal that will not fix itself waits 10 minutes */
+  const retry = new Map<string, { n: number; at: number }>();
 
   /** One pass for one released letter. Cheap and repeatable: it only does what is due and not yet done. */
   async function run(letterId: string, pkg: PostmanPackage): Promise<PassReport> {
@@ -129,15 +132,22 @@ export function createEscalation(deps: EscalationDeps) {
         report.skipped.push(s.key);
         continue;
       }
+      const wait = retry.get(`${letterId}:${s.key}`);
+      if (wait && now() < wait.at) continue; // still waiting after a failed try
       if (!(await store.claim(letterId, s.key, now()))) continue; // already done (maybe by an earlier pass)
       try {
         await s.send(notifier);
+        retry.delete(`${letterId}:${s.key}`);
         report.sent.push(s.key);
         log(`letter #${letterId}: step ${s.key} sent`);
       } catch (err) {
         await store.release(letterId, s.key); // try again on a later pass
+        const n = (retry.get(`${letterId}:${s.key}`)?.n ?? 0) + 1;
+        const hopeless = err instanceof ProviderError && err.hopeless;
+        const delay = hopeless ? 10 * MIN : Math.min(30_000 * 2 ** (n - 1), 5 * MIN);
+        retry.set(`${letterId}:${s.key}`, { n, at: now() + delay });
         report.failed.push(s.key);
-        log(`letter #${letterId}: step ${s.key} failed (${err instanceof Error ? err.message : "error"}); will retry`);
+        log(`letter #${letterId}: step ${s.key} failed (${err instanceof Error ? err.message : "error"}); will retry in ${Math.round(delay / 1000)} s`);
       }
     }
     const after = await store.steps(letterId);

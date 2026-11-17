@@ -180,6 +180,8 @@ describe("every step is sent once, and retries are safe", () => {
     const first = await esc.run("9", pkg());
     expect(first.sent).toEqual([]);
     expect(first.failed).toEqual(["r:email"]);
+    expect((await esc.run("9", pkg())).sent).toEqual([]); // not again at once: the step waits after a failed try
+    now += 30_000;
     const second = await esc.run("9", pkg());
     expect(second.sent).toEqual(["r:email"]);
     expect(n.sent.filter((m) => m.kind === "email")).toHaveLength(1); // sent once, after one failed try
@@ -298,5 +300,35 @@ describe("through the Postman and /opened", () => {
     let last = 0;
     for (let i = 0; i < 8; i++) last = (await post(app, { nope: 1 }, "6.6.6.6")).status;
     expect(last).toBe(429);
+  });
+});
+
+describe("a provider that says no", () => {
+  it("scrubs addresses, numbers and links out of what is logged", async () => {
+    const { scrub } = await import("../src/notify/providers.js");
+    expect(scrub("validation_error: You can only send testing emails to your own email address (me.secret@gmail.com). Call +44 7700 900123 or see https://resend.com/domains")).toBe("validation_error: You can only send testing emails to your own email address (<email>). Call <number> or see <link>");
+    expect(scrub("x".repeat(500))).toHaveLength(160);
+  });
+  it("a 4xx refusal (a key or sender problem) waits ten minutes; a hiccup backs off 30 s, 1 min, 2 min, then 5 min", async () => {
+    const { ProviderError } = await import("../src/notify/providers.js");
+    const n = createDryRunNotifier(EMAIL_ONLY);
+    let mode: "403" | "503" | "ok" = "403";
+    const flaky: Notifier = { ...n, channels: n.channels, sms: n.sms, call: n.call, email: async (to, sub, text, key) => { if (mode === "403") throw new ProviderError(403, "validation_error"); if (mode === "503") throw new ProviderError(503, ""); return n.email(to, sub, text, key); } };
+    const { esc } = make(flaky);
+    expect((await esc.run("3", pkg())).failed).toEqual(["r:email"]);
+    for (let i = 0; i < 5; i++) { now += 60_000; expect((await esc.run("3", pkg())).failed).toEqual([]); } // five minutes of quiet, not 15 more tries
+    now += 5 * 60_000 + 1;
+    expect((await esc.run("3", pkg())).failed).toEqual(["r:email"]); // after ten minutes it tries once more
+    expect(logs.at(-1)).toMatch(/failed \(provider answered HTTP 403 \(validation_error\)\); will retry in 600 s/);
+    mode = "503";
+    now += 10 * 60_000 + 1;
+    await esc.run("3", pkg()); // fails with 503: 30 s
+    expect(logs.at(-1)).toMatch(/will retry in 30 s/);
+    now += 30_001; await esc.run("3", pkg());
+    expect(logs.at(-1)).toMatch(/will retry in 60 s/);
+    mode = "ok";
+    now += 60_001;
+    expect((await esc.run("3", pkg())).sent).toEqual(["r:email"]);
+    expect(n.sent).toHaveLength(1);
   });
 });
