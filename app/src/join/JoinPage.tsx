@@ -1,5 +1,6 @@
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { detectQoreX } from "../lib/qorex";
 import { becomeReady, identityFromCard, isOpeningKeyRegistered, newCard, registerWithQoreX, type JoinProgress } from "../lib/heir";
 import { friendlyError } from "../lib/helper";
 import { Button } from "../ui/Button";
@@ -65,6 +66,18 @@ export function JoinPage() {
   const [kept, setKept] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [qorexNote, setQorexNote] = useState<string | null>(null);
+  // "Use QoreX instead" only appears when a QoreX wallet is really there; otherwise the no-wallet path is all anyone sees
+  const [hasQorex, setHasQorex] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const look = () => detectQoreX().then((v) => alive && v && setHasQorex(true));
+    void look();
+    const t = setTimeout(look, 2500); // a wallet can announce itself a little late
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, []);
   const running = useRef(false);
 
   const finish = (card: string, qor: string, via?: "qorex") => {
@@ -153,11 +166,13 @@ export function JoinPage() {
                 Make my opening card
               </Button>
             </div>
-            <p className="hint">
-              <button type="button" className="link" onClick={viaQoreX}>
-                Use QoreX instead
-              </button>
-            </p>
+            {hasQorex && (
+              <p className="hint">
+                <button type="button" className="link" onClick={viaQoreX}>
+                  Use QoreX instead
+                </button>
+              </p>
+            )}
             {qorexNote && (
               <p className="status-line" role="status">
                 {qorexNote}

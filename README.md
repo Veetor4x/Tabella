@@ -18,3 +18,11 @@ Sealed today. Opened when it matters. A quantum-safe sealed letter on QoreChain.
 
 (Full list to be completed before submission.)
 
+## Honest limits
+
+- **QoreX browser connection.** In QoreX v0.4.2 (during the event) the wallet was not available to websites: `window.qorex` was undefined, and another wallet extension threw "Cannot redefine property: ethereum". So Tabella registers keys through its own no-wallet path. The "Use QoreX instead" option appears only if a QoreX provider is really found (`window.qorex.native` or an EIP-6963 announcement from `network.qore.qorex`), so QoreX support switches on automatically when it is available. That path is untested against a live extension. See `docs/QOREX.md`.
+- This is a test-network demo. Please don't write real secrets yet.
+- The protection has not had an independent security review.
+- Email is the only delivery channel today; text and call reminders are not switched on.
+- Real emails need a verified sending domain; Resend's test sender only delivers to the account owner's own address.
+

@@ -20,6 +20,8 @@ import { notify, getToasts, dismiss } from "../src/lib/notices";
 import { APP_HOST, CARD_URL } from "../src/lib/config";
 import { Landing } from "../src/landing/Landing";
 import { skyAtHour } from "../src/lib/sky";
+import { detectQoreX, QOREX_RDNS } from "../src/lib/qorex";
+import { JoinPage } from "../src/join/JoinPage";
 import { SpareCardRow } from "../src/me/SpareCards";
 import * as storage from "../src/lib/storage";
 import { stuckLabel } from "../src/me/StuckLetter";
@@ -232,6 +234,43 @@ describe("the light page is warm pearl, with pink only in the clouds", () => {
     expect(rule).not.toMatch(/rgba\((2[0-4]\d|1\d\d), (1\d\d|[0-9]{1,2}),/);
     const tint = /--cloud-tint: (\d+) (\d+) (\d+)/.exec(css)!;
     expect(Number(tint[1]) - Number(tint[3])).toBeGreaterThan(30); // a clear blush
+  });
+});
+
+describe("QoreX is offered only when it is really there", () => {
+  const stub = (extra: Record<string, unknown> = {}) => {
+    const t = new EventTarget() as EventTarget & Record<string, unknown>;
+    Object.assign(t, extra);
+    (globalThis as unknown as { window: unknown }).window = t;
+    return t;
+  };
+  const done = () => delete (globalThis as unknown as { window?: unknown }).window;
+  const announce = (t: EventTarget, rdns: string, provider: unknown) => t.addEventListener("eip6963:requestProvider", () => t.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info: { rdns }, provider } })));
+  it("finds nothing when no wallet is there (the usual case), and says so quietly", async () => {
+    stub();
+    expect(await detectQoreX(60)).toBe(false);
+    done();
+  });
+  it("finds window.qorex.native", async () => {
+    stub({ qorex: { native: { enable: () => {} } } });
+    expect(await detectQoreX(60)).toBe(true);
+    done();
+  });
+  it("finds an EIP-6963 announcement from network.qore.qorex, and ignores other wallets", async () => {
+    const t = stub();
+    announce(t, "io.other.wallet", { native: { enable: () => {} } });
+    expect(await detectQoreX(60)).toBe(false);
+    announce(t, QOREX_RDNS, { native: { enable: () => {} } });
+    expect(await detectQoreX(60)).toBe(true);
+    done();
+  });
+  it("never touches window.ethereum", () => {
+    const src = readFileSync(new URL("../src/lib/qorex.ts", import.meta.url), "utf8");
+    expect(src.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/window\.ethereum|defineProperty/);
+  });
+  it("/join shows the no-wallet path, and no 'Use QoreX instead' until a wallet is found", () => {
+    const h = html(<JoinPage />);
+    expect(h).not.toContain("Use QoreX instead");
   });
 });
 

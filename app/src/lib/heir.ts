@@ -11,6 +11,7 @@ import { fetchKemKey } from "@qorechain/qoreseal/network";
 import { EthNativeSigner, TxClient, deriveUnifiedAccount, ensurePqcRegistered, getNetwork, qorechainRegistry, resolveSignBytesVersion, type UnifiedAccount } from "@qorechain/sdk";
 import { entropyToMnemonic } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
+import { qorexNative } from "./qorex";
 import { cardDecode, cardEncode, newSeed, sealKeysFromCardSeed, type SealKeyPair } from "../../../shared/tabella-crypto";
 import { HELPER_URL, restUrl } from "./config";
 import { HelperError, warmUp } from "./helper";
@@ -173,7 +174,7 @@ export async function becomeReady(card: string, onProgress: (p: JoinProgress) =>
 
 /** The QoreX way: her own wallet signs; the card only holds her opening keys. */
 export async function registerWithQoreX(card: string): Promise<{ qor: string }> {
-  const native = window.qorex?.native;
+  const native = qorexNative();
   if (!native) throw new HelperError("no_qorex");
   const keys = sealKeysFromCardSeed(cardDecode(card));
   await native.enable("qorechain-diana");

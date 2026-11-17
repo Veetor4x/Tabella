@@ -50,7 +50,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.goto(url("join?from=Alex"), { waitUntil: "networkidle" });
     await p.getByRole("heading", { name: /Alex wants to leave you something to read one day/ }).waitFor();
     await p.waitForTimeout(1200);
-    ok(await p.getByRole("button", { name: "Make my opening card" }).isVisible() && await p.getByRole("button", { name: "Use QoreX instead" }).isVisible(), `${name}: the invitation, "Make my opening card" and the quiet "Use QoreX instead"`);
+    ok(await p.getByRole("button", { name: "Make my opening card" }).isVisible() && (await p.getByRole("button", { name: "Use QoreX instead" }).count()) === 0, `${name}: the invitation and "Make my opening card"; with no QoreX wallet in the browser, no QoreX option is shown`);
     await clean(p, `${name}: invitation`);
     await shot(p, `${name.toLowerCase()}-01-invitation`);
     await p.getByRole("button", { name: "Make my opening card" }).click();
