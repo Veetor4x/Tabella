@@ -121,12 +121,14 @@ function Calendar() {
 }
 
 /** An envelope: the letter slides in, the flap closes, the seal is pressed. */
-function SealScene() {
+function SealScene({ bare = false }: { bare?: boolean }) {
   return (
     <g transform="translate(180 230)">
       {/* the letter sliding down into the envelope (it ends hidden behind the front) */}
       <A a="letter-in" d={0.3} dur={1.1} ease="ease-in-out" fill="backwards">
         <rect className="letter-sheet" x="104" y="100" width="152" height="134" rx="2" />
+        {!bare && (
+          <>
         <text className="hand" x="114" y="114.0" fontSize="7.4">Dear Mia and Leo,</text>
         <text className="hand" x="114" y="133.2" fontSize="6.6">I've put aside 2 Bitcoin for you</text>
         <text className="hand" x="114" y="142.8" fontSize="6.6">both, my gift for your futures.</text>
@@ -137,6 +139,8 @@ function SealScene() {
         <text className="hand" x="114" y="190.8" fontSize="6.6">he'll help you. Split it fairly</text>
         <text className="hand" x="114" y="200.4" fontSize="6.6">and look after each other.</text>
         <text className="hand" x="114" y="219.6" fontSize="6.6">All my love, Alex.</text>
+          </>
+        )}
       </A>
       <rect className="cover" x="-91" y="-49" width="182" height="109" />
       <path className="sk" d="M-90 -50 H90 V60 H-90 Z M-90 60 L-18 6 M90 60 L18 6" />
@@ -276,11 +280,11 @@ export function EnvelopeOpen({ lines, dur = 2.6, delay = 4.0 }: { lines: string[
 }
 const Open = () => <EnvelopeOpen lines={DEMO_SHEET} />;
 
-const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs, shield: Shield, calendar: Calendar, seal: SealScene, horizon: Horizon, clock: Clock, open: Open };
+const SCENES: Record<StoryId, () => JSX.Element> = { desk: Desk, chairs: Chairs, shield: Shield, calendar: Calendar, seal: () => <SealScene />, horizon: Horizon, clock: Clock, open: Open };
 
 /** One scene, on its own transparent canvas (the intro puts it on the ink). */
 export function Story({ id, still = false, lines }: { id: StoryId; still?: boolean; lines?: string[] }) {
-  const Scene = id === "open" && lines ? () => <EnvelopeOpen lines={lines} /> : SCENES[id];
+  const Scene = id === "open" && lines ? () => <EnvelopeOpen lines={lines} /> : id === "seal" && lines ? () => <SealScene bare /> : SCENES[id];
   return (
     <svg className={`story ${still ? "still" : ""}`} viewBox="0 0 360 420" role="img" aria-label={STORY_ALT[id]} preserveAspectRatio="xMidYMid meet">
       <Scene />

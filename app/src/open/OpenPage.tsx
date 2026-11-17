@@ -114,7 +114,7 @@ function LetterCard({ id, first }: { id: Identity; first: HeirLetter }) {
       } catch {
         /* try again next time */
       }
-    }, letter.state === "on-its-way" ? 6000 : 15000);
+    }, letter.state === "on-its-way" ? 4000 : 5000);
     return () => clearInterval(t);
   }, [letter.id, letter.state]);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -169,7 +169,7 @@ export function HeirStateView({ state, busy = false, pressed = false, error, onO
   return (
     <m.div className="letter-state" {...cardAppear}>
       <Panel soft={state === "on-its-way"}>
-        <Story id="seal" still />
+        <Story id="seal" lines={[]} still />
       </Panel>
       {state === "sealed" && <h2 className="state-line">Your letter is still safely sealed.</h2>}
       {state === "on-its-way" && (

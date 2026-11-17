@@ -238,3 +238,17 @@ describe("the intro screens", () => {
     expect(EMOJI.exec(text)?.[0]).toBeUndefined();
   });
 });
+
+describe("the loved one's waiting screens reveal nothing", () => {
+  it("sealed and on-its-way show only the calm line and no letter words (not even the demo's)", async () => {
+    const { HeirStateView } = await import("../src/open/OpenPage");
+    for (const state of ["sealed", "on-its-way"] as const) {
+      const html = renderToStaticMarkup(<HeirStateView state={state} onOpen={() => {}} />);
+      const text = html.replace(/<[^>]+>/g, " ");
+      expect(text).not.toMatch(/Bitcoin|Dear Mia|wallet|recovery|study|Alex|Open your letter/);
+      expect(text).toContain(state === "sealed" ? "Your letter is still safely sealed." : "Your letter is on its way.");
+    }
+    const ready = renderToStaticMarkup(<HeirStateView state="ready" onOpen={() => {}} />);
+    expect(ready).toContain("Open your letter");
+  });
+});
