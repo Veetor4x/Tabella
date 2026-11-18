@@ -168,3 +168,6 @@ The old time-of-day "Auto" is gone. System (default) follows the device's own li
 
 ## Sound effects complete, mobile header
 All 17 sound effects now exist (ElevenLabs eleven_text_to_sound_v2, one at a time). The site music and six voice lines (s02, s03, s04, s06, s08, s09) are still missing: the site-music button stays hidden until the music file exists, and the film's missing voice lines are skipped. The phone header now shows one pill (I have a card, or My letters when this device has a card) plus a three-line menu icon; checked by screenshots at 320, 360, 390 and 430 px in light and dark.
+
+## Surprise film: all nine lines voiced
+The six missing lines (s02, s03, s04, s06, s08, s09) were recorded by me on ElevenLabs ("Autumn Veil") as one take. Claude cut the take into one file per line at the pauses, matched their loudness to the existing lines, and set the planning estimates in `introScriptSurprise.ts` to the real lengths (the player still reads each file's own length). Intro tests pass.

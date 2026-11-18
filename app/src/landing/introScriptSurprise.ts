@@ -1,6 +1,6 @@
 /**
  * The "Keep it a surprise" film's script: nine spoken lines, the same voice ("Autumn Veil") and style as the other film.
- * Lines 1, 5 and 7 are the same words as the first film's, so they reuse those recordings (s01, s05, s07).
+ * Every line is recorded (s01.mp3 to s09.mp3). Lines 1, 5 and 7 are the same words as the first film's, so they reuse those recordings (s01, s05, s07).
  */
 import { STEPS_SURPRISE } from "./Demo";
 import { PHONE_AT, STORY_MS, at, makeFilm, type Beat } from "./film";
@@ -17,7 +17,7 @@ export const SURPRISE_LINES = [
   "They answer the question only they know, and your words reach them. Sealed today. Opened when it matters.",
 ] as const;
 
-const ESTIMATES = [4.6, 2.4, 5.2, 3.2, 4.0, 3.6, 3.5, 5.0, 7.2];
+const ESTIMATES = [4.6, 2.1, 5.1, 3.0, 4.0, 3.9, 3.5, 4.0, 7.7];
 
 /** The last scene: a question card (2.2 s), then the envelope opens and the camera comes in. */
 export const SURPRISE_FINAL_MS = 12_000;
