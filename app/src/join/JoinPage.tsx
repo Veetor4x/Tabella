@@ -5,6 +5,7 @@ import { becomeReady, identityFromCard, isOpeningKeyRegistered, newCard, registe
 import { friendlyError } from "../lib/helper";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { SplitBody, SplitIntro } from "../ui/split";
 import { IconCheck } from "../ui/icons";
 import { EASE, cardAppear } from "../ui/motion";
 import { SharePanel } from "../ui/SharePanel";
@@ -158,9 +159,12 @@ export function JoinPage() {
     <Shell here="join" className="join-page">
       <AnimatePresence mode="wait" initial={false}>
         {phase === "intro" && (
-          <m.div key="intro" className="step" {...cardAppear}>
+          <m.div key="intro" className="step split" {...cardAppear}>
+            <SplitIntro>
             <Headline text={`${from || "Someone"} wants to leave you something to *read* one day.`} />
             <p className="lead">{from ? `${who} wrote you a letter.` : "Someone who cares about you wrote a letter."} To receive it safely, you'll make an opening card. It takes about a minute, and you don't need anything but this phone.</p>
+            </SplitIntro>
+            <SplitBody>
             <div className="actions static">
               <Button arrow="forward" onClick={make}>
                 Make my opening card
@@ -178,42 +182,54 @@ export function JoinPage() {
                 {qorexNote}
               </p>
             )}
+          </SplitBody>
           </m.div>
         )}
 
         {phase === "working" && (
-          <m.div key="working" className="step center-step" {...cardAppear}>
+          <m.div key="working" className="step center-step split" {...cardAppear}>
+            <SplitIntro>
             <Headline text="One moment…" />
             <p className="lead" role="status" aria-live="polite">
               {STEP_TEXT[progress]}
             </p>
+            </SplitIntro>
+            <SplitBody>
             <div className="waiting-dots" aria-hidden="true">
               <i />
               <i />
               <i />
             </div>
             <p className="hint">This can take up to a minute. Please keep this page open.</p>
+          </SplitBody>
           </m.div>
         )}
 
         {phase === "error" && (
-          <m.div key="error" className="step" {...cardAppear}>
+          <m.div key="error" className="step split" {...cardAppear}>
+            <SplitIntro>
             <Headline text="Not quite *yet*." />
             <p className="lead" role="alert">
               {error}
             </p>
+            </SplitIntro>
+            <SplitBody>
             <div className="actions static">
               <Button arrow="forward" onClick={() => card && void run(card)}>
                 Try again
               </Button>
             </div>
+          </SplitBody>
           </m.div>
         )}
 
         {phase === "card" && card && address && message && (
-          <m.div key="card" className="step cards-page" {...cardAppear}>
+          <m.div key="card" className="step cards-page split" {...cardAppear}>
+            <SplitIntro>
             <Headline text="Your opening card is *ready*." />
             <p className="lead no-print">This card is what opens the letter. Print it or save a copy.</p>
+            </SplitIntro>
+            <SplitBody>
             <div className="print-area">
               <PrintCard kind="opening" title="Your opening card" line={`This card is what opens your letter. It works on any phone.`} use="Use this on /card to open your letter." code={card} />
             </div>
@@ -247,6 +263,7 @@ export function JoinPage() {
                 </m.section>
               )}
             </AnimatePresence>
+          </SplitBody>
           </m.div>
         )}
       </AnimatePresence>

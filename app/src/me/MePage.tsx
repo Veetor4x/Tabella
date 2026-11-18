@@ -8,6 +8,7 @@ import { countdown } from "../lib/time";
 import { loadLetters, saveLetter, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { SplitBody, SplitIntro } from "../ui/split";
 import { EASE, cardAppear } from "../ui/motion";
 import { Ring } from "../ui/Ring";
 import { useResolvedLetter, useNow, useRoute } from "./hooks";
@@ -219,10 +220,13 @@ export function MePage() {
           <Detail saved={detail} go={go} onChanged={reload} />
         </>
       ) : (
-        <div className="step">
-          <HowThisWorks />
-          <Headline text="My *letters*" />
-          <p className="lead">Every letter you've sealed on this phone, and how long until each one needs you.</p>
+        <div className="step split">
+          <SplitIntro>
+            <HowThisWorks />
+            <Headline text="My *letters*" />
+            <p className="lead">Every letter you've sealed on this phone, and how long until each one needs you.</p>
+          </SplitIntro>
+          <SplitBody>
           {letters.length === 0 ? (
             <p className="empty glass">No letters on this phone yet. Write one, or restore a letter from its card below.</p>
           ) : (
@@ -242,6 +246,7 @@ export function MePage() {
           </p>
           <SpareCards />
           <RestorePanel role="owner" onDone={reload} />
+          </SplitBody>
         </div>
       )}
     </Shell>

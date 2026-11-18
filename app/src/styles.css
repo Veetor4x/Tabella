@@ -924,3 +924,50 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
   .lc-b { left: auto; right: -3vw; top: 38%; }
   .lc-c { left: auto; right: 6vw; top: 82%; }
 }
+
+
+/* ================= desktop =================
+   Below 768px nothing here applies, so phones look exactly as before. From 768px the Continue bar stops floating over the page (it sits under the
+   form, in the normal flow, so it can never cover a field). From 1024px the pages use two columns: the heading and its words on the left, the
+   form or list on the right. */
+@media (min-width: 768px) {
+  .actions { position: static; margin-top: 28px; padding: 6px 0 0; }
+  .actions::before { display: none; }
+}
+
+@media (min-width: 1024px) {
+  /* the write flow and the card pages */
+  .app { max-width: 1100px; padding-left: 40px; padding-right: 40px; }
+  .app main { padding-top: 28px; }
+  .app footer { margin-top: 40px; }
+  .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: 72px; align-items: start; padding-top: 0; }
+  .split-intro { position: sticky; top: 24px; }
+  .split-body { min-width: 0; padding-top: 8px; }
+  .split .headline { font-size: clamp(46px, 4.4vw, 62px); margin-top: 6px; }
+  .split .lead { max-width: 36ch; font-size: 18px; }
+  .split .numeral-wrap { margin-bottom: 6px; }
+  .write-app .split-intro .pills { margin-bottom: 4px; }
+  .write-app .letter-wrap textarea { min-height: clamp(300px, 46vh, 540px); }
+  .write-app .done-screen { max-width: 760px; margin-left: auto; margin-right: auto; }
+  .split .actions { margin-top: 26px; }
+  .split .actions .btn.primary, .split .actions .holdseal { flex: 0 1 360px; }
+  .split .letters-list, .split .letter-list { max-width: none; }
+  .split .glass.btn { width: auto; }
+  .split .restore-actions .btn { width: auto; }
+
+  /* the front page */
+  .land-nav, .land main, .land-footer { max-width: 1200px; }
+  .land-nav { padding-left: 40px; padding-right: 40px; }
+  .land main, .land-footer { padding-left: 40px; padding-right: 40px; }
+  .hero { grid-template-columns: 1fr 1fr; gap: 56px; min-height: min(620px, calc(100vh - 150px)); padding: 36px 0 48px; }
+  .hero-h { font-size: clamp(64px, 6.3vw, 96px); }
+  .hero-lead { font-size: 19px; max-width: 40ch; }
+  .hero-art { min-height: 440px; padding-bottom: 90px; }
+  .hero-stage { transform: scale(1.5); }
+  .land-section { padding-top: 76px; }
+  .why-grid, .trust-grid { gap: 22px; }
+  .trust-grid { grid-template-columns: repeat(3, 1fr); }
+  .trust-card.limits { grid-column: 1 / -1; }
+  .trust-card.limits ul { grid-template-columns: 1fr 1fr; column-gap: 48px; }
+  .faq { max-width: none; grid-template-columns: 1fr 1fr; gap: 14px 22px; align-items: start; }
+}

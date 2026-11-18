@@ -17,6 +17,7 @@ import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
 import { SoundWave } from "./ui/SoundWave";
 import { ThemeToggle } from "./ui/ThemeToggle";
+import { AsideContext, useWide } from "./ui/split";
 import { countWords, joinNames } from "./ui/steps";
 
 const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
@@ -29,6 +30,7 @@ export function App() {
   const [veil, setVeil] = useState(false); // the dark veil that carries the screen into night
   const [taps, setTaps] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const wide = useWide();
 
   // Wake the Postman now: by the time the letter is written it is up.
   useEffect(() => {
@@ -127,13 +129,21 @@ export function App() {
     <SealStep draft={{ ...draft, when: whenById(draft.when).id }} stepIndex={count - 1} onBack={back} onSealed={onSealed} />
   );
 
+  // On a phone the number and the pills sit above the screen; on a desktop each step draws them in its left column (see ui/split.tsx).
+  const progress = (
+    <>
+      <Numeral step={step} count={count} onTap={() => setTaps((t) => t + 1)} />
+      <Pills items={pills} />
+    </>
+  );
+
   return (
     // reducedMotion="user": people who ask their device for less motion get a calm version (fades, no movement)
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
         <div className={`root ${sealed ? "night" : ""}`}>
           <Background />
-          <div className="app">
+          <div className="app write-app">
             <header className="brand">
               <div className="brand-text">
                 <a className="brand-name" href="/" aria-label="Tabella, home"><BrandMark />Tabella</a>
@@ -145,15 +155,10 @@ export function App() {
               </div>
             </header>
             <main>
-              {!sealed && (
-                <>
-                  <Numeral step={step} count={count} onTap={() => setTaps((t) => t + 1)} />
-                  <Pills items={pills} />
-                </>
-              )}
+              {!sealed && !wide && progress}
               <AnimatePresence mode="wait" custom={dir.current} initial={false}>
                 <m.div key={sealed ? "done" : step} className="screen" custom={dir.current} variants={screenVariants} transition={screenTransition} initial="enter" animate="center" exit="exit">
-                  {screen}
+                  <AsideContext.Provider value={!sealed && wide ? progress : null}>{screen}</AsideContext.Provider>
                 </m.div>
               </AnimatePresence>
             </main>

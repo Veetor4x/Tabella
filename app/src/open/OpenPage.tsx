@@ -10,6 +10,7 @@ import { OpenEnvelope } from "../ui/OpenEnvelope";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
 import { Headline } from "../ui/Headline";
+import { SplitBody, SplitIntro } from "../ui/split";
 import { cardAppear, EASE } from "../ui/motion";
 import { QrScanner } from "../ui/QrScanner";
 import { Shell } from "../me/Shell";
@@ -247,8 +248,11 @@ export function OpenPage() {
 
   return (
     <Shell here="open" className="open-page">
-      <div className="step">
-        <Headline text={found ? (found.letters.length > 1 ? "Your *letters*." : "Your *letter*.") : "Open your *letter*."} />
+      <div className="step split">
+        <SplitIntro>
+          <Headline text={found ? (found.letters.length > 1 ? "Your *letters*." : "Your *letter*.") : "Open your *letter*."} />
+        </SplitIntro>
+        <SplitBody>
         <AnimatePresence mode="wait" initial={false}>
           {letterParam && !found ? (
             <div key="surprise" className="letters-list">
@@ -273,6 +277,7 @@ export function OpenPage() {
             <CardFinder key="finder" onFound={(id, letters) => setFound({ id, letters })} />
           )}
         </AnimatePresence>
+        </SplitBody>
       </div>
     </Shell>
   );

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { loadLetters, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Headline } from "../ui/Headline";
+import { SplitBody, SplitIntro } from "../ui/split";
 import { APP_HOST, CARD_URL } from "../lib/config";
 import { BrandMark } from "../ui/BrandMark";
 import { CopyButton } from "../ui/CopyButton";
@@ -62,7 +63,8 @@ export function CardsView({ letter }: { letter: SealedLetter }) {
   const [saved, setSaved] = useState(false);
   const g = letter.guardianName || "your guardian";
   return (
-    <div className="step cards-page">
+    <div className="step cards-page split">
+      <SplitIntro>
       <Headline text="Your *cards*" />
       <p className="lead no-print">Two small cards keep your letter safe. Print them, or save a copy.</p>
       <ol className="card-steps no-print">
@@ -78,6 +80,8 @@ export function CardsView({ letter }: { letter: SealedLetter }) {
           </li>
         )}
       </ol>
+      </SplitIntro>
+      <SplitBody>
       <div className="print-area">
         <PrintCard kind="owner" letterId={letter.letterId} title="I'm-still-here card" line="This is how you tell us you're okay, so your letter stays sealed." use="Use this on /card if you change phones." code={letter.ownerCard} />
         {letter.guardianCard && <PrintCard kind="guardian" letterId={letter.letterId} title={`Guardian card for ${g}`} line={`For ${g} only. Lets them tap “They're okay” if you go quiet, up to twice.`} use={`Give this to ${g}. ${g} uses it on /card.`} code={letter.guardianCard} />}
@@ -99,6 +103,7 @@ export function CardsView({ letter }: { letter: SealedLetter }) {
           </a>
         </p>
       </div>
+      </SplitBody>
     </div>
   );
 }
@@ -112,14 +117,18 @@ export function CardsPage() {
       {letter ? (
         <CardsView letter={letter} />
       ) : (
-        <div className="step">
-          <Headline text="No *cards* here." />
-          <p className="lead">The cards for a letter live on the phone that sealed it. Open My letters on that phone.</p>
-          <p className="center">
-            <a className="btn glass" href="/me">
-              My letters
-            </a>
-          </p>
+        <div className="step split">
+          <SplitIntro>
+            <Headline text="No *cards* here." />
+            <p className="lead">The cards for a letter live on the phone that sealed it. Open My letters on that phone.</p>
+          </SplitIntro>
+          <SplitBody>
+            <p className="center">
+              <a className="btn glass" href="/me">
+                My letters
+              </a>
+            </p>
+          </SplitBody>
         </div>
       )}
     </Shell>

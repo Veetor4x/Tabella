@@ -7,6 +7,7 @@ import { MAX_PAUSES, type LetterView } from "../lib/registry";
 import { countdown, ringText } from "../lib/time";
 import { loadGuardian, type GuardianEntry } from "../lib/storage";
 import { Headline } from "../ui/Headline";
+import { SplitBody, SplitIntro } from "../ui/split";
 import { EASE, cardAppear } from "../ui/motion";
 import { Ring } from "../ui/Ring";
 import { useLetter, useNow } from "./hooks";
@@ -96,11 +97,14 @@ export function GuardianPage() {
   const [entries, setEntries] = useState<GuardianEntry[]>(() => loadGuardian());
   return (
     <Shell here="guardian">
-      <div className="step">
+      <div className="step split">
+        <SplitIntro>
         <Headline text={entries.length ? "Are they *okay*?" : "You're someone's *guardian*."} />
         <p className="lead">
           {entries.length ? "If you know they're just ill or away, tap “They're okay”. You can do this twice." : "They trusted you with a guardian card. Restore it here to see their letter."}
         </p>
+        </SplitIntro>
+        <SplitBody>
         {entries.map((e) => (
           <m.div key={e.letterId} {...cardAppear}>
             <Entry entry={e} />
@@ -110,6 +114,7 @@ export function GuardianPage() {
           Got a different kind of card? <a href="/card">Use it here.</a>
         </p>
         <RestorePanel role="guardian" onDone={() => setEntries(loadGuardian())} />
+        </SplitBody>
       </div>
     </Shell>
   );
