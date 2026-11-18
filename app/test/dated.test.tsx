@@ -39,8 +39,9 @@ describe("picking a day", () => {
     const at = releaseAtFor("2031-06-14", now)!;
     expect(longDay(at, "en-GB")).toMatch(/^Saturday,? 14 June 2031$/);
     expect(fromNow(at, Math.floor(now.getTime() / 1000))).toMatch(/about 4 years, 7 months/);
-    expect(fromNow(Math.floor(now.getTime() / 1000) + 86400)).toBe("tomorrow");
-    expect(fromNow(Math.floor(now.getTime() / 1000) + 20 * 86400)).toBe("in 20 days");
+    const nowS = Math.floor(now.getTime() / 1000); // always pass "now": without it fromNow reads the real clock and the test drifts a day every day
+    expect(fromNow(nowS + 86400, nowS)).toBe("tomorrow");
+    expect(fromNow(nowS + 20 * 86400, nowS)).toBe("in 20 days");
     expect(DATED_DEMO_SECONDS).toBe(120);
   });
 });

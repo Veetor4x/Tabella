@@ -971,3 +971,10 @@ a.btn.big { padding: 22px 38px; font-size: 19px; min-height: 66px; }
   .trust-card.limits ul { grid-template-columns: 1fr 1fr; column-gap: 48px; }
   .faq { max-width: none; grid-template-columns: 1fr 1fr; gap: 14px 22px; align-items: start; }
 }
+
+/* phones: the Continue bar is sticky, so when a field is focused (or the caret moves) the browser must scroll it clear of the bar, not just into view.
+   The bar is 83px tall (127px on the seal screen); the extra is a little air above it. Changes how far the page scrolls, never how it looks. */
+@media (max-width: 767px) {
+  html { scroll-padding-bottom: 104px; }
+  html:has(.holdseal) { scroll-padding-bottom: 148px; }
+}
