@@ -1,6 +1,7 @@
 import { ChoiceCard } from "../ui/ChoiceCard";
 import { Field } from "../ui/Field";
 import { IconShield, IconUser } from "../ui/icons";
+import { Req } from "../ui/problems";
 import { StepFrame } from "../ui/StepFrame";
 
 export function GuardianStep(props: { guardian: { name: string } | null; onChange: (g: { name: string } | null) => void; onBack: () => void; onNext: () => void }) {
@@ -12,7 +13,7 @@ export function GuardianStep(props: { guardian: { name: string } | null; onChang
       lead="A guardian is someone you trust. If you go quiet, they can tap “They're okay” to give you more time."
       onBack={props.onBack}
       onNext={props.onNext}
-      nextDisabled={on && !props.guardian!.name.trim()}
+      check={() => (on && !props.guardian!.name.trim() ? [{ id: "guardian-name", message: "Add their name, or choose Skip for now." }] : [])}
     >
       <div className="choices" role="radiogroup" aria-label="Guardian">
         <ChoiceCard name="guardian" checked={on} onChange={() => props.onChange(props.guardian ?? { name: "" })} icon={<IconShield />} title="Add a guardian" sub="They can pause the countdown, up to twice." />
@@ -20,8 +21,11 @@ export function GuardianStep(props: { guardian: { name: string } | null; onChang
       </div>
       {on && (
         <>
-          <label htmlFor="guardian-name">Their name</label>
-          <Field>
+          <label htmlFor="guardian-name">
+            Their name
+            <Req />
+          </label>
+          <Field id="guardian-name">
             <input id="guardian-name" type="text" value={props.guardian!.name} placeholder="Sofia" autoComplete="off" onChange={(e) => props.onChange({ name: e.target.value })} />
           </Field>
           <p className="hint">After sealing you'll get a guardian card to give them.</p>

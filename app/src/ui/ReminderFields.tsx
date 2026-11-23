@@ -1,7 +1,8 @@
 import { IconClock, IconLetter } from "./icons";
 import { ChoiceCard } from "./ChoiceCard";
 import { Field } from "./Field";
-import { REMINDER_LINE_MAX, REMINDER_SUBJECT_MAX, reminderProblem } from "../lib/reminders";
+import { Req, useProblem } from "./problems";
+import { REMINDER_LINE_MAX, REMINDER_SUBJECT_MAX } from "../lib/reminders";
 import type { Reminders } from "../lib/storage";
 
 /**
@@ -10,12 +11,11 @@ import type { Reminders } from "../lib/storage";
  */
 export function ReminderFields({ value, onChange }: { value: Reminders; onChange: (r: Reminders) => void }) {
   const set = (p: Partial<Reminders>) => onChange({ ...value, ...p });
-  const problem = value.email.trim() ? reminderProblem(value) : null;
-  const emailBad = value.email.trim() !== "" && problem === "That email address doesn't look right.";
+  const emailBad = !!useProblem("reminder-email");
   return (
     <section className="reminders glass" aria-label="Reminders to check in">
       <label htmlFor="reminder-email">Your email, for reminders (optional)</label>
-      <Field>
+      <Field id="reminder-email">
         <input id="reminder-email" type="email" inputMode="email" autoComplete="email" value={value.email} placeholder="you@example.com" aria-invalid={emailBad || undefined} aria-describedby="reminder-help" onChange={(e) => set({ email: e.target.value })} />
       </Field>
       <p className="hint small" id="reminder-help">
@@ -32,21 +32,22 @@ export function ReminderFields({ value, onChange }: { value: Reminders; onChange
 
       {value.style === "personal" && (
         <div className="reminder-personal">
-          <label htmlFor="reminder-subject">Subject</label>
-          <Field>
+          <label htmlFor="reminder-subject">
+            Subject
+            <Req />
+          </label>
+          <Field id="reminder-subject">
             <input id="reminder-subject" type="text" maxLength={REMINDER_SUBJECT_MAX} value={value.subject} placeholder="Water the plants" onChange={(e) => set({ subject: e.target.value })} />
           </Field>
-          <label htmlFor="reminder-line">Your line</label>
-          <Field>
+          <label htmlFor="reminder-line">
+            Your line
+            <Req />
+          </label>
+          <Field id="reminder-line">
             <input id="reminder-line" type="text" maxLength={REMINDER_LINE_MAX} value={value.line} placeholder="A quick tap, then back to your day." onChange={(e) => set({ line: e.target.value })} />
           </Field>
           <p className="hint small">Keep it to you: please don't mention the letter or who it's for.</p>
         </div>
-      )}
-      {problem && (
-        <p className="status-line" role="alert">
-          {problem}
-        </p>
       )}
     </section>
   );

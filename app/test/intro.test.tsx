@@ -155,10 +155,11 @@ describe("the demo letter says where things are, and never shows anything secret
   const stories = readFileSync(new URL("../src/landing/stories.tsx", import.meta.url), "utf8");
   it("is the agreed text, in the demo and in the final envelope scene", () => {
     expect(LETTER).toBe(
-      "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.",
+      "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study. The safe code is Mum's birthday, and the recovery card is in the blue envelope taped under my desk drawer. Split it fairly and look after each other.\n\nAll my love, Alex.",
     );
     const flat = stories.replace(/<\/text>\s*<text[^>]*>/g, " ");
-    for (const part of ["I've put aside 2 Bitcoin for you", "both, my gift for your futures.", "The hardware wallet is in the small", "card is sealed with Mr. Hart, our", "he'll help you. Split it fairly", "and look after each other.", "All my love, Alex."]) expect(flat).toContain(part);
+    for (const part of ["I've put aside 2 Bitcoin for you", "both, my gift for your futures. The", "hardware wallet is in the small safe", "the blue envelope taped under my desk", "after each other.", "All my love, Alex."]) expect(flat).toContain(part);
+    expect(`${demo}${stories}`).not.toMatch(/Hart|lawyer|solicitor|attorney/i); // no outside people in the demo copy
   });
   it("shows no recovery words, codes, passwords or dollar amounts", () => {
     expect(LETTER).not.toMatch(/door code|password|passcode|\bPIN\b|seed phrase|\$\s?\d|USD|dollars?|\b\d{4,}\b/i);

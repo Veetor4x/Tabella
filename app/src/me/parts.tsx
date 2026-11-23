@@ -11,19 +11,20 @@ import { Ring } from "../ui/Ring";
 export const STATE_NOTE: Record<LetterState, string> = {
   Sealed: "Sealed and waiting.",
   Warning: "Time is running out.",
-  Opened: "Opened for the people you chose.",
+  Opened: "Released to the people you chose.",
   Cancelled: "Cancelled. Nobody can open it.",
 };
 
 export function StatePill({ state }: { state: LetterState }) {
-  return <span className={`state-pill ${state.toLowerCase()}`}>{state}</span>;
+  // The network calls this state "Opened", but it only means the time ran out and the second half was published. It does NOT mean the recipient opened it: say "Released".
+  return <span className={`state-pill ${state.toLowerCase()}`}>{state === "Opened" ? "Released" : state}</span>;
 }
 
 /** "Next check-in in 28 days" / "Opens in 2 days unless you check in". */
 export function nextLine(v: LetterView, now = Date.now()): string {
   const c = countdown(v, now);
   if (v.state === "Cancelled") return "Cancelled. Nobody can open it.";
-  if (v.state === "Opened") return "Opened for the people you chose.";
+  if (v.state === "Opened") return "Released to the people you chose.";
   if (v.releaseAt) return `Opens on ${longDay(v.releaseAt)}.`;
   if (c.phase === "warning" || v.state === "Warning") return `Opens in ${span(c.left)} unless you check in.`;
   return `Next check-in in ${span(c.left)}`;
@@ -60,9 +61,9 @@ export function CheckInView(props: {
   const text = ringText(view, c);
   const days = /^(\d+) days?$/.exec(text.big);
   const title = dated && view.state !== "Cancelled" && view.state !== "Opened" ? "Nothing to do." : 
-    view.state === "Cancelled" ? "This letter was cancelled." : view.state === "Opened" ? "Your letter has opened." : phase === "done" ? `Thanks${props.ownerName ? `, ${props.ownerName}` : ""}.` : urgent ? "Your letter will open soon." : "Still here?";
+    view.state === "Cancelled" ? "This letter was cancelled." : view.state === "Opened" ? "Your letter has been released." : phase === "done" ? `Thanks${props.ownerName ? `, ${props.ownerName}` : ""}.` : urgent ? "Your letter will open soon." : "Still here?";
   const lead = dated && view.state !== "Cancelled" && view.state !== "Opened" ? `It opens on ${longDay(view.releaseAt)}, whether or not you check in. You can cancel it until then.` :
-    view.state === "Cancelled" ? "It was withdrawn, and nobody will ever be able to open it." : view.state === "Opened" ? "The time ran out, so it was opened for the people you chose." : phase === "done" ? "Your letter stays sealed." : urgent ? "You haven't checked in for a while. One tap, and the time starts again." : "One tap tells everyone you're okay.";
+    view.state === "Cancelled" ? "It was withdrawn, and nobody will ever be able to open it." : view.state === "Opened" ? "The time ran out, so it was released to the people you chose. They still need to open it themselves." : phase === "done" ? "Your letter stays sealed." : urgent ? "You haven't checked in for a while. One tap, and the time starts again." : "One tap tells everyone you're okay.";
   return (
     <div className={`checkin ${urgent ? "urgent" : ""}`}>
       <Headline text={title} />

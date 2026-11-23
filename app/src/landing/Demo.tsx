@@ -44,9 +44,9 @@ export const STEPS_SURPRISE = [
   { label: "They open it", caption: "Mia answers the question only she and her dad share, and the letter opens.", ms: 14500 },
 ] as const;
 
-/** The demo letter. No recovery words, no codes, no amounts: it only says where things are and who can help. */
+/** The demo letter. No recovery words, no real codes: it only says where things are, in the family's own words. No outside people. */
 export const LETTER =
-  "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.";
+  "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study. The safe code is Mum's birthday, and the recovery card is in the blue envelope taped under my desk drawer. Split it fairly and look after each other.\n\nAll my love, Alex.";
 const ADDRESS = "0xE6EB…6Ca3";
 
 const at = (t: number, ms: number) => t >= ms;

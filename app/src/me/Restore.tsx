@@ -6,6 +6,7 @@ import { findLetters } from "../lib/registry";
 import { loadLetters, saveGuardian, saveLetter, type SealedLetter } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
+import { ProblemsProvider, Req, focusProblem } from "../ui/problems";
 import { QrScanner } from "../ui/QrScanner";
 
 export type Found = { owner: string[]; guardian: string[] };
@@ -35,6 +36,9 @@ export function RestorePanel({ role, onDone }: { role: "owner" | "guardian"; onD
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [tried, setTried] = useState(false);
+  const fieldId = `card-${role}`;
+  const missing = tried && !code.trim(); // the code is required: pressing Restore without it says so, right under the box
 
   async function run(text: string) {
     setBusy(true);
@@ -56,11 +60,15 @@ export function RestorePanel({ role, onDone }: { role: "owner" | "guardian"; onD
   }
 
   return (
+    <ProblemsProvider problems={missing ? [{ id: fieldId, message: "Paste the code from your card, or scan its QR code." }] : []}>
     <section className="restore glass" aria-label="Restore from a card">
       <h2>Restore from a card</h2>
       <p>On a new phone? Paste the code from your {role === "owner" ? "I'm-still-here card" : "guardian card"}, or scan its QR code, and the {role === "owner" ? "letters come" : "letter comes"} back.</p>
-      <label htmlFor={`card-${role}`}>The code on the card</label>
-      <Field>
+      <label htmlFor={fieldId}>
+        The code on the card
+        <Req />
+      </label>
+      <Field id={fieldId}>
         <textarea id={`card-${role}`} className="card-input mono" rows={3} value={code} placeholder="tbl1_…" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} onChange={(e) => setCode(e.target.value)} />
       </Field>
       {scanning && (
@@ -80,10 +88,21 @@ export function RestorePanel({ role, onDone }: { role: "owner" | "guardian"; onD
         <Button variant="glass" onClick={() => setScanning((s) => !s)}>
           Scan the QR code
         </Button>
-        <Button disabled={busy || !code.trim()} onClick={() => run(code)}>
+        <Button
+          disabled={busy}
+          onClick={() => {
+            if (!code.trim()) {
+              setTried(true);
+              focusProblem(fieldId);
+              return;
+            }
+            void run(code);
+          }}
+        >
           Restore
         </Button>
       </div>
     </section>
+    </ProblemsProvider>
   );
 }

@@ -1,12 +1,13 @@
 import { m } from "framer-motion";
 import { WARNING_DAYS, WHEN_OPTIONS, TEST_UNITS, defaultTestQuiet, fromNow, longDay, maxDay, minDay, releaseAtFor, testDuration, testQuietSeconds, testWarningSeconds, type TestQuiet, type TestUnit, type WhenId, type WhenMode } from "../lib/periods";
-import { reminderProblem } from "../lib/reminders";
+import { isReminderEmail } from "../lib/reminders";
 import type { Reminders } from "../lib/storage";
 import { ChoiceCard } from "../ui/ChoiceCard";
 import { Field } from "../ui/Field";
 import { IconClock, IconLetter } from "../ui/icons";
 import { ReminderFields } from "../ui/ReminderFields";
 import { screenTransition } from "../ui/motion";
+import { Req, type Problem } from "../ui/problems";
 import { StepFrame } from "../ui/StepFrame";
 
 /** Where each choice sits on the thin timeline (0 to 1): a longer quiet, further along. */
@@ -43,9 +44,24 @@ export function WhenStep(props: {
   const showDemoDate = props.demo || !!props.dateDemo;
   const tq = props.testQuiet ?? defaultTestQuiet();
   const tqSeconds = testQuietSeconds(tq);
-  const quietProblem = !dated && ((props.test && tqSeconds === null) || !!reminderProblem(props.reminders));
+  /** What is missing or wrong here: a real day (for a dated letter); the typed time (test mode); the reminder email and note (if an email was added). */
+  const check = (): Problem[] => {
+    const out: Problem[] = [];
+    if (dated) {
+      if (!whenReady(props.mode, props.releaseDay, props.dateDemo)) out.push({ id: "release-day", message: "Pick a date from tomorrow on (up to 50 years ahead)." });
+      return out;
+    }
+    const r = props.reminders;
+    if (r && r.email.trim() && !isReminderEmail(r.email)) out.push({ id: "reminder-email", message: "That email address doesn't look right. It should be like name@example.com, or leave it empty." });
+    if (r && r.email.trim() && isReminderEmail(r.email) && r.style === "personal") {
+      if (!r.subject.trim()) out.push({ id: "reminder-subject", message: "Add a short subject, or choose the simple check-in." });
+      if (!r.line.trim()) out.push({ id: "reminder-line", message: "Add a line of your own, or choose the simple check-in." });
+    }
+    if (props.test && tqSeconds === null) out.push({ id: "test-quiet-n", message: "Type a whole number, 1 or more (up to 10 years)." });
+    return out;
+  };
   return (
-    <StepFrame step={2} title="When should it *open*?" lead="Choose how it decides." onBack={props.onBack} onNext={props.onNext} nextDisabled={!whenReady(props.mode, props.releaseDay, props.dateDemo) || quietProblem}>
+    <StepFrame step={2} title="When should it *open*?" lead="Choose how it decides." onBack={props.onBack} onNext={props.onNext} check={check}>
       <div className="choices" role="radiogroup" aria-label="How it decides when to open">
         <ChoiceCard name="when-mode" checked={!dated} onChange={() => props.onMode("quiet")} icon={<IconClock />} title="If I go quiet" sub="It opens only if you stop checking in for a long time. A guardian can pause it." />
         {!dated && props.reminders && props.onReminders && <ReminderFields value={props.reminders} onChange={props.onReminders} />}
@@ -54,9 +70,12 @@ export function WhenStep(props: {
 
       {!dated && props.test && (
         <>
-          <label htmlFor="test-quiet-n">How long before it starts to open? (test)</label>
+          <label htmlFor="test-quiet-n">
+            How long before it starts to open? (test)
+            <Req />
+          </label>
           <div className="custom-time">
-            <Field>
+            <Field id="test-quiet-n">
               <input id="test-quiet-n" type="text" inputMode="numeric" autoComplete="off" value={tq.n} aria-invalid={tqSeconds === null || undefined} aria-describedby="test-quiet-echo" onChange={(e) => props.onTestQuiet?.({ ...tq, n: e.target.value.replace(/[^\d]/g, "").slice(0, 7) })} />
             </Field>
             <div className="field">
@@ -116,8 +135,11 @@ export function WhenStep(props: {
 
       {dated && (
         <>
-          <label htmlFor="release-day">The day it opens</label>
-          <Field>
+          <label htmlFor="release-day">
+            The day it opens
+            <Req />
+          </label>
+          <Field id="release-day">
             <input id="release-day" type="date" className="date-input" value={props.dateDemo ? "" : props.releaseDay ?? ""} min={minDay()} max={maxDay()} disabled={!!props.dateDemo} onChange={(e) => (props.onDateDemo(false), props.onDay(e.target.value))} />
           </Field>
           <p className="date-echo" role="status" aria-live="polite">

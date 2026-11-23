@@ -119,6 +119,7 @@ export function Landing() {
           <main>
             <section className="hero">
               <div className="hero-copy">
+                <p className="hero-note">Leave a letter for your family: what to say, and where things are, for when you're no longer there.</p>
                 <Headline text="Sealed today. Opened when it *matters*." className="hero-h" />
                 <m.p className="hero-lead" {...fadeUp(0.9)}>
                   A letter for the people you love, locked today and opened only for them, and only if you go quiet.

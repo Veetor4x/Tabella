@@ -16,7 +16,7 @@ const OUT = process.argv[3] || path.join(__dirname, "..", "..", "docs", "screens
 fs.mkdirSync(OUT, { recursive: true });
 const FORBIDDEN = /\b(ML-?KEM|ML-?DSA|KEM|DSA|ciphertext|encrypt\w*|decrypt\w*|signature|sign(ed|ing)?|wallet|mnemonic|seed|hash\w*|nonce|gas|blockchain|on-?chain|smart contract|private key|public key|keys?|token|crypto\w*|ethereum|solidity)\b/i;
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
-const LETTER = "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study, and its recovery card is sealed with Mr. Hart, our lawyer. Show him this letter and he'll help you. Split it fairly and look after each other.\n\nAll my love, Alex.";
+const LETTER = "Dear Mia and Leo,\n\nI've put aside 2 Bitcoin for you both, my gift for your futures. The hardware wallet is in the small safe in my study. The safe code is Mum's birthday, and the recovery card is in the blue envelope taped under my desk drawer. Split it fairly and look after each other.\n\nAll my love, Alex.";
 const url = (p) => new URL(p, BASE).href;
 let failures = 0;
 const ok = (c, m) => { console.log(`${c ? "PASS" : "FAIL"}  ${m}`); if (!c) failures++; };

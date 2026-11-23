@@ -43,7 +43,7 @@ export function span(seconds: number): string {
 /** The two-line reading inside the ring: a big figure and what it counts. */
 export function ringText(l: LetterView, c: Countdown): { big: string; small: string } {
   if (l.state === "Cancelled") return { big: "Cancelled", small: "Nobody can open it" };
-  if (l.state === "Opened") return { big: "Opened", small: "For the people you chose" };
+  if (l.state === "Opened") return { big: "Released", small: "For the people you chose" };
   if (l.releaseAt) return { big: span(c.left), small: "until it opens" };
   if (c.phase === "warning" || l.state === "Warning") return { big: span(c.left), small: "until it opens" };
   return { big: span(c.left), small: "until your next check-in" };

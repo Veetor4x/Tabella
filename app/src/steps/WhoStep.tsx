@@ -9,6 +9,7 @@ import { inviteLink } from "../lib/share";
 import { IconCheck, IconPlus } from "../ui/icons";
 import { SharePanel } from "../ui/SharePanel";
 import { cardAppear, fadeTransition, ghostLayer, sharpLayer } from "../ui/motion";
+import { Req, useProblem, type Problem } from "../ui/problems";
 import { StepFrame } from "../ui/StepFrame";
 
 /** 0xE6EB…6Ca3: enough to recognise an address. */
@@ -91,6 +92,7 @@ function PersonRow(props: {
   index: number;
   person: Person;
   canRemove: boolean;
+  owner: string;
   duplicate: boolean;
   onChange: (p: Person) => void;
   onRemove: () => void;
@@ -100,16 +102,24 @@ function PersonRow(props: {
   const parsed = useMemo(() => parseAddress(person.address), [person.address]);
   const state = useReadiness(person.address);
   useEffect(() => onState(state), [state, onState]);
-  const message = props.duplicate ? "This address is already in the list." : MESSAGE[state] ?? "";
+  const shown = useProblem(`addr-${index}`); // when Continue was pressed with this address wrong, its message is already under the field
+  const message = shown ? "" : props.duplicate ? "This address is already in the list." : MESSAGE[state] ?? "";
 
   return (
     <div className="person" role="group" aria-label={`Person ${index + 1}`}>
-      <label htmlFor={`name-${index}`}>Their name</label>
-      <Field>
+      <label htmlFor={`name-${index}`}>
+        Their name
+        <Req />
+      </label>
+      <Field id={`name-${index}`}>
         <input id={`name-${index}`} type="text" value={person.name} placeholder="Mia" autoComplete="off" onChange={(e) => props.onChange({ ...person, name: e.target.value })} />
       </Field>
-      <label htmlFor={`addr-${index}`}>Their address</label>
-      <Field>
+      <InvitePanel owner={props.owner} />
+      <label htmlFor={`addr-${index}`}>
+        Their address (from their invite)
+        <Req />
+      </label>
+      <Field id={`addr-${index}`}>
         <input
           id={`addr-${index}`}
           type="text"
@@ -132,6 +142,7 @@ function PersonRow(props: {
           </m.div>
         )}
       </AnimatePresence>
+      <p className="hint small">Ordinary wallet addresses won't work: it needs the opening card from the invite.</p>
       <p className="status-line" id={`addr-msg-${index}`} aria-live="polite">
         {message}
       </p>
@@ -158,6 +169,7 @@ function InvitePanel({ owner }: { owner: string }) {
       <Button variant="glass" onClick={() => setOpen((o) => !o)}>
         Invite someone
       </Button>
+      <p className="hint small">Don't have their address? Send them this link. They'll make an opening card in a minute (no wallet or crypto needed) and send you back an address starting with qor1.</p>
       <AnimatePresence initial={false}>
         {open && (
           <m.div key="invite" className="invite-card glass" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fadeTransition}>
@@ -185,7 +197,21 @@ export function WhoStep(props: { top?: React.ReactNode; owner: string; heirs: Pe
     return p.ok ? p.qor : "";
   });
   const duplicate = (i: number) => !!keys[i] && keys.indexOf(keys[i]!) !== i;
-  const allReady = heirs.every((h, i) => h.name.trim() && states[ids[i]!] === "ready" && !duplicate(i));
+  const check = (): Problem[] => {
+    const out: Problem[] = [];
+    heirs.forEach((h, i) => {
+      if (!h.name.trim()) out.push({ id: `name-${i}`, message: "Add their first name." });
+      const st = states[ids[i]!];
+      const parsed = parseAddress(h.address);
+      if (!h.address.trim()) out.push({ id: `addr-${i}`, message: "Paste the address they sent you from their invite. It starts with qor1 or 0x." });
+      else if (!parsed.ok) out.push({ id: `addr-${i}`, message: "This address should start with qor1 or 0x." });
+      else if (duplicate(i)) out.push({ id: `addr-${i}`, message: "This address is already in the list." });
+      else if (st === "notready") out.push({ id: `addr-${i}`, message: "They haven't set up their opening card yet. Once they have, this turns to Ready and you can continue." });
+      else if (st === "error") out.push({ id: `addr-${i}`, message: "We couldn't check this address just now. Please try again in a moment." });
+      else if (st !== "ready") out.push({ id: `addr-${i}`, message: "Still checking this address. Try again in a moment." });
+    });
+    return out;
+  };
   const update = (i: number, p: Person) => props.onChange(heirs.map((h, j) => (j === i ? p : h)));
 
   const add = () => {
@@ -199,7 +225,7 @@ export function WhoStep(props: { top?: React.ReactNode; owner: string; heirs: Pe
 
   const title = `${props.owner.trim() ? `${props.owner.trim()}, who` : "Who"} should *read* this one day?`;
   return (
-    <StepFrame step={1} title={title} lead="Choose up to three people. The letter is sealed just for them." onBack={props.onBack} onNext={props.onNext} nextDisabled={!allReady}>
+    <StepFrame step={1} title={title} lead="Choose up to three people. The letter is sealed just for them." onBack={props.onBack} onNext={props.onNext} check={check}>
       {props.top}
       <AnimatePresence initial={false}>
         {heirs.map((p, i) => {
@@ -210,6 +236,7 @@ export function WhoStep(props: { top?: React.ReactNode; owner: string; heirs: Pe
                 index={i}
                 person={p}
                 canRemove={heirs.length > 1}
+                owner={props.owner}
                 duplicate={duplicate(i)}
                 onChange={(np) => update(i, np)}
                 onRemove={() => remove(i)}
@@ -226,7 +253,6 @@ export function WhoStep(props: { top?: React.ReactNode; owner: string; heirs: Pe
           </span>
         </Button>
       )}
-      <InvitePanel owner={props.owner} />
       <p className="hint">
         <strong>Ready</strong> means they have set up their opening card, so a letter can be sealed for them. Paste the address they gave you.
       </p>
