@@ -22,9 +22,11 @@ import {
   signingKeysFromSeed,
   splitKey,
 } from "../../../shared/tabella-crypto";
+import { sealPostmanPackage, type PostmanPackage } from "../../../shared/surprise";
 import { REGISTRY, evmRpcUrl, restUrl } from "./config";
+import { ownerReminders } from "./reminders";
 import { HelperError, SealProblem, relay, warmUp } from "./helper";
-import type { SealedLetter } from "./storage";
+import type { Reminders, SealedLetter } from "./storage";
 
 export { MAX_LETTER_BYTES };
 
@@ -41,6 +43,10 @@ export interface SealInput {
   whenLabel: string;
   /** a dated letter: the unix time it opens, or "demo" for 2 minutes from now. Then there is no quiet time and no guardian. */
   releaseAt?: number | "demo";
+  /** the owner's reminders (emailed while the letter is in its warning); ignored for a dated letter */
+  reminders?: Reminders;
+  /** made on the /test page: labelled "Test" */
+  test?: boolean;
 }
 
 /** The steps shown to the person while sealing. */
@@ -184,7 +190,12 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
   const letterCiphertext = await encryptLetter(K, input.text);
   const { A, B } = splitKey(K);
   const partAEnvelope = sealPartA(A, heirKeys);
-  const partBForPostman = sealPartB(B, postmanPublic);
+  // With reminders, Part B travels with a small package for the Postman (the owner's email and wording; no recipient, so no ladder).
+  const reminders = ownerReminders(input.reminders, !!input.releaseAt);
+  const pkg: PostmanPackage | null = reminders
+    ? { v: 1, mode: input.test ? "demo" : "real", reminders, owner: input.ownerName?.trim() || "", cardKeyHash: ZERO_HASH, recipient: { name: "", email: "", phone: "" }, backups: [] }
+    : null;
+  const partBForPostman = pkg ? sealPostmanPackage(B, pkg, postmanPublic) : sealPartB(B, postmanPublic);
 
   // 4. Sign and send.
   onProgress("send");
@@ -206,5 +217,6 @@ export async function sealLetter(input: SealInput, onProgress: (p: Progress) => 
     ...(sent.releaseAt ? { releaseAt: sent.releaseAt } : {}),
     ownerCard: cardEncode(ownerSeed),
     guardianCard: guardianSeed ? cardEncode(guardianSeed) : null,
+    ...(input.test ? { test: true } : {}),
   };
 }

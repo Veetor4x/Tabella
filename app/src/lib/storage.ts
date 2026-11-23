@@ -1,5 +1,5 @@
 import { REGISTRY } from "./config";
-import type { WhenId } from "./periods";
+import type { TestQuiet, WhenId } from "./periods";
 
 export interface Person {
   name: string;
@@ -20,6 +20,17 @@ export interface SurprisePerson {
 }
 export const emptyPerson = (): SurprisePerson => ({ name: "", email: "", phone: "", question: "", answer: "", relation: "" });
 
+/** The owner's own reminders: emailed while a letter is in its warning ("tap here to say you're still around"). Sealed to the Postman, like every address. */
+export interface Reminders {
+  /** optional: empty means no reminders */
+  email: string;
+  /** "simple": Tabella's own words. "personal": the owner's own subject and line (the link is added at the end). */
+  style: "simple" | "personal";
+  subject: string;
+  line: string;
+}
+export const emptyReminders = (): Reminders => ({ email: "", style: "simple", subject: "", line: "" });
+
 export interface Draft {
   /** "surprise" (the main way: we find them) or "invite" (they make their own card first) */
   mode?: "surprise" | "invite";
@@ -39,6 +50,12 @@ export interface Draft {
   releaseDay?: string;
   /** the 2-minute demo for a dated letter (hidden, with the demo timer) */
   dateDemo?: boolean;
+  /** owner reminders (only used for "If I go quiet") */
+  reminders?: Reminders;
+  /** a letter made on the /test page: its quiet time is typed in, and it is labelled "Test" */
+  test?: boolean;
+  /** /test only: the typed quiet time */
+  testQuiet?: TestQuiet;
 }
 
 export const emptyDraft = (): Draft => ({ mode: "surprise", recipient: emptyPerson(), backups: [], text: "", heirs: [{ name: "", address: "" }], guardian: null, when: "6m" });
@@ -65,9 +82,13 @@ export interface SealedLetter {
   guardianCard: string | null;
   /** a "keep it a surprise" letter: the recipient's card is NOT here (it is locked with their answers, nowhere else) */
   surprise?: { backups: number; /** false when no email was given for the recipient */ emailed?: boolean };
+  /** made on the /test page: shown with a "Test" label */
+  test?: boolean;
 }
 
 const DRAFT_KEY = "tabella.draft.v1";
+/** A test letter's draft is kept apart, so trying things on /test never touches a real letter in progress. */
+const TEST_DRAFT_KEY = "tabella.draft.test.v1";
 const LETTERS_KEY = "tabella.letters.v1";
 
 function read<T>(key: string): T | undefined {
@@ -88,17 +109,17 @@ function write(key: string, value: unknown): boolean {
   }
 }
 
-export function loadDraft(): Draft | undefined {
-  const d = read<Draft>(DRAFT_KEY);
+export function loadDraft(test = false): Draft | undefined {
+  const d = read<Draft>(test ? TEST_DRAFT_KEY : DRAFT_KEY);
   if (!d || typeof d.text !== "string" || !Array.isArray(d.heirs) || d.heirs.length === 0) return undefined;
   return d;
 }
 /** Answers are secrets: they are never written to this device's storage. */
 const withoutAnswers = (d: Draft): Draft => ({ ...d, recipient: d.recipient ? { ...d.recipient, answer: "" } : d.recipient, backups: d.backups?.map((b) => ({ ...b, answer: "" })) });
-export const saveDraft = (d: Draft) => write(DRAFT_KEY, withoutAnswers(d));
-export function clearDraft() {
+export const saveDraft = (d: Draft, test = false) => write(test ? TEST_DRAFT_KEY : DRAFT_KEY, withoutAnswers(d));
+export function clearDraft(test = false) {
   try {
-    window.localStorage.removeItem(DRAFT_KEY);
+    window.localStorage.removeItem(test ? TEST_DRAFT_KEY : DRAFT_KEY);
   } catch {
     /* nothing to clear */
   }

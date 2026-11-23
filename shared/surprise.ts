@@ -60,10 +60,31 @@ export interface Contact {
   email: string;
   phone: string;
 }
-/** Sealed to the Postman. `mode: "demo"` runs the escalation ladder in minutes instead of days. */
+/**
+ * The owner's own reminders, sent while a letter is in its warning: "tap here to say you're still around".
+ * They are about the OWNER only: no email built from this ever mentions a letter, the recipient or what is inside.
+ */
+export interface OwnerReminders {
+  /** where the reminders go */
+  email: string;
+  /** "simple": Tabella's own check-in wording. "personal": the owner's own subject and line, with the link added at the end. */
+  style: "simple" | "personal";
+  subject?: string;
+  line?: string;
+}
+export const REMINDER_SUBJECT_MAX = 80;
+export const REMINDER_LINE_MAX = 200;
+
+/**
+ * Sealed to the Postman. `mode: "demo"` runs the escalation ladder in minutes instead of days.
+ * A letter that is NOT a surprise (the "invite them" way) can still carry reminders: its package then has an empty recipient and no
+ * backups, so the escalation ladder has nothing to send and only the reminders use it.
+ */
 export interface PostmanPackage {
   v: 1;
   mode: "real" | "demo";
+  /** the owner's reminders (optional) */
+  reminders?: OwnerReminders;
   /** the owner's first name, for the messages ("Alex left you a letter") */
   owner: string;
   /** keccak256 of the card's signing key: how the Postman checks "opened" reports */

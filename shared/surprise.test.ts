@@ -72,6 +72,31 @@ describe("the Postman's package", () => {
   });
 });
 
+describe("owner reminders in the Postman's package", () => {
+  const postman = sealKeysFromCardSeed(newSeed());
+  const { B } = splitKey(makeContentKey());
+  const base: PostmanPackage = { v: 1, mode: "demo", owner: "Alex", cardKeyHash: keyHash(signingKeysFromSeed(newSeed()).publicKey), recipient: { name: "", email: "", phone: "" }, backups: [] };
+  it("travel sealed with Part B, and only the Postman can read them", () => {
+    const pkg: PostmanPackage = { ...base, reminders: { email: "alex.owner@example.org", style: "personal", subject: "Water the plants", line: "Quick tap." } };
+    const env = sealPostmanPackage(B, pkg, postman.mlkemPublicKey);
+    expect(openPostmanPackage(env, postman).pkg?.reminders).toEqual(pkg.reminders);
+    expect(() => openPostmanPackage(env, sealKeysFromCardSeed(newSeed()))).toThrow();
+    const text = Buffer.from(env).toString("latin1");
+    expect(text).not.toContain("alex.owner@example.org");
+    expect(text).not.toContain("Water the plants");
+  });
+  it("an 'invite them' letter can carry reminders with an empty recipient and no backups", () => {
+    const opened = openPostmanPackage(sealPostmanPackage(B, { ...base, reminders: { email: "alex.owner@example.org", style: "simple" } }, postman.mlkemPublicKey), postman);
+    expect(opened.pkg?.recipient.email).toBe("");
+    expect(opened.pkg?.backups).toEqual([]);
+    expect(opened.pkg?.reminders?.style).toBe("simple");
+    expect(Buffer.from(opened.B).equals(Buffer.from(B))).toBe(true);
+  });
+  it("a package without reminders is unchanged", () => {
+    expect(openPostmanPackage(sealPostmanPackage(B, base, postman.mlkemPublicKey), postman).pkg?.reminders).toBeUndefined();
+  });
+});
+
 describe('"opened" reports', () => {
   const REG = "0xC0808aF18e2283dFE4d026315a462349561fFd1c" as const;
   it("verify for the right card and letter, and for nothing else", () => {

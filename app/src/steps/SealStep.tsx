@@ -5,7 +5,7 @@ import { friendlyError } from "../lib/helper";
 import { sealLetter, type Progress } from "../lib/seal";
 import { sealSurprise, type SurpriseProgress } from "../lib/sealSurprise";
 import type { JoinProgress } from "../lib/heir";
-import { longDay, releaseAtFor, whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
+import { longDay, releaseAtFor, testDuration, testLabel, testQuietSeconds, testWarningSeconds, whenById, WARNING_DAYS, type WhenId } from "../lib/periods";
 import type { Draft, SealedLetter } from "../lib/storage";
 import { parseAddress } from "../lib/addr";
 import { IconLetter } from "../ui/icons";
@@ -49,6 +49,11 @@ export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () =
   const names = surprise ? [draft.recipient?.name.trim() ?? ""] : draft.heirs.map((h) => h.name.trim());
   const when = whenById(draft.when as WhenId);
   const dated = draft.whenMode === "date";
+  // /test: the quiet time was typed in; the warning is half of it (never under a minute)
+  const typed = draft.test ? testQuietSeconds(draft.testQuiet) : null;
+  const quiet = typed ?? when.quiet;
+  const warning = typed ? testWarningSeconds(typed) : when.warning;
+  const quietLabel = typed ? testLabel(typed) : when.label;
   // a dated letter: the picked day (the start of it, in this person's time zone), or the 2-minute demo
   const releaseAt: number | "demo" | undefined = dated ? (draft.dateDemo ? "demo" : releaseAtFor(draft.releaseDay ?? "") ?? undefined) : undefined;
   const datedLabel = dated ? (draft.dateDemo ? "In 2 minutes (demo)" : typeof releaseAt === "number" ? longDay(releaseAt) : "") : "";
@@ -74,10 +79,12 @@ export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () =
                 recipient: draft.recipient!,
                 backups: draft.backups ?? [],
                 guardianName: !dated && draft.guardian ? draft.guardian.name.trim() : null,
-                quiet: when.quiet,
-                warning: when.warning,
-                whenLabel: dated ? datedLabel : when.label,
-                demo: when.id === "demo" || (dated && !!draft.dateDemo),
+                quiet,
+                warning,
+                whenLabel: dated ? datedLabel : quietLabel,
+                demo: when.id === "demo" || !!draft.test || (dated && !!draft.dateDemo),
+                reminders: draft.reminders,
+                test: !!draft.test,
                 releaseAt,
                 onCard: (p) => setProgress(CARD_TEXT[p]),
               },
@@ -90,7 +97,7 @@ export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () =
                 return { name: h.name.trim(), evm: p.evm, qor: p.qor };
               });
               return sealLetter(
-                { text: draft.text, heirs, guardianName: !dated && draft.guardian ? draft.guardian.name.trim() : null, ownerName: draft.owner, quiet: when.quiet, warning: when.warning, whenLabel: dated ? datedLabel : when.label, releaseAt },
+                { text: draft.text, heirs, guardianName: !dated && draft.guardian ? draft.guardian.name.trim() : null, ownerName: draft.owner, quiet, warning, whenLabel: dated ? datedLabel : quietLabel, releaseAt, reminders: draft.reminders, test: !!draft.test },
                 (p) => setProgress(PROGRESS_TEXT[p]),
               );
             })(),
@@ -132,7 +139,7 @@ export function SealStep(props: { draft: Draft; stepIndex?: number; onBack: () =
       <p className="status-line center" role="status" aria-live="polite">
         {busy ? (slow ? "The Postman is waking up. This can take a minute…" : progress) : ""}
       </p>
-      <p className="hint center">{dated ? (draft.dateDemo ? "Opens 2 minutes after you seal it, whether or not you check in." : `Opens at the start of ${datedLabel}, whether or not you check in. You can cancel it until then.`) : when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>
+      <p className="hint center">{dated ? (draft.dateDemo ? "Opens 2 minutes after you seal it, whether or not you check in." : `Opens at the start of ${datedLabel}, whether or not you check in. You can cancel it until then.`) : typed ? `Opens after ${testDuration(quiet)} of quiet, then a ${testDuration(warning)} countdown.` : when.id === "demo" ? "Opens after 2 quiet minutes, then a 1-minute countdown." : `Opens after ${when.label} of quiet, then a ${WARNING_DAYS}-day countdown.`}</p>
       {error && (
         <p className="notice" role="alert">
           {error}

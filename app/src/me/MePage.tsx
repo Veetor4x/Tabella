@@ -17,6 +17,7 @@ import { CheckInView, StatePill, namesOf, nextLine, type CheckInPhase } from "./
 import { RestorePanel } from "./Restore";
 import { SpareCards } from "./SpareCards";
 import { Shell } from "./Shell";
+import { TestBanner, TestTag } from "../ui/TestBanner";
 
 /** One plain line under the ring: how this letter will reach the people it is for. */
 export function deliveryLine(saved: SealedLetter): string {
@@ -49,6 +50,7 @@ function ListRow({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string
         <span className="letter-row-text">
           <strong>
             Letter {saved.letterId} · for {names}
+            {saved.test && <> <TestTag /></>}
           </strong>
           <span>{text}</span>
           {label && <span className="row-sub">{label.line}</span>}
@@ -216,6 +218,7 @@ export function MePage() {
     <Shell here="me">
       {detail ? (
         <>
+          {detail.test && <TestBanner />}
           <HowThisWorks />
           <Detail saved={detail} go={go} onChanged={reload} />
         </>

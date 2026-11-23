@@ -107,6 +107,7 @@ export function Landing() {
                 <button type="button" className="menu-item" onClick={() => { setMenu(false); start(false); }}>
                   Watch intro
                 </button>
+                <a href="/test" onClick={() => setMenu(false)}>Test mode</a>
                 <div className="menu-theme">
                   <ThemeToggle />
                   <SoundWave />

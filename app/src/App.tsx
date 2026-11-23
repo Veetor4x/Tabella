@@ -1,8 +1,8 @@
 import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { warmUp } from "./lib/helper";
-import { longDay, releaseAtFor, whenById } from "./lib/periods";
-import { clearDraft, emptyDraft, loadDraft, saveDraft, saveLetter, type Draft, type SealedLetter } from "./lib/storage";
+import { defaultTestQuiet, longDay, releaseAtFor, testLabel, testQuietSeconds, whenById } from "./lib/periods";
+import { clearDraft, emptyDraft, emptyReminders, loadDraft, saveDraft, saveLetter, type Draft, type SealedLetter } from "./lib/storage";
 import { DoneScreen } from "./steps/DoneScreen";
 import { GuardianStep } from "./steps/GuardianStep";
 import { SealStep } from "./steps/SealStep";
@@ -16,14 +16,22 @@ import { screenTransition, screenVariants, veilTransition } from "./ui/motion";
 import { Numeral } from "./ui/Numeral";
 import { Pills } from "./ui/Pills";
 import { SoundWave } from "./ui/SoundWave";
+import { TestBanner } from "./ui/TestBanner";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { AsideContext, useWide } from "./ui/split";
 import { countWords, joinNames } from "./ui/steps";
 
 const demoFromUrl = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
 
-export function App() {
-  const [draft, setDraft] = useState<Draft>(() => loadDraft() ?? emptyDraft());
+/** A fresh draft. On the /test page it is marked as a test and starts with a 2-minute quiet time. */
+const freshDraft = (test: boolean): Draft => (test ? { ...emptyDraft(), test: true, testQuiet: defaultTestQuiet() } : emptyDraft());
+
+/** `test`: the /test page. The same write-and-seal flow, with the quiet time typed in and a clear "test mode" banner. */
+export function App({ test = false }: { test?: boolean } = {}) {
+  const [draft, setDraft] = useState<Draft>(() => {
+    const saved = loadDraft(test);
+    return test ? { ...(saved ?? freshDraft(true)), test: true, testQuiet: saved?.testQuiet ?? defaultTestQuiet() } : saved ?? emptyDraft();
+  });
   const [step, setStep] = useState(0);
   const dir = useRef(1); // 1 = going forward, -1 = going back: the screens slide differently
   const [sealed, setSealed] = useState<SealedLetter | null>(null);
@@ -37,8 +45,8 @@ export function App() {
     warmUp().catch(() => {});
   }, []);
   useEffect(() => {
-    saveDraft(draft);
-  }, [draft]);
+    saveDraft(draft, test);
+  }, [draft, test]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
@@ -59,7 +67,7 @@ export function App() {
   const onSealed = useCallback((letter: SealedLetter) => {
     // Keep the cards first, before any animation: nothing can lose them.
     saveLetter(letter);
-    clearDraft();
+    clearDraft(test);
     dir.current = 1;
     setVeil(true); // fade the day screen out to night...
     timers.current.push(
@@ -76,7 +84,7 @@ export function App() {
     timers.current.push(
       setTimeout(() => {
         setSealed(null);
-        setDraft(emptyDraft());
+        setDraft(freshDraft(test));
         setStep(0);
         setVeil(false);
       }, 900),
@@ -88,7 +96,8 @@ export function App() {
   const words = countWords(draft.text);
   const pills: { key: string; label: string }[] = [];
   const at = dated && draft.releaseDay ? releaseAtFor(draft.releaseDay) : null;
-  const whenLabel = dated ? (draft.dateDemo ? "In 2 minutes (demo)" : at ? `Opens ${longDay(at)}` : "On a date") : whenById(draft.when).label;
+  const testSeconds = test ? testQuietSeconds(draft.testQuiet) : null;
+  const whenLabel = dated ? (draft.dateDemo ? "In 2 minutes (demo)" : at ? `Opens ${longDay(at)}` : "On a date") : testSeconds ? testLabel(testSeconds) : whenById(draft.when).label;
   if (!sealed) {
     const pos = (n: string) => order.indexOf(n as never);
     if (step > pos("write")) pills.push({ key: "letter", label: `Letter · ${words} ${words === 1 ? "word" : "words"}` });
@@ -122,6 +131,11 @@ export function App() {
       onChange={(when) => patch({ when })}
       onBack={back}
       onNext={next}
+      reminders={draft.reminders ?? emptyReminders()}
+      onReminders={(reminders) => patch({ reminders })}
+      test={test}
+      testQuiet={draft.testQuiet}
+      onTestQuiet={(testQuiet) => patch({ testQuiet })}
     />
   ) : name === "guardian" ? (
     <GuardianStep guardian={draft.guardian} onChange={(guardian) => patch({ guardian })} onBack={back} onNext={next} />
@@ -144,6 +158,7 @@ export function App() {
         <div className={`root ${sealed ? "night" : ""}`}>
           <Background />
           <div className="app write-app">
+            {test && <TestBanner />}
             <header className="brand">
               <div className="brand-text">
                 <a className="brand-name" href="/" aria-label="Tabella, home"><BrandMark />Tabella</a>

@@ -15,6 +15,7 @@ import { createEscalation } from "./escalation.js";
 import { createNotifier } from "./notify/providers.js";
 import { createMemoryStore, createPgStore } from "./notify/store.js";
 import { createPostman } from "./postman.js";
+import { createReminders } from "./reminders.js";
 import { derivePostmanKeys, ensurePostmanKemKey } from "./postmanKeys.js";
 import { createApp } from "./relay.js";
 import { Mutex } from "./window.js";
@@ -53,7 +54,8 @@ async function main() {
     const escalation = createEscalation({ notifier, store, appUrl: cfg.appUrl });
     for (const id of cfg.finishedLetters) await escalation.markFinished(id); // old test letters: done, kept quiet
     messages = () => notifier.channels;
-    postman = createPostman({ chain, cfg, keys, mutex, escalation });
+    const reminders = createReminders({ notifier, store, appUrl: cfg.appUrl });
+    postman = createPostman({ chain, cfg, keys, mutex, escalation, reminders });
   } else {
     console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
   }

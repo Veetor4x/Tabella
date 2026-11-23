@@ -29,7 +29,8 @@ import { becomeReady, type JoinProgress } from "./heir";
 import { HelperError, SealProblem, relay, warmUp } from "./helper";
 import { lockSeed } from "./locks";
 import { ZERO_HASH, hexToU8, sendCreate } from "./seal";
-import type { SealedLetter, SurprisePerson } from "./storage";
+import { ownerReminders } from "./reminders";
+import type { Reminders, SealedLetter, SurprisePerson } from "./storage";
 
 export type SurpriseProgress = "postman" | "card" | "lock" | "wrap" | "send";
 
@@ -46,6 +47,10 @@ export interface SurpriseInput {
   releaseAt?: number | "demo";
   /** the 2-minute demo timer: the Postman then runs its ladder in minutes instead of days */
   demo: boolean;
+  /** the owner's reminders (emailed while the letter is in its warning); ignored for a letter that opens on a date */
+  reminders?: Reminders;
+  /** made on the /test page: labelled "Test" */
+  test?: boolean;
   onCard?: (p: JoinProgress) => void;
 }
 
@@ -108,6 +113,7 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
   const pkg: PostmanPackage = {
     v: 1,
     mode: input.demo ? "demo" : "real",
+    ...(ownerReminders(input.reminders, !!input.releaseAt) ? { reminders: ownerReminders(input.reminders, !!input.releaseAt) } : {}),
     owner: input.ownerName.trim() || "Someone who cares about you",
     cardKeyHash: keyHash(cardKeys.publicKey),
     recipient: { name: recipient.name.trim(), email: recipient.email.trim(), phone: cleanPhone(recipient.phone) },
@@ -136,5 +142,6 @@ export async function sealSurprise(input: SurpriseInput, onProgress: (p: Surpris
     ownerCard: cardEncode(ownerSeed),
     guardianCard: guardianSeed ? cardEncode(guardianSeed) : null,
     surprise: { backups: backups.length, emailed: !!recipient.email?.trim() },
+    ...(input.test ? { test: true } : {}),
   };
 }

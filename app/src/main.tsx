@@ -28,6 +28,6 @@ if (window.location.hash === "#spike") {
 } else {
   // "/" is the front page; "/write" is the owner's flow
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
-  const page = path === "/write" ? <App /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : path === "/card" ? <CardPage /> : path === "/join" ? <JoinPage /> : path === "/open" ? <OpenPage /> : <Landing />;
+  const page = path === "/write" ? <App /> : path === "/test" ? <App test /> : path === "/me" || path.startsWith("/me/") ? <MePage /> : path === "/guardian" ? <GuardianPage /> : path === "/cards" ? <CardsPage /> : path === "/card" ? <CardPage /> : path === "/join" ? <JoinPage /> : path === "/open" ? <OpenPage /> : <Landing />;
   root.render(<React.StrictMode>{page}</React.StrictMode>);
 }

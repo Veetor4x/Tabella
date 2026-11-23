@@ -10,6 +10,11 @@ export interface MockLetter {
   heirs: Hex[];
   partBForPostman: Hex;
   partBForHeirs: Hex;
+  /** seconds; default 120 / 60 / last check-in at 1 (what the older tests expect) */
+  quietPeriod?: bigint;
+  warningPeriod?: bigint;
+  lastCheckIn?: bigint;
+  releaseAt?: bigint;
 }
 
 /** A scriptable stand-in for QoreChain. `calls` records the order things happened in. */
@@ -204,10 +209,10 @@ export class MockChain implements Chain {
             ownerKeyHash: `0x${"11".repeat(32)}`,
             guardianKeyHash: `0x${"22".repeat(32)}`,
             heirs: l.heirs,
-            quietPeriod: 120n,
-            warningPeriod: 60n,
-            releaseAt: 0n,
-            lastCheckIn: 1n,
+            quietPeriod: l.quietPeriod ?? 120n,
+            warningPeriod: l.warningPeriod ?? 60n,
+            releaseAt: l.releaseAt ?? 0n,
+            lastCheckIn: l.lastCheckIn ?? 1n,
             nonce: 1n,
             pausesUsed: 0,
             cancelled: l.status === STATUS.Cancelled,

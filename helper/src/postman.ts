@@ -31,6 +31,7 @@ import { bytesToHex, decodeFunctionResult, encodeFunctionData, hexToBytes, type 
 import { keyHash, sealPartB, type SealKeyPair } from "../../shared/tabella-crypto.ts";
 import { openPostmanPackage, verifyOpened, type PostmanPackage } from "../../shared/surprise.ts";
 import type { Escalation } from "./escalation.js";
+import type { Reminders } from "./reminders.js";
 import { STATUS, postmanAbi } from "./abi.js";
 import type { Chain } from "./chain.js";
 import type { Config } from "./config.js";
@@ -49,6 +50,8 @@ export interface PostmanDeps {
   now?: () => number;
   /** The escalation ladder for surprise letters. Without it the Postman only publishes Part B. */
   escalation?: Escalation;
+  /** Owner reminders, sent while a letter is in its warning. Without it the Postman sends none. */
+  reminders?: Reminders;
 }
 
 export interface TickReport {
@@ -68,7 +71,22 @@ interface LetterView {
   heirs: readonly Hex[];
   released: boolean;
   partBForPostman: Hex;
+  quietPeriod?: bigint;
+  warningPeriod?: bigint;
+  releaseAt?: bigint;
+  lastCheckIn?: bigint;
 }
+
+/** A letter whose owner asked for reminders: what we need to keep an eye on it while it is Active or in Warning. */
+interface Watched {
+  pkg: PostmanPackage;
+  quiet: number;
+  warning: number;
+  /** unix seconds; refreshed every time the letter is read. A check-in only ever moves the warning LATER, so an old value is a safe (early) guess. */
+  lastCheckIn: number;
+}
+/** How early before a warning we start looking at a letter every few seconds. */
+const WATCH_AHEAD_MS = 30_000;
 
 const RETRY_BASE_MS = 30_000;
 const RETRY_MAX_MS = 5 * 60_000;
@@ -87,6 +105,13 @@ export function createPostman(deps: PostmanDeps) {
   const firstSeenReleased = new Map<bigint, number>();
   const lastWaitLog = new Map<bigint, number>();
   const stats = { lastTickAt: 0, lastTickOk: true, published: 0, scanned: 0, lastError: null as string | null };
+
+  /** Letters with owner reminders that are still Active or in Warning. */
+  const watched = new Map<bigint, Watched>();
+  /** Letters we have looked at and that will never need a reminder (none asked for, or a dated letter). */
+  const noReminders = new Set<bigint>();
+  let remindersRunning = false;
+  let remTimer: ReturnType<typeof setTimeout> | undefined;
 
   let running = false;
   let stopped = true;
@@ -182,6 +207,11 @@ export function createPostman(deps: PostmanDeps) {
   /** Run the escalation ladder for a released letter, if it has one. */
   async function ladder(id: bigint, letter: LetterView, report: TickReport): Promise<void> {
     const pkg = deps.escalation ? await packageOf(id, letter) : null;
+    // an "invite them" letter that only carries owner reminders has an empty recipient: there is no ladder to run
+    if (pkg && !pkg.recipient.email && !pkg.recipient.phone && pkg.backups.length === 0) {
+      finished.add(id);
+      return;
+    }
     if (!pkg || !deps.escalation) {
       finished.add(id);
       return;
@@ -215,13 +245,78 @@ export function createPostman(deps: PostmanDeps) {
     return "ok";
   }
 
+  // ---------------------------------------------------------------- owner reminders
+
+  /** Look at one watched letter now (fresh from the network) and send whatever reminder is due. */
+  async function remind(id: bigint): Promise<void> {
+    const w = watched.get(id);
+    if (!w || !deps.reminders) return;
+    const status = Number(await read("status", [id]));
+    if (status !== STATUS.Active && status !== STATUS.Warning) {
+      watched.delete(id); // released or cancelled: no more reminders, ever
+      return;
+    }
+    const letter = (await read("getLetter", [id])) as LetterView;
+    w.lastCheckIn = Number(letter.lastCheckIn ?? w.lastCheckIn);
+    await deps.reminders.check(id.toString(), w.pkg, { status, lastCheckIn: w.lastCheckIn, quiet: w.quiet, warning: w.warning });
+  }
+
+  /** Is it time to look at this letter every few seconds? (Its warning is about to start, or has.) */
+  const nearWarning = (w: Watched) => now() >= (w.lastCheckIn + w.quiet) * 1000 - WATCH_AHEAD_MS;
+
+  /** Called for a letter that is Active or in Warning: start watching it if its owner asked for reminders. */
+  async function watch(id: bigint): Promise<void> {
+    if (!deps.reminders) return;
+    const known = watched.get(id);
+    if (known) {
+      if (nearWarning(known)) await remind(id); // far from its warning there is nothing to read: no calls spent
+      return;
+    }
+    if (noReminders.has(id) || packages.get(id) === null) return; // already looked: this letter has no reminders
+    const letter = (await read("getLetter", [id])) as LetterView;
+    if (letter.releaseAt && letter.releaseAt > 0n) {
+      noReminders.add(id); // a dated letter has no quiet time, so nothing to remind about
+      return;
+    }
+    const pkg = await packageOf(id, letter);
+    if (!pkg || !deps.reminders.wants(pkg)) {
+      noReminders.add(id); // looked once: never read again for reminders
+      return;
+    }
+    watched.set(id, { pkg, quiet: Number(letter.quietPeriod ?? 0n), warning: Number(letter.warningPeriod ?? 0n), lastCheckIn: Number(letter.lastCheckIn ?? 0n) });
+    if (nearWarning(watched.get(id)!)) await remind(id);
+  }
+
+  /** The quick loop: only the few letters that are close to (or in) their warning, every few seconds, so a reminder goes out on time. */
+  async function remindersPass(): Promise<void> {
+    if (remindersRunning || !deps.reminders) return;
+    remindersRunning = true;
+    try {
+      for (const [id, w] of [...watched]) {
+        if (!nearWarning(w)) continue;
+        try {
+          await remind(id);
+        } catch (err) {
+          log(`letter #${id}: reminders ${describe(err)}`);
+        }
+      }
+    } finally {
+      remindersRunning = false;
+    }
+  }
+
   async function visit(id: bigint, report: TickReport): Promise<void> {
     const status = Number(await read("status", [id]));
     if (status === STATUS.Cancelled) {
       finished.add(id);
+      watched.delete(id);
       return;
     }
-    if (status !== STATUS.Released) return; // Active or Warning: nothing to do yet
+    if (status === STATUS.Active || status === STATUS.Warning) {
+      await watch(id).catch((err) => log(`letter #${id}: reminders ${describe(err)}`));
+      return; // nothing else to do yet
+    }
+    watched.delete(id);
 
     const letter = (await read("getLetter", [id])) as LetterView;
     if (letter.released) {
@@ -291,6 +386,14 @@ export function createPostman(deps: PostmanDeps) {
     void catchUp.then(() => {
       if (!stopped) timer = setTimeout(loop, cfg.postmanIntervalMs);
     });
+    if (deps.reminders) {
+      const quick = async () => {
+        if (stopped) return;
+        await remindersPass();
+        if (!stopped) remTimer = setTimeout(quick, cfg.reminderIntervalMs);
+      };
+      remTimer = setTimeout(quick, cfg.reminderIntervalMs);
+    }
     return catchUp;
   }
 
@@ -298,6 +401,7 @@ export function createPostman(deps: PostmanDeps) {
     stopped = true;
     catchUp = undefined;
     if (timer) clearTimeout(timer);
+    if (remTimer) clearTimeout(remTimer);
   }
 
   /** Public information for GET /health. */
@@ -316,7 +420,7 @@ export function createPostman(deps: PostmanDeps) {
     };
   }
 
-  return { tick, start, stop, info, reportOpened };
+  return { tick, start, stop, info, reportOpened, remindersPass, watching: () => watched.size };
 }
 
 export type Postman = ReturnType<typeof createPostman>;

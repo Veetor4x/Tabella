@@ -338,6 +338,7 @@ export function IntroPlayer({ onClose, film = "surprise", onOther }: { onClose: 
             <button type="button" className="btn glass" onClick={onClose}>
               <span>Back to the page</span>
             </button>
+            <a className="link intro-test-link" href="/test">Test mode</a>
           </m.div>
         ) : beat === 0 ? (
           <Opener t={calm ? 99999 : t} calm={calm} />

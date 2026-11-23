@@ -22,6 +22,49 @@ export const WHEN_OPTIONS: WhenOption[] = [
   { id: "demo", label: "2 minutes (demo)", quiet: 120, warning: 60, hidden: true },
 ];
 
+/** The longest quiet time the contract accepts (and so the longest a test letter may use). */
+export const MAX_QUIET_SECONDS = 3650 * DAY;
+
+// ------------------------------------------------------------------ test mode (/test)
+
+/** On the /test page the quiet time is typed in: a whole number of minutes, hours or days. */
+export type TestUnit = "minutes" | "hours" | "days";
+export interface TestQuiet {
+  /** what was typed (kept as text so the box can be empty or half-typed) */
+  n: string;
+  unit: TestUnit;
+}
+export const TEST_UNITS: { id: TestUnit; label: string; seconds: number }[] = [
+  { id: "minutes", label: "minutes", seconds: 60 },
+  { id: "hours", label: "hours", seconds: 3600 },
+  { id: "days", label: "days", seconds: DAY },
+];
+export const defaultTestQuiet = (): TestQuiet => ({ n: "2", unit: "minutes" });
+
+/** The quiet time in seconds, or null when what was typed is not a whole number of at least one, or is beyond the contract's limit. */
+export function testQuietSeconds(q: TestQuiet | undefined): number | null {
+  if (!q || !/^\d{1,7}$/.test(q.n.trim())) return null;
+  const n = Number(q.n.trim());
+  const unit = TEST_UNITS.find((u) => u.id === q.unit);
+  if (!unit || n < 1) return null;
+  const seconds = n * unit.seconds;
+  return seconds > MAX_QUIET_SECONDS ? null : seconds;
+}
+/** The warning is half the quiet time, but never less than a minute. It starts after the quiet time runs out. */
+export const testWarningSeconds = (quietSeconds: number) => Math.max(60, Math.floor(quietSeconds / 2));
+
+/** "5 minutes", "1 hour", "3 days" */
+export function testDuration(seconds: number): string {
+  for (const [unit, size] of [["day", DAY], ["hour", 3600], ["minute", 60]] as const) {
+    if (seconds >= size && seconds % size === 0) {
+      const n = seconds / size;
+      return `${n} ${unit}${n === 1 ? "" : "s"}`;
+    }
+  }
+  return `${seconds} seconds`;
+}
+export const testLabel = (quietSeconds: number) => `${testDuration(quietSeconds)} (test)`;
+
 export const whenById = (id: WhenId): WhenOption => WHEN_OPTIONS.find((o) => o.id === id) ?? WHEN_OPTIONS[1]!;
 
 // ------------------------------------------------------------------ "on a date"
