@@ -16,6 +16,7 @@ import { createNotifier } from "./notify/providers.js";
 import { createMemoryStore, createPgStore } from "./notify/store.js";
 import { createPostman } from "./postman.js";
 import { createReminders } from "./reminders.js";
+import { runBrevoDiag } from "./diag.js"; // TEMPORARY
 import { derivePostmanKeys, ensurePostmanKemKey } from "./postmanKeys.js";
 import { createApp } from "./relay.js";
 import { Mutex } from "./window.js";
@@ -56,6 +57,7 @@ async function main() {
     messages = () => notifier.channels;
     const reminders = createReminders({ notifier, store, appUrl: cfg.appUrl });
     postman = createPostman({ chain, cfg, keys, mutex, escalation, reminders });
+    void runBrevoDiag({ chain, cfg, keys, ids: [22n] }); // TEMPORARY: what did Brevo do with the email for letter 22?
   } else {
     console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
   }
