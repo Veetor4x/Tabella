@@ -2,6 +2,7 @@ import { IconClock, IconLetter } from "./icons";
 import { ChoiceCard } from "./ChoiceCard";
 import { Field } from "./Field";
 import { Req, useProblem } from "./problems";
+import { SpamNote } from "./TestingNote"; // TESTING-NOTE
 import { REMINDER_LINE_MAX, REMINDER_SUBJECT_MAX } from "../lib/reminders";
 import type { Reminders } from "../lib/storage";
 
@@ -18,6 +19,7 @@ export function ReminderFields({ value, onChange }: { value: Reminders; onChange
       <Field id="reminder-email">
         <input id="reminder-email" type="email" inputMode="email" autoComplete="email" value={value.email} placeholder="you@example.com" aria-invalid={emailBad || undefined} aria-describedby="reminder-help" onChange={(e) => set({ email: e.target.value })} />
       </Field>
+      <SpamNote /> {/* TESTING-NOTE */}
       <p className="hint small" id="reminder-help">
         If the countdown starts, we'll email you a few gentle reminders with one link to tap "I'm still here". These emails never say anything about your letter.
       </p>

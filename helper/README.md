@@ -169,7 +169,8 @@ Names only, see `../.env.example`. Never commit real values.
 | `WINDOW_BLOCKS`, `WINDOW_MAX_TXS`, `WINDOW_MAX_UQOR` | 17280, 200, derived | clamped to the chain maximums |
 | `WINDOW_LOW_TXS`, `WINDOW_LOW_BLOCKS` | 10, 1200 | when to reopen |
 | `POSTMAN_ENABLED` | true | `false` runs the relay only |
-| `POSTMAN_INTERVAL_SECONDS` | 20 | how often to look for released letters |
+| `POSTMAN_INTERVAL_SECONDS` | 20 | how often to look at every letter (the slow pass) |
+| `FAST_INTERVAL_SECONDS` | 15 | how often to look at letters in their final 5 minutes (and at test-timed ladders still sending), so the first email goes out within seconds of the release |
 | `POSTMAN_HEIR_KEY_GRACE_MINUTES` | 30 | see "Heirs without a key" |
 
 ## GET /health

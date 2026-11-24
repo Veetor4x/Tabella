@@ -532,19 +532,42 @@ describe("startup catch-up (a helper waking from sleep on a free instance)", () 
     postman.stop();
   });
 
-  it("then carries on every 20 s, and a letter that releases later is picked up on the next tick", async () => {
+  it("then carries on, and a letter that is about to be released is picked up by the quick pass (15 s), not the slow one (20 s)", async () => {
     addLetter(1n, STATUS.Released);
-    addLetter(2n, STATUS.Warning);
+    addLetter(2n, STATUS.Warning); // its release time is moments ago in this test's clock: it is "imminent"
     const postman = makePostman();
     await postman.start();
     expect(chain.published.map((p) => p.id)).toEqual([1n]);
 
     chain.letters.get(2n)!.status = STATUS.Released;
-    await vi.advanceTimersByTimeAsync(19_000);
+    await vi.advanceTimersByTimeAsync(14_000);
     expect(chain.published.map((p) => p.id)).toEqual([1n]); // not yet
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(chain.published.map((p) => p.id)).toEqual([1n, 2n]);
+    expect(chain.published.map((p) => p.id)).toEqual([1n, 2n]); // the quick pass, 15 s after the start
     postman.stop();
+  });
+
+  it("a letter that cannot be released for a long time costs nothing on the slow passes (free-plan friendly)", async () => {
+    addLetter(1n, STATUS.Active);
+    const l = chain.letters.get(1n)!;
+    l.lastCheckIn = BigInt(Math.floor(nowMs / 1000)); // just checked in
+    l.quietPeriod = BigInt(180 * 86_400); // six months
+    l.warningPeriod = BigInt(14 * 86_400);
+    const postman = makePostman();
+    await postman.start(); // the first look reads the letter once and learns when it can be released
+    const before = chain.calls.filter((c) => c === "call").length;
+    await vi.advanceTimersByTimeAsync(60_000); // three slow passes and four quick ones
+    expect(chain.calls.filter((c) => c === "call").length - before).toBe(3); // only letterCount, once per slow pass: no status or letter reads
+    postman.stop();
+  });
+
+  it("the slow and the quick pass never work on the same letter at the same moment (no double publish)", async () => {
+    addLetter(1n, STATUS.Released);
+    const postman = makePostman();
+    await Promise.all([postman.tick(), postman.fastPass(), postman.tick(), postman.fastPass()]);
+    await postman.tick();
+    expect(chain.published).toHaveLength(1);
+    expect(chain.calls.filter((c) => c === "send")).toHaveLength(1);
   });
 
   it("start() twice gives one catch-up and no double publication", async () => {

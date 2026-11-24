@@ -7,6 +7,7 @@ import { joinNames } from "../ui/steps";
 import { Button } from "../ui/Button";
 import { CopyButton } from "../ui/CopyButton";
 import { Headline } from "../ui/Headline";
+import { SpamHeadsUp } from "../ui/TestingNote"; // TESTING-NOTE
 import { fadeUp, sealSettle } from "../ui/motion";
 import { PeopleMap } from "../ui/PeopleMap";
 import { playSealPress } from "../landing/sfx";
@@ -65,6 +66,8 @@ export function DoneScreen({ letter, onAnother }: { letter: SealedLetter; onAnot
           {letter.surprise.backups ? `, and ask ${letter.surprise.backups === 1 ? "your backup person" : `your ${letter.surprise.backups} backup people`} to help if they can't be reached` : ""}.
         </m.p>
       )}
+
+      <SpamHeadsUp /> {/* TESTING-NOTE */}
 
       <PeopleMap
         variant="night"

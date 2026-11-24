@@ -60,6 +60,8 @@ export interface Config {
   postmanIntervalMs: number;
   /** If an heir still has no registered opening key this long after release, seal to the heirs that do. */
   heirKeyGraceMs: number;
+  /** How often letters that are about to be released (and test-timed ladders still sending) are looked at, so the first email goes out within seconds. */
+  fastIntervalMs: number;
   /** How often the few letters that are close to (or in) their warning are looked at, so an owner reminder goes out on time. */
   reminderIntervalMs: number;
 }
@@ -126,6 +128,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     postmanEnabled: (env.POSTMAN_ENABLED?.trim() ?? "true").toLowerCase() !== "false",
     postmanIntervalMs: num(env, "POSTMAN_INTERVAL_SECONDS", 20) * 1000,
     heirKeyGraceMs: num(env, "POSTMAN_HEIR_KEY_GRACE_MINUTES", 30) * 60_000,
+    fastIntervalMs: Math.max(5_000, num(env, "FAST_INTERVAL_SECONDS", 15) * 1000),
     reminderIntervalMs: Math.max(1000, num(env, "REMINDER_INTERVAL_SECONDS", 5) * 1000),
   };
 }

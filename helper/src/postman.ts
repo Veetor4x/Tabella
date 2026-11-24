@@ -87,6 +87,12 @@ interface Watched {
 }
 /** How early before a warning we start looking at a letter every few seconds. */
 const WATCH_AHEAD_MS = 30_000;
+/** A letter is "imminent" (looked at every few seconds, not every 20) from this long before it is released... */
+const FAST_WINDOW_MS = 5 * 60_000;
+/** ...until this long after (a release that cannot finish yet is left to the slow pass after that). */
+const FAST_GRACE_MS = 15 * 60_000;
+/** A letter that cannot be released for longer than this is not even read by the slow pass: one cheap look is enough until it is closer. */
+const FAR_MS = 10 * 60_000;
 
 const RETRY_BASE_MS = 30_000;
 const RETRY_MAX_MS = 5 * 60_000;
@@ -110,6 +116,17 @@ export function createPostman(deps: PostmanDeps) {
   const watched = new Map<bigint, Watched>();
   /** Letters we have looked at and that will never need a reminder (none asked for, or a dated letter). */
   const noReminders = new Set<bigint>();
+  /**
+   * When each Active or Warning letter will be released AT THE EARLIEST (ms). A check-in or a pause only moves the release LATER, so an old
+   * value is a safe (early) guess: it can make us look too soon, never too late.
+   */
+  const due = new Map<bigint, { at: number; checked: number }>();
+  /** Test-timed ladders that are still sending their steps (minutes apart): looked at quickly until they are done. id -> stop looking at (ms). */
+  const quickLadders = new Map<bigint, number>();
+  /** Letters being worked on right now, so the slow and the quick pass never do the same letter at the same time. */
+  const busy = new Set<bigint>();
+  let fastRunning = false;
+  let fastTimer: ReturnType<typeof setTimeout> | undefined;
   let remindersRunning = false;
   let remTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -220,6 +237,9 @@ export function createPostman(deps: PostmanDeps) {
     if (r.finished) {
       finished.add(id);
       packages.delete(id);
+      quickLadders.delete(id);
+    } else if (pkg.mode === "demo" && !quickLadders.has(id)) {
+      quickLadders.set(id, now() + FAST_GRACE_MS); // its steps are minutes apart: check every few seconds, not every 20
     }
   }
 
@@ -315,6 +335,63 @@ export function createPostman(deps: PostmanDeps) {
     return deps.escalation.deliveryState(id.toString(), pkg);
   }
 
+  /** Learn (or refresh) when a letter will be released, at the earliest. Cheap: it reads the letter at most once in a while. */
+  async function noteDue(id: bigint): Promise<void> {
+    const t = now();
+    const known = due.get(id);
+    // still in the future: nothing to learn. Past (a check-in moved it): look again, quickly if it matters now, rarely if it does not.
+    if (known && (t <= known.at || t - known.checked < (t - known.at > FAST_GRACE_MS ? 300_000 : 10_000))) return;
+    const l = (await read("getLetter", [id])) as LetterView;
+    const at = l.releaseAt && l.releaseAt > 0n ? Number(l.releaseAt) * 1000 : (Number(l.lastCheckIn ?? 0n) + Number(l.quietPeriod ?? 0n) + Number(l.warningPeriod ?? 0n)) * 1000;
+    due.set(id, { at, checked: t });
+  }
+
+  /** One letter, at most one worker at a time (the slow and the quick pass share the work). */
+  async function visitOnce(id: bigint, report: TickReport): Promise<void> {
+    if (busy.has(id)) return;
+    busy.add(id);
+    try {
+      await visit(id, report);
+    } finally {
+      busy.delete(id);
+    }
+  }
+
+  /** The slow pass can leave this letter alone: it cannot be released for a good while, and nothing about its reminders is due. */
+  const farAway = (id: bigint): boolean => {
+    const d = due.get(id);
+    const w = watched.get(id);
+    return !!d && d.at - now() > FAR_MS && !(w && nearWarning(w));
+  };
+
+  /**
+   * The quick pass: only letters that are about to be released (or just were), and test-timed ladders still sending. Every few seconds,
+   * a few letters, one cheap read each. It is what makes the first email go out within seconds of the release instead of up to a pass later.
+   */
+  async function fastPass(): Promise<void> {
+    if (fastRunning) return;
+    fastRunning = true;
+    try {
+      const t = now();
+      const ids = new Set<bigint>();
+      for (const [id, until] of quickLadders) {
+        if (t > until || finished.has(id)) quickLadders.delete(id);
+        else ids.add(id);
+      }
+      for (const [id, d] of due) if (!finished.has(id) && !cannotOpen.has(id) && d.at - t <= FAST_WINDOW_MS && t - d.at <= FAST_GRACE_MS) ids.add(id);
+      for (const id of ids) {
+        const report: TickReport = { skipped: false, scanned: 0, published: [], waiting: [], cannotOpen: [], errors: 0 };
+        try {
+          await visitOnce(id, report);
+        } catch (err) {
+          log(`letter #${id}: ${describe(err)}`);
+        }
+      }
+    } finally {
+      fastRunning = false;
+    }
+  }
+
   async function visit(id: bigint, report: TickReport): Promise<void> {
     const status = Number(await read("status", [id]));
     if (status === STATUS.Cancelled) {
@@ -323,10 +400,12 @@ export function createPostman(deps: PostmanDeps) {
       return;
     }
     if (status === STATUS.Active || status === STATUS.Warning) {
+      await noteDue(id);
       await watch(id).catch((err) => log(`letter #${id}: reminders ${describe(err)}`));
       return; // nothing else to do yet
     }
     watched.delete(id);
+    due.delete(id);
 
     const letter = (await read("getLetter", [id])) as LetterView;
     if (letter.released) {
@@ -355,9 +434,10 @@ export function createPostman(deps: PostmanDeps) {
       const count = (await read("letterCount")) as bigint;
       for (let id = 1n; id <= count; id++) {
         if (finished.has(id) || cannotOpen.has(id)) continue; // nothing more to do, and no RPC calls spent on them
+        if (farAway(id)) continue; // not for a good while: the quick pass will pick it up when it is close
         report.scanned++;
         try {
-          await visit(id, report);
+          await visitOnce(id, report);
         } catch (err) {
           // one bad letter must not stop the others
           report.errors++;
@@ -396,6 +476,12 @@ export function createPostman(deps: PostmanDeps) {
     void catchUp.then(() => {
       if (!stopped) timer = setTimeout(loop, cfg.postmanIntervalMs);
     });
+    const fast = async () => {
+      if (stopped) return;
+      await fastPass();
+      if (!stopped) fastTimer = setTimeout(fast, cfg.fastIntervalMs);
+    };
+    fastTimer = setTimeout(fast, cfg.fastIntervalMs);
     if (deps.reminders) {
       const quick = async () => {
         if (stopped) return;
@@ -412,6 +498,7 @@ export function createPostman(deps: PostmanDeps) {
     catchUp = undefined;
     if (timer) clearTimeout(timer);
     if (remTimer) clearTimeout(remTimer);
+    if (fastTimer) clearTimeout(fastTimer);
   }
 
   /** Public information for GET /health. */
@@ -430,7 +517,7 @@ export function createPostman(deps: PostmanDeps) {
     };
   }
 
-  return { tick, start, stop, info, reportOpened, deliveryOf, remindersPass, watching: () => watched.size };
+  return { tick, start, stop, info, reportOpened, deliveryOf, remindersPass, fastPass, watching: () => watched.size };
 }
 
 export type Postman = ReturnType<typeof createPostman>;

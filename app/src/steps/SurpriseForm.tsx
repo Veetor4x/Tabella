@@ -7,8 +7,9 @@ import { Field } from "../ui/Field";
 import { IconPlus } from "../ui/icons";
 import { cardAppear } from "../ui/motion";
 import { Req, type Problem } from "../ui/problems";
+import { SpamNote } from "../ui/TestingNote"; // TESTING-NOTE
 
-export function PersonFields(props: { id: string; kind: "recipient" | "backup"; p: SurprisePerson; onChange: (p: SurprisePerson) => void; heading: string; onRemove?: () => void; showProblem?: boolean }) {
+export function PersonFields(props: { id: string; kind: "recipient" | "backup"; p: SurprisePerson; onChange: (p: SurprisePerson) => void; heading: string; onRemove?: () => void; showProblem?: boolean; /** TESTING-NOTE: the real form says emails may land in Spam; the demo phone on the front page does not */ testingNote?: boolean }) {
   const { id, p, kind } = props;
   const set = (patch: Partial<SurprisePerson>) => props.onChange({ ...p, ...patch });
   return (
@@ -39,6 +40,7 @@ export function PersonFields(props: { id: string; kind: "recipient" | "backup"; 
       <Field id={`${id}-email`}>
         <input id={`${id}-email`} type="email" inputMode="email" value={p.email} placeholder="name@example.com" autoComplete="off" autoCapitalize="off" spellCheck={false} onChange={(e) => set({ email: e.target.value })} />
       </Field>
+      {props.testingNote && <SpamNote /> /* TESTING-NOTE */}
       <label htmlFor={`${id}-phone`}>Phone, with country code (optional)</label>
       <Field id={`${id}-phone`}>
         <input id={`${id}-phone`} type="tel" inputMode="tel" value={p.phone} placeholder="+44 7700 900123" autoComplete="off" onChange={(e) => set({ phone: e.target.value })} />
@@ -74,11 +76,11 @@ export function SurpriseForm(props: { recipient: SurprisePerson; backups: Surpri
   const { recipient, backups } = props;
   return (
     <div className="surprise-form">
-      <PersonFields id="r" kind="recipient" p={recipient} heading="Who is it for?" onChange={(r) => props.onChange(r, backups)} />
+      <PersonFields id="r" kind="recipient" p={recipient} heading="Who is it for?" onChange={(r) => props.onChange(r, backups)} testingNote /* TESTING-NOTE */ />
       <AnimatePresence initial={false}>
         {backups.map((b, i) => (
           <m.div key={i} {...cardAppear}>
-            <PersonFields id={`b${i}`} kind="backup" p={b} heading={`Backup person ${i + 1}`} onChange={(nb) => props.onChange(recipient, backups.map((x, j) => (j === i ? nb : x)))} onRemove={() => props.onChange(recipient, backups.filter((_, j) => j !== i))} showProblem={props.showProblems} />
+            <PersonFields id={`b${i}`} kind="backup" p={b} heading={`Backup person ${i + 1}`} onChange={(nb) => props.onChange(recipient, backups.map((x, j) => (j === i ? nb : x)))} onRemove={() => props.onChange(recipient, backups.filter((_, j) => j !== i))} testingNote /* TESTING-NOTE */ showProblem={props.showProblems} />
           </m.div>
         ))}
       </AnimatePresence>
