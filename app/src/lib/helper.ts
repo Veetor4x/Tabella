@@ -125,3 +125,17 @@ export class SealProblem extends Error {
     this.name = "SealProblem";
   }
 }
+
+/** What the helper can say about the email to a letter's recipient (never the address). "waiting" = the letter is not released yet. */
+export type DeliveryState = "waiting" | "none" | "sending" | "sent" | "failed" | "opened";
+
+/** Has the recipient's email gone out? null when the helper cannot say right now (asleep, offline): the caller keeps what it had. */
+export async function fetchDelivery(letterId: string): Promise<DeliveryState | null> {
+  try {
+    const res = await fetch(`${HELPER_URL}/delivery/${encodeURIComponent(letterId)}`, { signal: timeout(30_000) });
+    const json = (await res.json()) as { ok?: boolean; state?: string };
+    return res.ok && json.ok && ["waiting", "none", "sending", "sent", "failed", "opened"].includes(json.state ?? "") ? (json.state as DeliveryState) : null;
+  } catch {
+    return null;
+  }
+}

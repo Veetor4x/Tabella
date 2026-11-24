@@ -44,7 +44,9 @@ before it is sent** (so a second pass, a second process or a restart never sends
 
 | Variable | What it is |
 |---|---|
-| `RESEND_API_KEY` | Resend API key (email). **Needed now.** |
+| `BREVO_API_KEY` | Brevo API key (email, no domain needed). When set, Brevo sends the email; otherwise Resend does. |
+| `EMAIL_FROM` | with Brevo: the sender address you verified in Brevo (the name shown is "Tabella"). |
+| `RESEND_API_KEY` | Resend API key (email), used when there is no `BREVO_API_KEY`. |
 | `RESEND_FROM` | the sender, like `Tabella <letters@your-verified-domain>` (Resend's `onboarding@resend.dev` only reaches your own address). **Needed now.** |
 | `TWILIO_ACCOUNT_SID` | later: Twilio account SID (SMS and calls) |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |

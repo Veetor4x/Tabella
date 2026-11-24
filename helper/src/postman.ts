@@ -305,6 +305,16 @@ export function createPostman(deps: PostmanDeps) {
     }
   }
 
+  /** For the owner's page: has the recipient's email gone out? (Only the coarse state: never an address.) */
+  async function deliveryOf(id: bigint): Promise<"waiting" | "none" | "sending" | "sent" | "failed" | "opened"> {
+    if (!deps.escalation) return "none";
+    const letter = (await read("getLetter", [id])) as LetterView;
+    if (!letter.released) return "waiting";
+    const pkg = await packageOf(id, letter);
+    if (!pkg || (!pkg.recipient.email && !pkg.recipient.phone)) return "none";
+    return deps.escalation.deliveryState(id.toString(), pkg);
+  }
+
   async function visit(id: bigint, report: TickReport): Promise<void> {
     const status = Number(await read("status", [id]));
     if (status === STATUS.Cancelled) {
@@ -420,7 +430,7 @@ export function createPostman(deps: PostmanDeps) {
     };
   }
 
-  return { tick, start, stop, info, reportOpened, remindersPass, watching: () => watched.size };
+  return { tick, start, stop, info, reportOpened, deliveryOf, remindersPass, watching: () => watched.size };
 }
 
 export type Postman = ReturnType<typeof createPostman>;

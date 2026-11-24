@@ -2,6 +2,8 @@
  * Resend (email) and Twilio (SMS and phone calls), through their plain HTTPS APIs.
  * Keys are read from the environment here and nowhere else; nothing in this file logs a key or a contact detail.
  *
+ *   BREVO_API_KEY, EMAIL_FROM                         email   (Brevo, no domain needed: EMAIL_FROM is a sender address verified in Brevo; the name shown is "Tabella").
+ *                                                             When BREVO_API_KEY is set, Brevo is used; otherwise Resend.
  *   RESEND_API_KEY, RESEND_FROM                       email   (RESEND_FROM like  Tabella <letters@your-verified-domain>)
  *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN             SMS and calls
  *   TWILIO_FROM (SMS sender), TWILIO_VOICE_FROM       (calls; defaults to TWILIO_FROM)
@@ -47,7 +49,7 @@ async function post(url: string, init: RequestInit, recipient?: string): Promise
       reason = scrub(`${name}${name && msg ? ": " : ""}${msg}`);
       // "you can only send testing emails to your own address (x@y)": say whether that address is the recipient, never what it is
       const allowed = /([^\s<>"',;()]+)@([^\s<>"',;()]+?)[).]*(?:[\s,;]|$)/.exec(msg);
-      if (allowed && recipient) {
+      if (allowed && recipient && /only send testing emails|own email/i.test(msg)) {
         const same = `${allowed[1]}@${allowed[2]}`.toLowerCase() === recipient.toLowerCase();
         reason += same ? " [the address Resend allows is the recipient]" : ` [the address Resend allows differs from the recipient: it is on ${allowed[2]!.toLowerCase()}]`;
       }
@@ -82,7 +84,19 @@ export function emailHtml(text: string, appUrl = "https://tabella-veetor4x.verce
   );
 }
 
+/** "Tabella <a@b.co>" or "a@b.co" -> "a@b.co" (Brevo wants the plain address; the name is always "Tabella"). */
+export const plainAddress = (from: string | undefined): string => {
+  const s = (from ?? "").trim();
+  const m = /<([^<>\s]+@[^<>\s]+)>\s*$/.exec(s);
+  return (m ? m[1]! : s).trim();
+};
+
+export const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
+
 export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
+  const brevoKey = env.BREVO_API_KEY?.trim();
+  const brevoFrom = plainAddress(env.EMAIL_FROM);
+  const useBrevo = !!brevoKey; // with a Brevo key, Brevo sends the email; without one, Resend does
   const resendKey = env.RESEND_API_KEY?.trim();
   const resendFrom = env.RESEND_FROM?.trim();
   const sid = env.TWILIO_ACCOUNT_SID?.trim();
@@ -92,8 +106,18 @@ export function createNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
   const twilioAuth = sid && token ? `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` : undefined;
 
   return {
-    channels: { email: !!(resendKey && resendFrom), sms: !!(twilioAuth && smsFrom), call: !!(twilioAuth && voiceFrom) },
+    emailProvider: useBrevo ? "brevo" : "resend",
+    channels: { email: useBrevo ? !!brevoFrom : !!(resendKey && resendFrom), sms: !!(twilioAuth && smsFrom), call: !!(twilioAuth && voiceFrom) },
     async email(to, subject, text, idempotencyKey) {
+      if (useBrevo) {
+        // Brevo's transactional email API. It answers 201 with a messageId when it has ACCEPTED the message; anything else throws, so the caller never records a send that did not happen.
+        await post(BREVO_URL, {
+          method: "POST",
+          headers: { "api-key": brevoKey!, "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({ sender: { name: "Tabella", email: brevoFrom }, to: [{ email: to }], subject, textContent: text, htmlContent: emailHtml(text, env.APP_URL?.trim() || undefined) }),
+        }, to);
+        return;
+      }
       await post("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json", "idempotency-key": idempotencyKey },

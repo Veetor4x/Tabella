@@ -140,9 +140,12 @@ export function createEscalation(deps: EscalationDeps) {
         await s.send(notifier);
         retry.delete(`${letterId}:${s.key}`);
         report.sent.push(s.key);
+        await store.claim(letterId, `ok:${s.key}`, now()); // the provider ACCEPTED it: this, not the claim, is what "sent" means
+        await store.release(letterId, `fail:${s.key}`);
         log(`letter #${letterId}: step ${s.key} sent`);
       } catch (err) {
         await store.release(letterId, s.key); // try again on a later pass
+        await store.claim(letterId, `fail:${s.key}`, now()); // remembered, so the owner's page can say "couldn't email yet"
         const n = (retry.get(`${letterId}:${s.key}`)?.n ?? 0) + 1;
         const hopeless = err instanceof ProviderError && err.hopeless;
         const delay = hopeless ? 10 * MIN : Math.min(30_000 * 2 ** (n - 1), 5 * MIN);
@@ -154,6 +157,24 @@ export function createEscalation(deps: EscalationDeps) {
     const after = await store.steps(letterId);
     report.finished = steps.length === 0 || steps.every((s) => after.has(s.key));
     return report;
+  }
+
+  /**
+   * What the owner's page may say about the recipient's email, from what really happened:
+   *   "sent"    the provider accepted the email;   "sending"  not yet, we are on it (or it is in flight);
+   *   "failed"  the provider refused it, we keep trying;   "opened"  the recipient opened the letter;   "none"  no email address to send to.
+   * It never reveals an address, a name or a link.
+   */
+  async function deliveryState(letterId: string, pkg: PostmanPackage): Promise<"none" | "sending" | "sent" | "failed" | "opened"> {
+    const steps = await store.steps(letterId);
+    if (steps.has("opened")) return "opened";
+    if (!sendable(pkg.recipient.email)) return "none";
+    if (steps.has("ok:r:email")) return "sent";
+    if (steps.has("fail:r:email")) return "failed";
+    // a letter sent before this record existed: claimed a while ago and never failed means it went out
+    const claimedAt = steps.get("r:email");
+    if (claimedAt !== undefined && now() - claimedAt > 2 * MIN) return "sent";
+    return "sending";
   }
 
   /** The browser says the letter was opened (already checked against the card's signature). Stops the ladder. */
@@ -173,6 +194,6 @@ export function createEscalation(deps: EscalationDeps) {
     return first;
   }
 
-  return { run, markOpened, markFinished };
+  return { run, markOpened, markFinished, deliveryState };
 }
 export type Escalation = ReturnType<typeof createEscalation>;

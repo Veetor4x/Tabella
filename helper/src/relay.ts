@@ -36,6 +36,8 @@ export interface AppDeps {
   messages?: () => { email: boolean; sms: boolean; call: boolean };
   /** "This letter was opened", signed by its card. From the Postman; omitted when there is no escalation ladder. */
   reportOpened?: (letterId: bigint, publicKey: Uint8Array, sig: Uint8Array) => Promise<"ok" | "unknown" | "bad">;
+  /** The coarse state of a letter's email to its recipient, for the owner's page. From the Postman; omitted when there is no escalation ladder. */
+  deliveryOf?: (letterId: bigint) => Promise<"waiting" | "none" | "sending" | "sent" | "failed" | "opened">;
 }
 
 const HEALTH_CACHE_MS = 5_000;
@@ -52,6 +54,7 @@ export function createApp(deps: AppDeps): Hono {
   const fundPerIp = createRateLimiter({ limit: cfg.fundPerIpPerHour, windowMs: 3_600_000, now });
   const fundEveryone = createRateLimiter({ limit: cfg.fundGlobalPerHour, windowMs: 3_600_000, now });
   const openedPerIp = createRateLimiter({ limit: cfg.openedPerMinPerIp, now });
+  const deliveryPerIp = createRateLimiter({ limit: 60, now });
   const funder = createFunder({ chain, cfg, mutex, log });
 
   const app = new Hono();
@@ -222,6 +225,22 @@ export function createApp(deps: AppDeps): Hono {
       }
     },
   );
+
+  // ------------------------------------------------------------------ /delivery/:id
+
+  /** "Has the email to the recipient gone out?": one word, no address, no name. The owner's page asks it after the letter is released. */
+  app.get("/delivery/:id", async (c) => {
+    if (!deps.deliveryOf) return c.json({ ok: false, error: "not_available" }, 404);
+    const a = deliveryPerIp.take(ipOf(c));
+    if (!a.ok) return limited(c, a.retryAfterSec, "ip");
+    const id = c.req.param("id");
+    if (!/^[1-9]\d{0,18}$/.test(id)) return c.json({ ok: false, error: "invalid_request" }, 400);
+    try {
+      return c.json({ ok: true, state: await deps.deliveryOf(BigInt(id)) });
+    } catch {
+      return c.json({ ok: false, error: "unknown_letter" }, 404);
+    }
+  });
 
   /** Everything after validation. Runs one at a time (shared nonce / sequence). */
   function relayOne(fn: string, data: `0x${string}`) {

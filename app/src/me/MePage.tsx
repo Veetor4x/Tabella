@@ -1,7 +1,7 @@
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { cancelLetter, checkIn } from "../lib/actions";
-import { friendlyError } from "../lib/helper";
+import { friendlyError, fetchDelivery, type DeliveryState } from "../lib/helper";
 import { notify } from "../lib/notices";
 import { type LetterView } from "../lib/registry";
 import { countdown } from "../lib/time";
@@ -19,9 +19,18 @@ import { SpareCards } from "./SpareCards";
 import { Shell } from "./Shell";
 import { TestBanner, TestTag } from "../ui/TestBanner";
 
-/** One plain line under the ring: how this letter will reach the people it is for. */
-export function deliveryLine(saved: SealedLetter): string {
+/**
+ * One plain line under the ring: how this letter will reach the people it is for. Once it has been released, a surprise letter says what really
+ * happened to the email (from the helper, which only counts an email as sent when the email service accepted it).
+ */
+export function deliveryLine(saved: SealedLetter, released = false, state: DeliveryState | null = null): string {
   const name = saved.heirs[0]?.name?.trim() || "them";
+  if (saved.surprise && released && saved.surprise.emailed !== false && state !== "none") {
+    if (state === "sent") return `Email sent to ${name}`;
+    if (state === "opened") return `${name} opened the letter`;
+    if (state === "failed") return `Couldn't email ${name} yet`;
+    return "Sending… we'll keep trying"; // not tried yet, or the helper cannot say right now
+  }
   if (saved.surprise) return saved.surprise.emailed === false ? "Add an email so we can reach them" : `Delivery ready: we'll email ${name} when it opens`;
   return "Delivery ready: they'll open it with the card or link you gave them";
 }
@@ -35,6 +44,27 @@ function HowThisWorks() {
       </p>
     </aside>
   );
+}
+
+/** After release, ask the helper now and then what happened to the recipient's email. */
+function useDelivery(saved: SealedLetter, released: boolean): DeliveryState | null {
+  const [state, setState] = useState<DeliveryState | null>(null);
+  useEffect(() => {
+    if (!saved.surprise || !released) return;
+    let alive = true;
+    const ask = async () => {
+      const s = await fetchDelivery(saved.letterId);
+      if (alive && s) setState(s);
+    };
+    void ask();
+    const t = setInterval(() => !document.hidden && state !== "opened" && void ask(), 15_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved.letterId, saved.surprise, released]);
+  return state;
 }
 
 function ListRow({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string) => void; onChanged: () => void }) {
@@ -86,6 +116,8 @@ function Detail({ saved, go, onChanged }: { saved: SealedLetter; go: (p: string)
 }
 
 function CurrentDetail({ saved, go, onChanged, view, refresh }: { saved: SealedLetter; go: (p: string) => void; onChanged: () => void; view: LetterView; refresh: () => Promise<LetterView | null> }) {
+  const released = view.state === "Opened"; // the network's name for "the time ran out and the second half is out"
+  const delivery = useDelivery(saved, released);
   const now = useNow();
   const [phase, setPhase] = useState<CheckInPhase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +179,7 @@ function CurrentDetail({ saved, go, onChanged, view, refresh }: { saved: SealedL
         phase={phase}
         error={error}
         onTap={tap}
-        statusLine={deliveryLine(saved)}
+        statusLine={deliveryLine(saved, released, delivery)}
         extra={
           <>
             <dl className="facts glass">

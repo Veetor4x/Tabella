@@ -50,7 +50,7 @@ async function main() {
     const notifier = createNotifier();
     const dbUrl = process.env.DATABASE_URL?.trim();
     const store = dbUrl ? await createPgStore(dbUrl) : createMemoryStore();
-    console.log(`Messages:  email ${notifier.channels.email ? "on" : "off"}, SMS ${notifier.channels.sms ? "on" : "off (email only for now)"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
+    console.log(`Messages:  email ${notifier.channels.email ? `on (${notifier.emailProvider === "brevo" ? "Brevo" : "Resend"})` : "off"}, SMS ${notifier.channels.sms ? "on" : "off (email only for now)"}, calls ${notifier.channels.call ? "on" : "off"}; steps remembered in ${dbUrl ? "the database" : "memory (a restart forgets: set DATABASE_URL)"}`);
     const escalation = createEscalation({ notifier, store, appUrl: cfg.appUrl });
     for (const id of cfg.finishedLetters) await escalation.markFinished(id); // old test letters: done, kept quiet
     messages = () => notifier.channels;
@@ -60,7 +60,7 @@ async function main() {
     console.log("Postman:   disabled (POSTMAN_ENABLED=false)");
   }
 
-  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info, reportOpened: postman?.reportOpened, messages });
+  const app = createApp({ chain, cfg, mutex, postmanInfo: postman?.info, reportOpened: postman?.reportOpened, deliveryOf: postman?.deliveryOf, messages });
   serve({ fetch: app.fetch, port: cfg.port }, (info) => console.log(`listening: http://localhost:${info.port}  (POST /relay, GET /health)`));
   if (postman) {
     // Catch-up first: after a sleep (free Render plan) this publishes anything that became overdue, right away.

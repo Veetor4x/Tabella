@@ -2,6 +2,8 @@
 export interface Notifier {
   /** which channels can really send (the others are skipped, once, with a log line) */
   readonly channels: { email: boolean; sms: boolean; call: boolean };
+  /** which service sends the email (shown once in the startup log) */
+  readonly emailProvider?: "brevo" | "resend";
   email(to: string, subject: string, text: string, idempotencyKey: string): Promise<void>;
   sms(to: string, text: string): Promise<void>;
   /** a phone call that reads `say` aloud */
